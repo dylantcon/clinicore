@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Domain\Authentication\" />
+    <Folder Include="Domain\Validation\" />
+  </ItemGroup>
+
 </Project>
