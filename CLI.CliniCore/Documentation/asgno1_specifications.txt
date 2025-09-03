@@ -1,0 +1,16 @@
+Assignment 1 - Basic Console Application 
+Due Sep 12 by 11:59pm 
+Points 100 
+Submitting a text entry box or a file upload 
+Available Aug 29 at 12am - Sep 14 at 11:59pm
+
+For this assignment, you will create a basic console-based implementation of a charting system for medical practice management. The specifications are:
+
+The application should allow for the creation of patients
+The application should track basic demographics like name, address, birthdate, race, and gender.
+The application should track medical notes including diagnoses and prescriptions
+The application should allow for the creation of physicians
+The application should track basic demographics like name, license number, graduation date, and specializations
+The application should allow for the creation of appointments
+The application should not allow a physician to be double-booked
+The application should assume that appointments may only be made from 8am to 5pm local time Monday through Friday.

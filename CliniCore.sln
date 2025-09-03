@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36414.22 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI.CliniCore", "CLI.CliniCore\CLI.CliniCore.csproj", "{1C463C31-BC4F-4098-B564-88EAD2A4BCA8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.CliniCore", "Core.CliniCore\Core.CliniCore.csproj", "{A88FFBCC-3C73-400E-B83E-D6E83A5D8BF1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1C463C31-BC4F-4098-B564-88EAD2A4BCA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C463C31-BC4F-4098-B564-88EAD2A4BCA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C463C31-BC4F-4098-B564-88EAD2A4BCA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C463C31-BC4F-4098-B564-88EAD2A4BCA8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A88FFBCC-3C73-400E-B83E-D6E83A5D8BF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A88FFBCC-3C73-400E-B83E-D6E83A5D8BF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A88FFBCC-3C73-400E-B83E-D6E83A5D8BF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A88FFBCC-3C73-400E-B83E-D6E83A5D8BF1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {477E220D-1382-4019-B69F-6476AC8C4F71}
+	EndGlobalSection
+EndGlobal
