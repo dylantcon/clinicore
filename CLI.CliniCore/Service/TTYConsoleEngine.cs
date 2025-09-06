@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Commands
+namespace CLI.CliniCore.Service
 {
-    public class CommandFactory
+    public class TTYConsoleEngine : AbstractConsoleEngine
     {
     }
 }
