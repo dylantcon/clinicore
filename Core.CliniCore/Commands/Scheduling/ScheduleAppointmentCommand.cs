@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Domain
+namespace Core.CliniCore.Commands.Scheduling
 {
-    internal class AbstractUser : IUser
+    internal class ScheduleAppointmentCommand : AbstractCommand
     {
     }
 }

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Commands
+namespace Core.CliniCore.Commands.Scheduling
 {
-    internal class AddClinicalEntryCommand : AbstractCommand
+    public class ViewAppointmentCommand : AbstractCommand
     {
     }
 }

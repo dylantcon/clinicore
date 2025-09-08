@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Commands
+namespace Core.CliniCore.Commands.Authentication
 {
-    public interface ICommand
+    public class ChangePasswordCommand : AbstractCommand
     {
     }
 }

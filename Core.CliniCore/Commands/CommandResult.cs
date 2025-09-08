@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Commands
 {
-    public interface ICommand
+    public class CommandResult
     {
     }
 }

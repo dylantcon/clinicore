@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Commands
 {
-    internal class CommandInvoker
+    public class CommandInvoker
     {
     }
 }

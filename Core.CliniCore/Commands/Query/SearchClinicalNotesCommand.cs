@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Commands
+namespace Core.CliniCore.Commands.Query
 {
-    internal class ScheduleAppointmentCommand : AbstractCommand
+    public class SearchClinicalNotesCommand : AbstractCommand
     {
     }
 }

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Commands
+namespace Core.CliniCore.Commands.Clinical
 {
-    internal class CreatePatientCommand : AbstractCommand
+    public class AddDiagnosisCommand : AbstractCommand
     {
     }
 }

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Commands
+namespace Core.CliniCore.Domain
 {
-    public interface ICommand
+    internal class ProfileBuilder
     {
     }
 }

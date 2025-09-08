@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Domain
+namespace Core.CliniCore.Commands.Admin
 {
-    internal class PatientUser : AbstractUser
+    public class ViewAuditLogCommand : AbstractCommand
     {
     }
 }

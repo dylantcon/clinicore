@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Scheduling
 {
-    internal interface ITimeInterval
+    public interface ITimeInterval
     {
     }
 }

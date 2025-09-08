@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.Commands
+namespace Core.CliniCore.Domain.ProfileTemplates
 {
-    internal class CreatePhysicianCommand : AbstractCommand
+    public interface IProfileTemplate
     {
+        List<ProfileEntry> GetRequiredEntries();
     }
 }

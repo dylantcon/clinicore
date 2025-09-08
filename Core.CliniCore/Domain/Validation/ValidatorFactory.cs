@@ -142,49 +142,18 @@ namespace Core.CliniCore.Domain.Validation
             return new EnumValidator<T?>(enumValues, customMessage, allowNull: true);
         }
 
-        #region Domain-Specific Enum Validators
-
-        /// <summary>
-        /// Validator for patient gender values
-        /// </summary>
-        public static IValidator<string> PatientGender()
-        {
-            var validGenders = new[] { "Male", "Female", "Other", "Prefer not to say" };
-            return OneOf(validGenders, "Gender must be Male, Female, Other, or Prefer not to say", allowNull: true);
-        }
-
-        /// <summary>
-        /// Validator for common US states (abbreviated)
-        /// </summary>
-        public static IValidator<string> USState()
-        {
-            var states = new[]
-            {
-                "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-                "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-                "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-                "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-                "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
-            };
-            return OneOf(states, "Must be a valid US state abbreviation", allowNull: false);
-        }
-
-        /// <summary>
-        /// Validator for medical specializations
-        /// </summary>
-        public static IValidator<string> MedicalSpecialization()
-        {
-            var specializations = new[]
-            {
-                "Family Medicine", "Internal Medicine", "Pediatrics", "Cardiology",
-                "Dermatology", "Emergency Medicine", "Psychiatry", "Radiology",
-                "Surgery", "Orthopedics", "Neurology", "Oncology", "Anesthesiology",
-                "Pathology", "Ophthalmology", "Otolaryngology", "Urology", "Obstetrics and Gynecology"
-            };
-            return OneOf(specializations, "Must be a valid medical specialization", allowNull: false);
-        }
-
         #endregion
+
+        #region List Validation
+
+        public static IValidator<List<T>> List<T>(
+            int? minCount = null,
+            int? maxCount = null,
+            IValidator<T>? itemValidator = null,
+            string? errorMessage = null)
+        {
+            return new ListValidator<T>(minCount, maxCount, itemValidator, errorMessage);
+        }
 
         #endregion
     }
