@@ -1,5 +1,6 @@
 ﻿using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.ProfileTemplates;
+using Core.CliniCore.Scheduling;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,8 +23,7 @@ namespace Core.CliniCore.Domain
         // Physician relationships
         public List<Guid> PatientIds { get; } = new();
         public List<Guid> AppointmentIds { get; } = new();
-
-        // public Dictionary<DayOfWeek, List<ITimeInterval>> StandardAvailability { get; } = new();
+        public Dictionary<DayOfWeek, List<UnavailableTimeInterval>> StandardAvailability { get; } = new();
 
         protected override IProfileTemplate GetProfileTemplate()
             => new PhysicianProfileTemplate();
