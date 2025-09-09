@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Commands.Profile
 {
-    internal class CreatePatientProfileCommand : AbstractCommand
+    internal class CreatePatientProfileCommand
     {
     }
 }

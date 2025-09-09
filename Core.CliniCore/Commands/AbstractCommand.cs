@@ -275,6 +275,7 @@ namespace Core.CliniCore.Commands
             // In production, this would write to an audit log
             var username = session?.Username ?? "Anonymous";
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            // TODO: remove Console.WriteLine usage here
             Console.WriteLine($"[{timestamp}] Command '{CommandName}' executed by user '{username}'");
         }
 
