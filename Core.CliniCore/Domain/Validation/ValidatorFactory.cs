@@ -80,6 +80,9 @@ namespace Core.CliniCore.Domain.Validation
         public static IValidator<DateTime> GraduationDate()
             => DateRange(DateTime.Now.AddYears(-MAX_GRAD_YEARS_ELAPSED), DateTime.Now, GRADDATE_SIZE_ERROR_STR);
 
+        public static IValidator<string> UsernameUniqueness(ProfileRegistry profileRegistry, string? errorMessage = null)
+            => new Validators.UsernameUniquenessValidator(profileRegistry, errorMessage);
+
         #endregion
 
         #region Domain-Specific Validators

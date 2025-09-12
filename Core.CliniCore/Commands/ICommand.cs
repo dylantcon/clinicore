@@ -24,6 +24,12 @@ namespace Core.CliniCore.Commands
         string CommandName { get; }
 
         /// <summary>
+        /// Unique key identifier for this command type (e.g., "login", "createpatient")
+        /// Used for command registration and invocation
+        /// </summary>
+        string CommandKey { get; }
+
+        /// <summary>
         /// Description of what this command does
         /// </summary>
         string Description { get; }

@@ -222,6 +222,70 @@ namespace Core.CliniCore.Domain
                 _profilesByUsername.Clear();
             }
         }
+
+        /// <summary>
+        /// Establishes a physician-patient relationship
+        /// </summary>
+        public bool AssignPatientToPhysician(Guid patientId, Guid physicianId, bool setPrimary = false)
+        {
+            lock (_lock)
+            {
+                var patient = GetProfileById(patientId) as PatientProfile;
+                var physician = GetProfileById(physicianId) as PhysicianProfile;
+
+                if (patient == null || physician == null)
+                    return false;
+
+                // Add patient to physician's list
+                if (!physician.PatientIds.Contains(patientId))
+                {
+                    physician.PatientIds.Add(patientId);
+                }
+
+                // Optionally set as primary physician
+                if (setPrimary)
+                {
+                    patient.PrimaryPhysicianId = physicianId;
+                }
+
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Gets all patients for a physician
+        /// </summary>
+        public IEnumerable<PatientProfile> GetPhysicianPatients(Guid physicianId)
+        {
+            lock (_lock)
+            {
+                var physician = GetProfileById(physicianId) as PhysicianProfile;
+                if (physician == null)
+                    return Enumerable.Empty<PatientProfile>();
+
+                return physician.PatientIds
+                    .Select(id => GetProfileById(id) as PatientProfile)
+                    .Where(p => p != null)
+                    .Cast<PatientProfile>()
+                    .ToList();
+            }
+        }
+
+        /// <summary>
+        /// Gets all physicians for a patient
+        /// </summary>
+        public IEnumerable<PhysicianProfile> GetPatientPhysicians(Guid patientId)
+        {
+            lock (_lock)
+            {
+                // Find all physicians who have this patient
+                return _profilesById.Values
+                    .OfType<PhysicianProfile>()
+                    .Where(physician => physician.PatientIds.Contains(patientId))
+                    .ToList();
+            }
+        }
+
     }
 
     /// <summary>

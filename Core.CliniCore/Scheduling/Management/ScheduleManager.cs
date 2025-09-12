@@ -13,13 +13,31 @@ namespace Core.CliniCore.Scheduling.Management
     /// </summary>
     public class ScheduleManager
     {
+        private static ScheduleManager? _instance;
+        private static readonly object _instanceLock = new object();
+        
         private readonly Dictionary<Guid, PhysicianSchedule> _physicianSchedules;
         private readonly List<UnavailableTimeInterval> _facilityUnavailableBlocks;
         private readonly ScheduleConflictResolver _conflictResolver;
         private readonly IBookingStrategy _defaultBookingStrategy;
         private readonly object _lock = new object();
 
-        public ScheduleManager()
+        public static ScheduleManager Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    lock (_instanceLock)
+                    {
+                        _instance ??= new ScheduleManager();
+                    }
+                }
+                return _instance;
+            }
+        }
+
+        private ScheduleManager()
         {
             _physicianSchedules = new Dictionary<Guid, PhysicianSchedule>();
             _facilityUnavailableBlocks = new List<UnavailableTimeInterval>();
@@ -253,6 +271,41 @@ namespace Core.CliniCore.Scheduling.Management
                 }
 
                 return appointments.OrderBy(a => a.Start);
+            }
+        }
+
+        /// <summary>
+        /// Gets all appointments across all physician schedules
+        /// </summary>
+        public IEnumerable<AppointmentTimeInterval> GetAllAppointments()
+        {
+            lock (_lock)
+            {
+                var appointments = new List<AppointmentTimeInterval>();
+
+                foreach (var schedule in _physicianSchedules.Values)
+                {
+                    appointments.AddRange(schedule.Appointments);
+                }
+
+                return appointments.OrderBy(a => a.Start);
+            }
+        }
+
+        /// <summary>
+        /// Finds a specific appointment by ID across all physician schedules
+        /// </summary>
+        public AppointmentTimeInterval? FindAppointmentById(Guid appointmentId)
+        {
+            lock (_lock)
+            {
+                foreach (var schedule in _physicianSchedules.Values)
+                {
+                    var appointment = schedule.Appointments.FirstOrDefault(a => a.Id == appointmentId);
+                    if (appointment != null)
+                        return appointment;
+                }
+                return null;
             }
         }
 

@@ -47,12 +47,11 @@
                     throw new ArgumentException(_validationErrorMessage);
             }
         }
-
+        
         public override Type ValueType => typeof(T);
 
         public override bool IsValid => 
-            (!IsRequired || !EqualityComparer<T>.Default.Equals(_value, default!))
-            && _validator(_value);
+            _validator(_value);
 
         public override string ErrorMessage => 
             IsValid ? string.Empty : _validationErrorMessage;

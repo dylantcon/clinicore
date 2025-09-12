@@ -63,6 +63,31 @@ namespace Core.CliniCore.Commands
             if (value is T typedValue)
                 return typedValue;
 
+            // Special handling for enums
+            var targetType = typeof(T);
+            var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+            
+            if (underlyingType.IsEnum)
+            {
+                try
+                {
+                    // If value is already an enum of the right type (boxed as object)
+                    if (value.GetType() == underlyingType)
+                        return (T)value;
+                    
+                    // Try to parse from string
+                    if (value is string stringValue)
+                        return (T)Enum.Parse(underlyingType, stringValue);
+                    
+                    // Try to convert from numeric value
+                    return (T)Enum.ToObject(underlyingType, value);
+                }
+                catch
+                {
+                    return default;
+                }
+            }
+
             // Try to convert
             try
             {

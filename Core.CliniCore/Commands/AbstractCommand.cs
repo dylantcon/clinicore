@@ -45,6 +45,23 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
+        /// Unique key identifier for this command type
+        /// Generated from the class name, converted to lowercase without "Command" suffix
+        /// E.g., "LoginCommand" becomes "login", "CreatePatientCommand" becomes "createpatient"
+        /// </summary>
+        public virtual string CommandKey
+        {
+            get
+            {
+                var typeName = GetType().Name;
+                var nameWithoutCommand = typeName.EndsWith("Command")
+                    ? typeName.Substring(0, typeName.Length - 7)
+                    : typeName;
+                return nameWithoutCommand.ToLowerInvariant();
+            }
+        }
+
+        /// <summary>
         /// Description of what this command does
         /// </summary>
         public abstract string Description { get; }
