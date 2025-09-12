@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Linq;
 using Core.CliniCore.ClinicalDoc;
 
 namespace CLI.CliniCore.Service.Editor
@@ -10,15 +12,81 @@ namespace CLI.CliniCore.Service.Editor
     {
         private readonly ClinicalDocumentEditor _editor;
         private readonly ThreadSafeConsoleManager _console;
+        private readonly StatusBarInputHandler _inputHandler;
+        private readonly EditorRenderer _renderer;
+        private bool _isEditingText = false;
+        private AbstractClinicalEntry? _entryBeingEdited;
+        private string? _editMode; // "content", "prescription", etc.
+        
+        // Add entry state
+        private bool _isAddingEntry = false;
+        private string _addEntryStep = ""; // "type", "content", "prescription_name", "prescription_dosage", etc.
+        private ConcurrentDictionary<string, string> _addEntryData = new();
 
-        public EditorKeyHandler(ClinicalDocumentEditor editor, ThreadSafeConsoleManager console)
+        public EditorKeyHandler(ClinicalDocumentEditor editor, ThreadSafeConsoleManager console, StatusBarInputHandler inputHandler, EditorRenderer renderer)
         {
             _editor = editor ?? throw new ArgumentNullException(nameof(editor));
             _console = console ?? throw new ArgumentNullException(nameof(console));
+            _inputHandler = inputHandler ?? throw new ArgumentNullException(nameof(inputHandler));
+            _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
         }
 
         public EditorKeyResult HandleKeyInput(ConsoleKeyInfo keyInfo, EditorState state)
         {
+            // If we're in text editing mode, handle input differently
+            if (_isEditingText && _inputHandler.IsActive)
+            {
+                bool continueEditing = _inputHandler.ProcessKey(keyInfo);
+                
+                if (!continueEditing)
+                {
+                    // Editing complete - save the changes
+                    var newText = _inputHandler.CurrentText;
+                    
+                    // CRITICAL: Stop the input handler first to clear edit mode
+                    _inputHandler.StopEditing();
+                    
+                    if (!string.IsNullOrEmpty(newText) && _entryBeingEdited != null)
+                    {
+                        ApplyEditToEntry(_entryBeingEdited, newText, _editMode);
+                        state.MarkDirty();
+                        
+                        // CRITICAL: Invalidate content zone to show updated text
+                        _renderer.InvalidateContentZone();
+                        _renderer.InvalidateStatusZone(); // Clear edit dialog
+                        
+                        _isEditingText = false;
+                        _entryBeingEdited = null;
+                        _editMode = null;
+                        return new EditorKeyResult(EditorAction.Continue, "Entry updated successfully", MessageType.Success);
+                    }
+                    else
+                    {
+                        // Edit cancelled - clear everything
+                        _renderer.InvalidateStatusZone(); // Clear edit dialog
+                        _isEditingText = false;
+                        _entryBeingEdited = null;
+                        _editMode = null;
+                        return new EditorKeyResult(EditorAction.Continue, "Edit cancelled");
+                    }
+                }
+                
+                return new EditorKeyResult(EditorAction.Continue);
+            }
+            
+            // If we're in add entry mode, handle input differently
+            if (_isAddingEntry && _inputHandler.IsActive)
+            {
+                bool continueAdding = _inputHandler.ProcessKey(keyInfo);
+                
+                if (!continueAdding)
+                {
+                    return HandleAddEntryStepComplete(state);
+                }
+                
+                return new EditorKeyResult(EditorAction.Continue);
+            }
+            
             // Handle special key combinations first
             if (keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control))
             {
@@ -69,6 +137,9 @@ namespace CLI.CliniCore.Service.Editor
             if (state.HasEntries && state.SelectedIndex > 0)
             {
                 state.MoveSelectionUp();
+                // Invalidate zones to update visual selection and content
+                _renderer.InvalidateTreeZone();
+                _renderer.InvalidateContentZone();
                 return new EditorKeyResult(EditorAction.Continue);
             }
             return new EditorKeyResult(EditorAction.Continue, "Already at first entry");
@@ -79,6 +150,9 @@ namespace CLI.CliniCore.Service.Editor
             if (state.HasEntries && state.SelectedIndex < state.FlattenedEntries.Count - 1)
             {
                 state.MoveSelectionDown();
+                // Invalidate zones to update visual selection and content
+                _renderer.InvalidateTreeZone();
+                _renderer.InvalidateContentZone();
                 return new EditorKeyResult(EditorAction.Continue);
             }
             return new EditorKeyResult(EditorAction.Continue, "Already at last entry");
@@ -89,6 +163,9 @@ namespace CLI.CliniCore.Service.Editor
             if (state.HasEntries)
             {
                 state.MoveToFirst();
+                // Invalidate zones to update visual selection and content
+                _renderer.InvalidateTreeZone();
+                _renderer.InvalidateContentZone();
                 return new EditorKeyResult(EditorAction.Continue, "Moved to first entry");
             }
             return new EditorKeyResult(EditorAction.Continue);
@@ -99,6 +176,9 @@ namespace CLI.CliniCore.Service.Editor
             if (state.HasEntries)
             {
                 state.MoveToLast();
+                // Invalidate zones to update visual selection and content
+                _renderer.InvalidateTreeZone();
+                _renderer.InvalidateContentZone();
                 return new EditorKeyResult(EditorAction.Continue, "Moved to last entry");
             }
             return new EditorKeyResult(EditorAction.Continue);
@@ -110,6 +190,9 @@ namespace CLI.CliniCore.Service.Editor
             {
                 var newIndex = Math.Max(0, state.SelectedIndex - 10);
                 state.SelectedIndex = newIndex;
+                // Invalidate zones to update visual selection and content
+                _renderer.InvalidateTreeZone();
+                _renderer.InvalidateContentZone();
                 return new EditorKeyResult(EditorAction.Continue);
             }
             return new EditorKeyResult(EditorAction.Continue);
@@ -121,6 +204,9 @@ namespace CLI.CliniCore.Service.Editor
             {
                 var newIndex = Math.Min(state.FlattenedEntries.Count - 1, state.SelectedIndex + 10);
                 state.SelectedIndex = newIndex;
+                // Invalidate zones to update visual selection and content
+                _renderer.InvalidateTreeZone();
+                _renderer.InvalidateContentZone();
                 return new EditorKeyResult(EditorAction.Continue);
             }
             return new EditorKeyResult(EditorAction.Continue);
@@ -128,41 +214,13 @@ namespace CLI.CliniCore.Service.Editor
 
         private EditorKeyResult HandleAddEntry(EditorState state)
         {
-            try
-            {
-                // Show SOAP entry type selection
-                var entryType = PromptForEntryType();
-                if (entryType == null)
-                {
-                    return new EditorKeyResult(EditorAction.Continue, "Add operation cancelled");
-                }
-
-                // Create new entry based on type
-                var newEntry = CreateNewEntry(entryType, state.Document);
-                if (newEntry != null)
-                {
-                    state.Document.AddEntry(newEntry);
-                    state.RefreshFlattenedEntries();
-                    state.MarkDirty();
-                    
-                    // Select the new entry
-                    var newIndex = state.GetEntryIndex(newEntry);
-                    if (newIndex >= 0)
-                    {
-                        state.SelectedIndex = newIndex;
-                    }
-
-                    return new EditorKeyResult(EditorAction.Continue, 
-                        $"Added new {entryType} entry", MessageType.Success);
-                }
-            }
-            catch (Exception ex)
-            {
-                return new EditorKeyResult(EditorAction.Continue, 
-                    $"Failed to add entry: {ex.Message}", MessageType.Error);
-            }
-
-            return new EditorKeyResult(EditorAction.Continue, "Add operation cancelled");
+            // Start the add entry flow with type selection
+            _isAddingEntry = true;
+            _addEntryStep = "type";
+            _addEntryData.Clear();
+            
+            StartAddEntryTypeSelection();
+            return new EditorKeyResult(EditorAction.Continue);
         }
 
         private EditorKeyResult HandleEditEntry(EditorState state)
@@ -239,6 +297,9 @@ namespace CLI.CliniCore.Service.Editor
                 EditorState.EditorViewMode.Details => EditorState.EditorViewMode.Tree,
                 _ => EditorState.EditorViewMode.Tree
             };
+            
+            // Invalidate tree zone since view mode affects tree rendering
+            _renderer.InvalidateTreeZone();
 
             return new EditorKeyResult(EditorAction.Continue, 
                 $"Switched to {state.ViewMode} view", MessageType.Info);
@@ -265,65 +326,392 @@ namespace CLI.CliniCore.Service.Editor
             return new EditorKeyResult(EditorAction.Exit);
         }
 
-        private string? PromptForEntryType()
-        {
-            // Show prompt at bottom of screen
-            var (_, height) = _console.GetDimensions();
-            _console.SetCursorPosition(2, height - 2);
-            _console.SetForegroundColor(ConsoleColor.Yellow);
-            _console.Write("Entry type - [S]ubjective [O]bjective [A]ssessment [P]lan [R]x (Esc=cancel): ");
-            _console.ResetColor();
-            
-            // Read single key
-            var key = _console.ReadKey(true);
-            
-            return key.Key switch
-            {
-                ConsoleKey.S => "observation",    // Subjective -> ObservationEntry 
-                ConsoleKey.O => "diagnosis",      // Objective -> DiagnosisEntry
-                ConsoleKey.A => "assessment",     // Assessment -> AssessmentEntry
-                ConsoleKey.P => "plan",           // Plan -> PlanEntry
-                ConsoleKey.R => "prescription",   // Rx -> PrescriptionEntry
-                ConsoleKey.Escape => null,
-                _ => null
-            };
-        }
 
-        private AbstractClinicalEntry? CreateNewEntry(string entryType, ClinicalDocument document)
-        {
-            // Use a default author ID - in real implementation this would come from session
-            var authorId = Guid.NewGuid(); 
-            
-            return entryType.ToLowerInvariant() switch
-            {
-                "observation" or "s" => new ObservationEntry(authorId, "New observation - edit to add details"),
-                "diagnosis" or "o" => new DiagnosisEntry(authorId, "New diagnosis - edit to add details"),
-                "prescription" or "rx" => new PrescriptionEntry(authorId, Guid.NewGuid(), "New medication"),
-                "assessment" or "a" => new AssessmentEntry(authorId, "New assessment - edit to add details"),
-                "plan" or "p" => new PlanEntry(authorId, "New plan - edit to add details"),
-                _ => null
-            };
-        }
+        
 
         private bool EditEntry(AbstractClinicalEntry entry)
         {
-            // Show prompt at bottom of screen
-            var (_, height) = _console.GetDimensions();
-            _console.SetCursorPosition(2, height - 2);
-            _console.SetForegroundColor(ConsoleColor.Yellow);
-            _console.Write($"Edit content (was: \"{entry.Content}\"): ");
-            _console.ResetColor();
+            // Start editing using the status bar input handler
+            _entryBeingEdited = entry;
+            _isEditingText = true;
             
-            // Read user input
-            var newContent = _console.ReadLine();
+            // Determine what we're editing and set the prompt
+            string prompt = "Edit content (Enter to submit, Shift+Enter for newline, Esc to cancel): ";
+            string initialText = entry.Content;
             
-            if (!string.IsNullOrWhiteSpace(newContent))
+            // For prescription entries, we might want to edit specific fields
+            if (entry is PrescriptionEntry rx)
             {
-                entry.Content = newContent;
-                return true;
+                // For now, just edit the medication name/content
+                // Could be extended to show a menu for which field to edit
+                _editMode = "content";
+            }
+            else
+            {
+                _editMode = "content";
             }
             
-            return false; // Cancelled or no input
+            var (width, _) = _console.GetDimensions();
+            _inputHandler.StartEditing(prompt, initialText, width - 4);
+            
+            return true; // The actual update happens in HandleKeyInput when editing completes
+        }
+        
+        private void ApplyEditToEntry(AbstractClinicalEntry entry, string newText, string? editMode)
+        {
+            switch (editMode)
+            {
+                case "content":
+                default:
+                    entry.Content = newText;
+                    break;
+                    
+                // Could add other modes for prescription fields, etc.
+            }
+        }
+        
+        /// <summary>
+        /// Starts the add entry type selection in status bar
+        /// </summary>
+        private void StartAddEntryTypeSelection()
+        {
+            var prompt = "Entry type - [S]ubjective [O]bjective [A]ssessment [P]lan [R]x (Esc=cancel): ";
+            _inputHandler.StartEditing(prompt, "", 200); // Wide enough for the prompt
+        }
+        
+        /// <summary>
+        /// Handles completion of each add entry step
+        /// </summary>
+        private EditorKeyResult HandleAddEntryStepComplete(EditorState state)
+        {
+            var input = _inputHandler.CurrentText;
+            _inputHandler.StopEditing();
+            
+            switch (_addEntryStep)
+            {
+                case "type":
+                    return HandleEntryTypeSelection(input, state);
+                    
+                case "objective_subtype":
+                    return HandleObjectiveSubtypeSelection(input, state);
+                    
+                case "content":
+                    return HandleEntryContentInput(input, state);
+                    
+                case "prescription_diagnosis_selection":
+                    return HandlePrescriptionDiagnosisSelection(input, state);
+                    
+                case "prescription_name":
+                    return HandlePrescriptionNameInput(input, state);
+                    
+                case "prescription_dosage":
+                    return HandlePrescriptionDosageInput(input, state);
+                    
+                case "prescription_instructions":
+                    return HandlePrescriptionInstructionsInput(input, state);
+                    
+                default:
+                    return CancelAddEntry("Unknown add entry step");
+            }
+        }
+        
+        /// <summary>
+        /// Handles entry type selection (S/O/A/P/R)
+        /// </summary>
+        private EditorKeyResult HandleEntryTypeSelection(string input, EditorState state)
+        {
+            // Note: For type selection, we're looking for single character input
+            // The input handler might return the full prompt + character, so check the last character
+            var lastChar = input.Length > 0 ? input.Last() : ' ';
+            
+            switch (char.ToUpper(lastChar))
+            {
+                case 'S':
+                    _addEntryData["type"] = "observation";
+                    return StartContentEntry("observation");
+                    
+                case 'O':
+                    // Objective can be diagnosis OR prescription - need sub-selection
+                    _addEntryStep = "objective_subtype";
+                    var prompt = "Objective type - [D]iagnosis or [P]rescription: ";
+                    _inputHandler.StartEditing(prompt, "", 150);
+                    return new EditorKeyResult(EditorAction.Continue);
+                    
+                case 'A':
+                    _addEntryData["type"] = "assessment";
+                    return StartContentEntry("assessment");
+                    
+                case 'P':
+                    _addEntryData["type"] = "plan";
+                    return StartContentEntry("plan");
+                    
+                case 'R':
+                    _addEntryData["type"] = "prescription";
+                    return StartPrescriptionEntry(state);
+                    
+                default:
+                    return CancelAddEntry("Add operation cancelled");
+            }
+        }
+        
+        /// <summary>
+        /// Handles objective subtype selection (D/P)
+        /// </summary>
+        private EditorKeyResult HandleObjectiveSubtypeSelection(string input, EditorState state)
+        {
+            var lastChar = input.Length > 0 ? input.Last() : ' ';
+            
+            switch (char.ToUpper(lastChar))
+            {
+                case 'D':
+                    _addEntryData["type"] = "diagnosis";
+                    return StartContentEntry("diagnosis");
+                    
+                case 'P':
+                    _addEntryData["type"] = "prescription";
+                    return StartPrescriptionEntry(state);
+                    
+                default:
+                    return CancelAddEntry("Invalid objective type selection");
+            }
+        }
+        
+        /// <summary>
+        /// Starts content entry for non-prescription types
+        /// </summary>
+        private EditorKeyResult StartContentEntry(string entryType)
+        {
+            _addEntryStep = "content";
+            var prompt = $"Enter {entryType} content: ";
+            _inputHandler.StartEditing(prompt, "", 200);
+            return new EditorKeyResult(EditorAction.Continue);
+        }
+        
+        /// <summary>
+        /// Starts prescription entry flow - but first check for existing diagnoses
+        /// </summary>
+        private EditorKeyResult StartPrescriptionEntry(EditorState state)
+        {
+            // Check if there are any existing diagnoses to link to
+            var diagnoses = state.FlattenedEntries.OfType<DiagnosisEntry>().ToList();
+            
+            if (diagnoses.Count == 0)
+            {
+                return CancelAddEntry("No diagnoses found. Create a diagnosis entry first before adding prescriptions.");
+            }
+            
+            // Store available diagnoses for selection
+            _addEntryData["available_diagnoses"] = string.Join("|", diagnoses.Select(d => $"{d.Id}:{d.Content}"));
+            
+            _addEntryStep = "prescription_diagnosis_selection";
+            var prompt = BuildDiagnosisSelectionPrompt(diagnoses);
+            _inputHandler.StartEditing(prompt, "", 200);
+            return new EditorKeyResult(EditorAction.Continue);
+        }
+        
+        /// <summary>
+        /// Handles content input for non-prescription entries
+        /// </summary>
+        private EditorKeyResult HandleEntryContentInput(string input, EditorState state)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return CancelAddEntry("Content cannot be empty");
+            }
+            
+            _addEntryData["content"] = input;
+            return CreateAndAddEntry(state);
+        }
+        
+        /// <summary>
+        /// Handles prescription medication name input
+        /// </summary>
+        private EditorKeyResult HandlePrescriptionNameInput(string input, EditorState state)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return CancelAddEntry("Medication name cannot be empty");
+            }
+            
+            _addEntryData["medication_name"] = input;
+            _addEntryStep = "prescription_dosage";
+            
+            var prompt = "Dosage: ";
+            _inputHandler.StartEditing(prompt, "", 100);
+            return new EditorKeyResult(EditorAction.Continue);
+        }
+        
+        /// <summary>
+        /// Handles prescription dosage input
+        /// </summary>
+        private EditorKeyResult HandlePrescriptionDosageInput(string input, EditorState state)
+        {
+            _addEntryData["dosage"] = input ?? "";
+            _addEntryStep = "prescription_instructions";
+            
+            var prompt = "Instructions: ";
+            _inputHandler.StartEditing(prompt, "", 200);
+            return new EditorKeyResult(EditorAction.Continue);
+        }
+        
+        /// <summary>
+        /// Handles prescription instructions input - final step
+        /// </summary>
+        private EditorKeyResult HandlePrescriptionInstructionsInput(string input, EditorState state)
+        {
+            _addEntryData["instructions"] = input ?? "";
+            return CreateAndAddEntry(state);
+        }
+        
+        /// <summary>
+        /// Creates the entry from collected data and adds it to the document
+        /// </summary>
+        private EditorKeyResult CreateAndAddEntry(EditorState state)
+        {
+            try
+            {
+                var entryType = _addEntryData["type"];
+                var authorId = Guid.NewGuid();
+                
+                AbstractClinicalEntry? newEntry = entryType switch
+                {
+                    "observation" => new ObservationEntry(authorId, _addEntryData["content"]),
+                    "diagnosis" => new DiagnosisEntry(authorId, _addEntryData["content"]),
+                    "assessment" => new AssessmentEntry(authorId, _addEntryData["content"]),
+                    "plan" => new PlanEntry(authorId, _addEntryData["content"]),
+                    "prescription" => CreatePrescriptionFromData(authorId),
+                    _ => null
+                };
+                
+                if (newEntry != null)
+                {
+                    state.Document.AddEntry(newEntry);
+                    state.RefreshFlattenedEntries();
+                    state.MarkDirty();
+                    
+                    // Select the new entry
+                    var newIndex = state.GetEntryIndex(newEntry);
+                    if (newIndex >= 0)
+                    {
+                        state.SelectedIndex = newIndex;
+                    }
+                    else
+                    {
+                        // If we can't find the entry, just select the last one
+                        state.SelectedIndex = Math.Max(0, state.FlattenedEntries.Count - 1);
+                    }
+                    
+                    // Clear status bar and invalidate zones
+                    ClearAddEntryState();
+                    _renderer.InvalidateTreeZone();
+                    _renderer.InvalidateContentZone();
+                    _renderer.InvalidateStatusZone();
+                    
+                    var displayName = newEntry is PrescriptionEntry rx ? $"prescription '{rx.MedicationName}'" : entryType;
+                    return new EditorKeyResult(EditorAction.Continue, 
+                        $"Added new {displayName} entry", MessageType.Success);
+                }
+                else
+                {
+                    return CancelAddEntry("Failed to create entry - entry was null");
+                }
+            }
+            catch (Exception ex)
+            {
+                return CancelAddEntry($"Failed to add entry: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Builds the diagnosis selection prompt
+        /// </summary>
+        private string BuildDiagnosisSelectionPrompt(List<DiagnosisEntry> diagnoses)
+        {
+            var prompt = "Select diagnosis: ";
+            for (int i = 0; i < Math.Min(diagnoses.Count, 9); i++)
+            {
+                prompt += $"[{i + 1}]{diagnoses[i].Content.Substring(0, Math.Min(15, diagnoses[i].Content.Length))}... ";
+            }
+            prompt += "(1-9): ";
+            return prompt;
+        }
+        
+        /// <summary>
+        /// Handles diagnosis selection for prescription
+        /// </summary>
+        private EditorKeyResult HandlePrescriptionDiagnosisSelection(string input, EditorState state)
+        {
+            var diagnoses = state.FlattenedEntries.OfType<DiagnosisEntry>().ToList();
+            
+            // Parse selection (1-9)
+            var lastChar = input.Length > 0 ? input.Last() : ' ';
+            if (char.IsDigit(lastChar))
+            {
+                var selection = int.Parse(lastChar.ToString()) - 1; // Convert to 0-based index
+                if (selection >= 0 && selection < diagnoses.Count)
+                {
+                    _addEntryData["selected_diagnosis_id"] = diagnoses[selection].Id.ToString();
+                    
+                    // Now get medication name
+                    _addEntryStep = "prescription_name";
+                    var prompt = "Medication name: ";
+                    _inputHandler.StartEditing(prompt, "", 100);
+                    return new EditorKeyResult(EditorAction.Continue);
+                }
+            }
+            
+            return CancelAddEntry("Invalid diagnosis selection");
+        }
+        
+        /// <summary>
+        /// Creates a prescription entry from collected data with valid diagnosis link
+        /// </summary>
+        private PrescriptionEntry CreatePrescriptionFromData(Guid authorId)
+        {
+            // Get required fields
+            if (!_addEntryData.TryGetValue("medication_name", out var medicationName) || 
+                string.IsNullOrWhiteSpace(medicationName))
+            {
+                throw new InvalidOperationException("Medication name is required for prescription entry");
+            }
+            
+            if (!_addEntryData.TryGetValue("selected_diagnosis_id", out var diagnosisIdStr) ||
+                !Guid.TryParse(diagnosisIdStr, out var diagnosisId))
+            {
+                throw new InvalidOperationException("Valid diagnosis selection is required for prescription entry");
+            }
+            
+            // Create prescription with proper diagnosis link
+            var rx = new PrescriptionEntry(authorId, diagnosisId, medicationName.Trim());
+            
+            // Set optional fields
+            if (_addEntryData.TryGetValue("dosage", out var dosage) && !string.IsNullOrWhiteSpace(dosage))
+                rx.Dosage = dosage.Trim();
+                
+            if (_addEntryData.TryGetValue("instructions", out var instructions) && !string.IsNullOrWhiteSpace(instructions))
+                rx.Instructions = instructions.Trim();
+                
+            return rx;
+        }
+        
+        /// <summary>
+        /// Cancels the add entry operation and cleans up state
+        /// </summary>
+        private EditorKeyResult CancelAddEntry(string message)
+        {
+            ClearAddEntryState();
+            _renderer.InvalidateStatusZone();
+            return new EditorKeyResult(EditorAction.Continue, message);
+        }
+        
+        /// <summary>
+        /// Clears add entry state variables
+        /// </summary>
+        private void ClearAddEntryState()
+        {
+            _isAddingEntry = false;
+            _addEntryStep = "";
+            _addEntryData.Clear();
         }
 
         private bool ConfirmDelete(AbstractClinicalEntry entry)

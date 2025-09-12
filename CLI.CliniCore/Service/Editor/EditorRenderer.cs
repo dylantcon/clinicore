@@ -12,63 +12,37 @@ namespace CLI.CliniCore.Service.Editor
     {
         private readonly ThreadSafeConsoleManager _console;
         private readonly DocumentTreeView _treeView;
+        private readonly StatusBarInputHandler _inputHandler;
+        private readonly ZonedRenderer _zonedRenderer;
         private bool _layoutInvalid = true;
         
         // Layout regions
         private EditorLayout _layout = new();
+        private int _statusBarHeight = 1; // Dynamic status bar height
+        
+        // Zone identifiers
+        private const string ZONE_BORDERS = "borders";
+        private const string ZONE_TREE = "tree";
+        private const string ZONE_CONTENT = "content";
+        private const string ZONE_STATUS = "status";
 
         public EditorRenderer(ThreadSafeConsoleManager console)
         {
             _console = console ?? throw new ArgumentNullException(nameof(console));
             _treeView = new DocumentTreeView(_console);
+            _inputHandler = new StatusBarInputHandler(_console);
+            _zonedRenderer = new ZonedRenderer(_console);
+            
+            InitializeZones();
             CalculateLayout();
         }
-
-        public void RenderEditor(EditorState state)
-        {
-            if (_layoutInvalid)
-            {
-                CalculateLayout();
-                _layoutInvalid = false;
-            }
-
-            // Clear screen and ensure we start at absolute top-left
-            _console.Clear();
-            
-            // Force cursor to absolute top-left and ensure clean state
-            _console.SetCursorPosition(0, 0);
-            _console.ResetColor();
-            
-            // Draw borders first to establish the layout
-            DrawBorders();
-            
-            // Clear only the content areas inside the borders
-            ClearContentAreas();
-            
-            // Draw content in the regions
-            DrawTreePane(state);
-            DrawContentPane(state);
-            DrawStatusBar(state);
-            
-            // Hide cursor to prevent flickering
-            try
-            {
-                _console.SetCursorPosition(_layout.TotalWidth - 1, _layout.TotalHeight - 1);
-            }
-            catch
-            {
-                // Ignore cursor positioning errors
-            }
-        }
-
-        public void InvalidateLayout()
-        {
-            _layoutInvalid = true;
-        }
-
-        public bool LayoutInvalid => _layoutInvalid;
-
-        public void ShowHelpOverlay(int width, int height)
+        
+        public StatusBarInputHandler InputHandler => _inputHandler;
+        
+        /// <summary>
+        /// Shows a help overlay as a temporary zone
+        /// </summary>
+        public void ShowHelpOverlay()
         {
             var helpText = new[]
             {
@@ -89,33 +63,32 @@ namespace CLI.CliniCore.Service.Editor
                 "  Ctrl+X      - Exit editor",
                 "  Escape      - Cancel current operation",
                 "",
-                "View Modes:",
-                "  Tree        - Grouped by SOAP categories",
-                "  List        - Flat list of all entries",
-                "  Details     - Detailed view of selection",
-                "",
                 "Press any key to continue..."
             };
 
-            int startY = Math.Max(0, (height - helpText.Length) / 2);
-            int startX = Math.Max(0, (width - 50) / 2);
-
+            int startY = Math.Max(2, (_layout.TotalHeight - helpText.Length) / 2);
+            int startX = Math.Max(2, (_layout.TotalWidth - 50) / 2);
+            
+            // Create temporary overlay zone
+            var overlayRegion = new Region(startX, startY, 50, helpText.Length);
+            
             _console.SetForegroundColor(ConsoleColor.White);
             _console.SetBackgroundColor(ConsoleColor.DarkBlue);
 
             for (int i = 0; i < helpText.Length; i++)
             {
-                Console.SetCursorPosition(startX, startY + i);
-                _console.Write(helpText[i].PadRight(50));
+                _console.SetCursorPosition(startX, startY + i);
+                _console.Write(helpText[i].PadRight(48)); // -2 for margins
             }
 
             _console.ResetColor();
         }
-
-        public void ShowStatusMessage(string message, MessageType type, int width, int height)
+        
+        /// <summary>
+        /// Shows a status message in the status zone
+        /// </summary>
+        public void ShowStatusMessage(string message, MessageType type)
         {
-            _console.SetCursorPosition(2, height - 1);
-            
             var color = type switch
             {
                 MessageType.Success => ConsoleColor.Green,
@@ -124,18 +97,94 @@ namespace CLI.CliniCore.Service.Editor
                 _ => ConsoleColor.White
             };
 
+            _console.SetCursorPosition(_layout.StatusRegion.Left, _layout.StatusRegion.Top);
             _console.SetForegroundColor(color);
-            _console.Write(message.PadRight(width - 4));
+            _console.Write(message.PadRight(_layout.StatusRegion.Width));
+            _console.ResetColor();
+        }
+        
+        /// <summary>
+        /// Shows a prompt message in the status bar - NON-BLOCKING
+        /// </summary>
+        public void ShowPromptMessage(string prompt)
+        {
+            _console.SetCursorPosition(_layout.StatusRegion.Left, _layout.StatusRegion.Top);
+            _console.SetForegroundColor(ConsoleColor.Yellow);
+            _console.Write((prompt + " (Y/n): ").PadRight(_layout.StatusRegion.Width));
             _console.ResetColor();
         }
 
-        public void ShowPrompt(string prompt)
+        public void RenderEditor(EditorState state)
         {
-            _console.SetCursorPosition(2, _layout.StatusRegion.Top);
-            _console.SetForegroundColor(ConsoleColor.Yellow);
-            _console.Write(prompt);
-            _console.ResetColor();
+            // Check for status bar height changes that cascade to layout
+            CheckAndHandleStatusBarHeightChange();
+            
+            bool needsFullRedraw = false;
+            
+            // Update layout if invalid
+            if (_layoutInvalid)
+            {
+                // CRITICAL: Full screen clear needed for layout changes (like resize)
+                _console.Clear();
+                _console.SetCursorPosition(0, 0);
+                _console.ResetColor();
+                needsFullRedraw = true;
+                
+                UpdateZoneLayouts();
+                _layoutInvalid = false;
+            }
+
+            // Use zone-based rendering for normal updates, full redraw for layout changes
+            if (needsFullRedraw)
+            {
+                // Force all zones to redraw after full clear
+                _zonedRenderer.InvalidateAll();
+            }
+            
+            _zonedRenderer.RenderDirtyZones(state);
+            
+            // Position cursor appropriately
+            PositionCursorForCurrentMode();
         }
+
+        public void InvalidateLayout()
+        {
+            _layoutInvalid = true;
+            // Invalidate all zones since layout affects everything
+            _zonedRenderer.InvalidateAll();
+        }
+        
+        /// <summary>
+        /// Invalidates only the status zone for live text updates
+        /// </summary>
+        public void InvalidateStatusZone()
+        {
+            _zonedRenderer.InvalidateZone(ZONE_STATUS);
+        }
+        
+        /// <summary>
+        /// Invalidates only the tree zone for view mode changes
+        /// </summary>
+        public void InvalidateTreeZone()
+        {
+            _zonedRenderer.InvalidateZone(ZONE_TREE);
+        }
+        
+        /// <summary>
+        /// Invalidates only the content zone for entry updates
+        /// </summary>
+        public void InvalidateContentZone()
+        {
+            _zonedRenderer.InvalidateZone(ZONE_CONTENT);
+        }
+
+        public bool LayoutInvalid => _layoutInvalid || _zonedRenderer.IsZoneDirty(ZONE_BORDERS) || 
+                                     _zonedRenderer.IsZoneDirty(ZONE_TREE) || 
+                                     _zonedRenderer.IsZoneDirty(ZONE_CONTENT) || 
+                                     _zonedRenderer.IsZoneDirty(ZONE_STATUS);
+
+
+
 
         private void CalculateLayout()
         {
@@ -152,19 +201,23 @@ namespace CLI.CliniCore.Service.Editor
             treeWidth = Math.Max(20, treeWidth);
             contentWidth = Math.Max(30, contentWidth);
 
+            // Adjust regions based on status bar height
+            var contentHeight = height - 3 - _statusBarHeight; // -3 for borders and header
+            var statusTop = height - _statusBarHeight;
+            
             _layout = new EditorLayout
             {
                 TotalWidth = width,
                 TotalHeight = height,
-                TreeRegion = new Region(1, 2, treeWidth - 1, height - 4),
-                ContentRegion = new Region(treeWidth + 2, 2, contentWidth, height - 4),  
-                StatusRegion = new Region(1, height - 1, width - 2, 1),
+                TreeRegion = new Region(1, 2, treeWidth - 1, contentHeight),
+                ContentRegion = new Region(treeWidth + 2, 2, contentWidth, contentHeight),  
+                StatusRegion = new Region(1, statusTop, width - 2, _statusBarHeight),
                 TreeWidth = treeWidth,
                 ContentWidth = contentWidth
             };
         }
 
-        private void DrawBorders()
+        private void DrawBordersInternal()
         {
             var width = _layout.TotalWidth;
             var height = _layout.TotalHeight;
@@ -201,36 +254,26 @@ namespace CLI.CliniCore.Service.Editor
                 _console.Write("│");
             }
 
-            // Bottom border  
-            _console.SetCursorPosition(0, height - 2);
+            // Bottom border - adjust for dynamic status bar height
+            var bottomBorderY = height - _statusBarHeight - 1;
+            _console.SetCursorPosition(0, bottomBorderY);
             _console.Write("├" + new string('─', _layout.TreeWidth - 1) + "┼" + new string('─', width - _layout.TreeWidth - 2) + "┤");
 
+            // Draw status bar borders
+            for (int y = bottomBorderY + 1; y < height - 1; y++)
+            {
+                _console.SetCursorPosition(0, y);
+                _console.Write("│");
+                _console.SetCursorPosition(width - 1, y);
+                _console.Write("│");
+            }
+            
             _console.SetCursorPosition(0, height - 1);
             _console.Write("└" + new string('─', width - 2) + "┘");
 
             _console.ResetColor();
         }
 
-        private void ClearContentAreas()
-        {
-            // Clear tree pane area with debug
-            var treeRegion = _layout.TreeRegion;
-            for (int y = 0; y < treeRegion.Height; y++)
-            {
-                var actualY = treeRegion.Top + y;
-                _console.SetCursorPosition(treeRegion.Left, actualY);
-                // Clear tree pane area
-                _console.Write(new string(' ', treeRegion.Width));
-            }
-            
-            // Clear content pane area
-            var contentRegion = _layout.ContentRegion;
-            for (int y = 0; y < contentRegion.Height; y++)
-            {
-                _console.SetCursorPosition(contentRegion.Left, contentRegion.Top + y);
-                _console.Write(new string(' ', contentRegion.Width));
-            }
-        }
 
         private void DrawTreePane(EditorState state)
         {
@@ -346,6 +389,137 @@ namespace CLI.CliniCore.Service.Editor
             return lines.ToString();
         }
 
+        
+        private void InitializeZones()
+        {
+            // Register all rendering zones with their callbacks
+            _zonedRenderer.RegisterZone(ZONE_BORDERS, new Region(0, 0, 80, 24), RenderBordersZone, 10);
+            _zonedRenderer.RegisterZone(ZONE_TREE, new Region(1, 2, 26, 20), RenderTreeZone, 20);
+            _zonedRenderer.RegisterZone(ZONE_CONTENT, new Region(28, 2, 50, 20), RenderContentZone, 20);
+            _zonedRenderer.RegisterZone(ZONE_STATUS, new Region(1, 23, 78, 1), RenderStatusZone, 30);
+            
+            // Set up dependencies - content and tree depend on borders for layout
+            _zonedRenderer.AddDependency(ZONE_TREE, ZONE_BORDERS);
+            _zonedRenderer.AddDependency(ZONE_CONTENT, ZONE_BORDERS);
+            _zonedRenderer.AddDependency(ZONE_STATUS, ZONE_BORDERS);
+        }
+        
+        private void CheckAndHandleStatusBarHeightChange()
+        {
+            if (_inputHandler.IsActive)
+            {
+                var requiredHeight = _inputHandler.RequiredHeight;
+                if (requiredHeight != _statusBarHeight)
+                {
+                    HandleStatusBarHeightChange(requiredHeight);
+                }
+            }
+            else if (_statusBarHeight != 1)
+            {
+                HandleStatusBarHeightChange(1);
+            }
+        }
+        
+        private void HandleStatusBarHeightChange(int newHeight)
+        {
+            var oldHeight = _statusBarHeight;
+            _statusBarHeight = Math.Min(newHeight, 10); // Max 10 lines
+            
+            if (oldHeight != _statusBarHeight)
+            {
+                _layoutInvalid = true;
+                
+                // Clear the affected area first (from old content bottom to screen bottom)
+                var clearRegion = new Region(0, _layout.ContentRegion.Top + _layout.ContentRegion.Height - Math.Abs(_statusBarHeight - oldHeight), 
+                                           _layout.TotalWidth, Math.Abs(_statusBarHeight - oldHeight) + _statusBarHeight + 1);
+                ClearRegion(clearRegion);
+                
+                // Invalidate zones that will move
+                _zonedRenderer.InvalidateZone(ZONE_BORDERS);
+                _zonedRenderer.InvalidateZone(ZONE_TREE);
+                _zonedRenderer.InvalidateZone(ZONE_CONTENT);
+                _zonedRenderer.InvalidateZone(ZONE_STATUS);
+            }
+        }
+        
+        private void UpdateZoneLayouts()
+        {
+            CalculateLayout();
+            
+            // Update all zone boundaries based on new layout
+            var borderRegion = new Region(0, 0, _layout.TotalWidth, _layout.TotalHeight);
+            _zonedRenderer.UpdateZoneBounds(ZONE_BORDERS, borderRegion);
+            _zonedRenderer.UpdateZoneBounds(ZONE_TREE, _layout.TreeRegion);
+            _zonedRenderer.UpdateZoneBounds(ZONE_CONTENT, _layout.ContentRegion);
+            _zonedRenderer.UpdateZoneBounds(ZONE_STATUS, _layout.StatusRegion);
+        }
+        
+        private void PositionCursorForCurrentMode()
+        {
+            if (!_inputHandler.IsActive)
+            {
+                try
+                {
+                    // Hide cursor at bottom-right when not editing
+                    _console.SetCursorPosition(_layout.TotalWidth - 1, _layout.TotalHeight - 1);
+                }
+                catch
+                {
+                    // Ignore cursor positioning errors
+                }
+            }
+            // If input handler is active, it manages its own cursor positioning
+        }
+        
+        // Zone render callbacks
+        private void RenderBordersZone(RenderZone zone, object? data)
+        {
+            DrawBordersInternal();
+        }
+        
+        private void RenderTreeZone(RenderZone zone, object? data)
+        {
+            if (data is EditorState state)
+            {
+                ClearRegion(zone.Bounds);
+                DrawTreePane(state);
+            }
+        }
+        
+        private void RenderContentZone(RenderZone zone, object? data)
+        {
+            if (data is EditorState state)
+            {
+                ClearRegion(zone.Bounds);
+                DrawContentPane(state);
+            }
+        }
+        
+        private void RenderStatusZone(RenderZone zone, object? data)
+        {
+            if (data is EditorState state)
+            {
+                ClearRegion(zone.Bounds);
+                if (_inputHandler.IsActive)
+                {
+                    _inputHandler.Render(_layout.StatusRegion);
+                }
+                else
+                {
+                    DrawStatusBar(state);
+                }
+            }
+        }
+        
+        private void ClearRegion(Region region)
+        {
+            for (int y = 0; y < region.Height; y++)
+            {
+                _console.SetCursorPosition(region.Left, region.Top + y);
+                _console.Write(new string(' ', region.Width));
+            }
+        }
+        
         private string BuildStatusText(EditorState state)
         {
             var sb = new StringBuilder();

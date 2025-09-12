@@ -21,6 +21,11 @@ namespace CLI.CliniCore.Service.Editor
         private Task? _resizeListenerTask;
         private CancellationTokenSource? _resizeListenerCancellation;
         private bool _editorActive = false;
+        
+        // Prompt state management
+        private bool _isPrompting = false;
+        private string _currentPrompt = "";
+        private Action<bool>? _promptCallback;
 
         public ClinicalDocumentEditor(
             ConsoleSessionManager sessionManager,
@@ -31,7 +36,7 @@ namespace CLI.CliniCore.Service.Editor
             _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             _commandParser = commandParser ?? throw new ArgumentNullException(nameof(commandParser));
             _renderer = new EditorRenderer(_console);
-            _keyHandler = new EditorKeyHandler(this, _console);
+            _keyHandler = new EditorKeyHandler(this, _console, _renderer.InputHandler, _renderer);
         }
 
         /// <summary>
@@ -77,67 +82,48 @@ namespace CLI.CliniCore.Service.Editor
             {
                 try
                 {
-                    // Render the current editor state (always on first run or after layout change)
-                    if (forceRedraw)
+                    // Render the current editor state
+                    // Force redraw when input handler is active to show live typing
+                    bool inputActive = _renderer.InputHandler.IsActive;
+                    if (forceRedraw || _renderer.LayoutInvalid || inputActive)
                     {
+                        // If input is active, specifically invalidate status zone for live updates
+                        if (inputActive)
+                        {
+                            _renderer.InvalidateStatusZone();
+                        }
+                        
                         _renderer.RenderEditor(_editorState!);
                         forceRedraw = false;
-                    }
-
-                    // Check if we need to redraw due to resize
-                    if (_renderer.LayoutInvalid)
-                    {
-                        _renderer.RenderEditor(_editorState!);
                     }
 
                     // Handle keyboard input with timeout to allow periodic redraws
                     ConsoleKeyInfo key;
                     if (TryReadKeyWithTimeout(out key, 250)) // 250ms timeout
                     {
-                        var result = _keyHandler.HandleKeyInput(key, _editorState!);
-
-                    switch (result.Action)
-                    {
-                        case EditorAction.Continue:
-                            // Continue normal operation
-                            break;
-
-                        case EditorAction.Exit:
-                            if (_editorState!.IsDirty)
-                            {
-                                if (PromptSaveChanges())
-                                {
-                                    SaveDocument();
-                                }
-                            }
-                            shouldExit = true;
-                            break;
-
-                        case EditorAction.Save:
-                            SaveDocument();
-                            break;
-
-                        case EditorAction.Refresh:
-                            _editorState!.RefreshFlattenedEntries();
-                            break;
-
-                        case EditorAction.ShowHelp:
-                            ShowHelpOverlay();
-                            break;
-                    }
-
-                    if (!string.IsNullOrEmpty(result.Message))
-                    {
-                        DisplayStatusMessage(result.Message, result.MessageType);
-                    }
-
-                    forceRedraw = true; // Redraw after any action
+                        // Handle system keys FIRST (exit keys bypass everything)
+                        if (IsSystemKey(key))
+                        {
+                            var result = _keyHandler.HandleKeyInput(key, _editorState!);
+                            HandleEditorResult(result, ref shouldExit);
+                        }
+                        // Handle prompts second
+                        else if (_isPrompting)
+                        {
+                            HandlePromptInput(key);
+                            continue;
+                        }
+                        // Normal key handling
+                        else
+                        {
+                            var result = _keyHandler.HandleKeyInput(key, _editorState!);
+                            HandleEditorResult(result, ref shouldExit);
+                        }
                     }
                     else
                     {
                         // No key pressed, add small delay to prevent CPU spinning
                         Thread.Sleep(50);
-                        continue;
                     }
                 }
                 catch (OperationCanceledException)
@@ -242,13 +228,16 @@ namespace CLI.CliniCore.Service.Editor
 
         private bool PromptSaveChanges()
         {
-            _renderer.ShowPrompt("Document has unsaved changes. Save before exiting? (Y/n): ");
-            var key = _console.ReadKey(true);
-            _console.WriteLine();
+            StartPrompt("Document has unsaved changes. Save before exiting?", (result) => {
+                if (result)
+                {
+                    SaveDocument();
+                }
+                // Exit regardless of save choice
+                _editorActive = false;
+            });
             
-            return key.Key == ConsoleKey.Enter || 
-                   key.KeyChar == 'y' || 
-                   key.KeyChar == 'Y';
+            return false; // Don't exit immediately, wait for prompt response
         }
 
         private void DisplayWelcomeMessage()
@@ -262,16 +251,112 @@ namespace CLI.CliniCore.Service.Editor
 
         private void ShowHelpOverlay()
         {
-            var (width, height) = _console.GetDimensions();
-            _renderer.ShowHelpOverlay(width, height);
-            
+            _renderer.ShowHelpOverlay();
             _console.ReadKey(true); // Wait for any key
+            
+            // Force full redraw after help overlay
+            _renderer.InvalidateLayout();
         }
 
         private void DisplayStatusMessage(string message, MessageType type)
         {
-            var (width, height) = _console.GetDimensions();
-            _renderer.ShowStatusMessage(message, type, width, height);
+            _renderer.ShowStatusMessage(message, type);
+        }
+        
+        /// <summary>
+        /// Starts a non-blocking Y/N prompt
+        /// </summary>
+        private void StartPrompt(string prompt, Action<bool> callback)
+        {
+            _isPrompting = true;
+            _currentPrompt = prompt;
+            _promptCallback = callback;
+            _renderer.ShowPromptMessage(prompt);
+        }
+        
+        /// <summary>
+        /// Handles input when in prompt mode
+        /// </summary>
+        /// <summary>
+        /// Checks if a key is a system key that should bypass input handlers
+        /// </summary>
+        private bool IsSystemKey(ConsoleKeyInfo key)
+        {
+            return (key.Modifiers.HasFlag(ConsoleModifiers.Control) && 
+                    (key.Key == ConsoleKey.X || key.Key == ConsoleKey.Q)) ||
+                   (!_renderer.InputHandler.IsActive && key.Key == ConsoleKey.Escape);
+        }
+        
+        /// <summary>
+        /// Handles the result of key processing
+        /// </summary>
+        private void HandleEditorResult(EditorKeyResult result, ref bool shouldExit)
+        {
+            switch (result.Action)
+            {
+                case EditorAction.Continue:
+                    // Continue normal operation
+                    break;
+
+                case EditorAction.Exit:
+                    if (_editorState!.IsDirty)
+                    {
+                        PromptSaveChanges(); // Non-blocking - callback will handle exit
+                    }
+                    else
+                    {
+                        shouldExit = true;
+                    }
+                    break;
+
+                case EditorAction.Save:
+                    SaveDocument();
+                    break;
+
+                case EditorAction.Refresh:
+                    _editorState!.RefreshFlattenedEntries();
+                    break;
+
+                case EditorAction.ShowHelp:
+                    ShowHelpOverlay();
+                    break;
+            }
+
+            if (!string.IsNullOrEmpty(result.Message))
+            {
+                DisplayStatusMessage(result.Message, result.MessageType);
+            }
+        }
+        
+        private void HandlePromptInput(ConsoleKeyInfo key)
+        {
+            bool? result = null;
+            
+            switch (key.Key)
+            {
+                case ConsoleKey.Y:
+                    result = true;
+                    break;
+                case ConsoleKey.N:
+                case ConsoleKey.Escape:
+                    result = false;
+                    break;
+                case ConsoleKey.Enter:
+                    result = true; // Default to Yes
+                    break;
+                // Ignore other keys
+            }
+            
+            if (result.HasValue)
+            {
+                _isPrompting = false;
+                _promptCallback?.Invoke(result.Value);
+                _promptCallback = null;
+                _currentPrompt = "";
+                
+                // Force redraw to clear prompt
+                _renderer.InvalidateLayout();
+            }
         }
 
         // Make required abstract methods available to key handler
