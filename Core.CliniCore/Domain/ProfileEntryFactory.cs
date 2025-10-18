@@ -1,4 +1,5 @@
-﻿using Core.CliniCore.Domain.Enumerations;
+﻿using Core.CliniCore.Commands.Profile;
+using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Domain.Validation;
@@ -108,9 +109,9 @@ namespace Core.CliniCore.Domain
                 PhysicianEntryType.Specializations.GetDisplayName(),
                 ValidatorFactory.List(
                     minCount: 1,
-                    maxCount: 3,
+                    maxCount: CreatePhysicianCommand.MEDSPECMAXCOUNT,
                     itemValidator: ValidatorFactory.ValidEnum<MedicalSpecialization>(allowNull: false),
-                    errorMessage: "Physician must have 1-3 valid specializations"
+                    errorMessage: $"Physician must have 1-{CreatePhysicianCommand.MEDSPECMAXCOUNT} valid specializations"
                 ));
 
         #endregion

@@ -10,6 +10,15 @@ namespace Core.CliniCore.Commands.Admin
 {
     public class SystemMaintenanceCommand : AbstractCommand
     {
+        public const string Key = "systemmaintenance";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            public const string MaintenanceType = "maintenancetype";
+            public const string Force = "force";
+        }
+
         public override string Description => throw new NotImplementedException();
 
         public override Permission? GetRequiredPermission()

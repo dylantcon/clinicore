@@ -348,6 +348,12 @@ namespace CLI.CliniCore.Service.Editor
                     sb.AppendLine($"Medication: {rx.MedicationName}");
                     if (!string.IsNullOrEmpty(rx.Dosage))
                         sb.AppendLine($"Dosage: {rx.Dosage}");
+                    if (!string.IsNullOrEmpty(rx.Frequency))
+                        sb.AppendLine($"Frequency: {rx.Frequency}");
+                    if (!string.IsNullOrEmpty(rx.Route))
+                        sb.AppendLine($"Route: {rx.Route}");
+                    if (!string.IsNullOrEmpty(rx.Duration))
+                        sb.AppendLine($"Duration: {rx.Duration}");
                     if (!string.IsNullOrEmpty(rx.Instructions))
                         sb.AppendLine($"Instructions: {WrapText(rx.Instructions, maxWidth - 2)}");
                     break;

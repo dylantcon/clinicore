@@ -90,7 +90,7 @@ namespace Core.CliniCore.ClinicalDoc
         }
 
         /// <summary>
-        /// Gets all observations (Objective)
+        /// Gets all observations (can be Subjective or Objective depending on Type)
         /// </summary>
         public IEnumerable<ObservationEntry> GetObservations()
             => GetEntries<ObservationEntry>();
@@ -220,9 +220,12 @@ namespace Core.CliniCore.ClinicalDoc
             // Subjective
             sb.AppendLine("SUBJECTIVE:");
             sb.AppendLine($"Chief Complaint: {ChiefComplaint ?? "Not documented"}");
-            foreach (var obs in GetObservations().Where(o => 
-                o.Type == ObservationType.ChiefComplaint || 
-                o.Type == ObservationType.HistoryOfPresentIllness))
+            foreach (var obs in GetObservations().Where(o =>
+                o.Type == ObservationType.ChiefComplaint ||
+                o.Type == ObservationType.HistoryOfPresentIllness ||
+                o.Type == ObservationType.SocialHistory ||
+                o.Type == ObservationType.FamilyHistory ||
+                o.Type == ObservationType.Allergy))
             {
                 sb.AppendLine($"  - {obs.GetDisplayString()}");
             }
@@ -230,10 +233,12 @@ namespace Core.CliniCore.ClinicalDoc
 
             // Objective
             sb.AppendLine("OBJECTIVE:");
-            foreach (var obs in GetObservations().Where(o => 
-                o.Type == ObservationType.PhysicalExam || 
+            foreach (var obs in GetObservations().Where(o =>
+                o.Type == ObservationType.PhysicalExam ||
                 o.Type == ObservationType.VitalSigns ||
-                o.Type == ObservationType.LabResult))
+                o.Type == ObservationType.LabResult ||
+                o.Type == ObservationType.ImagingResult ||
+                o.Type == ObservationType.ReviewOfSystems))
             {
                 sb.AppendLine($"  - {obs.GetDisplayString()}");
             }

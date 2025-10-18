@@ -10,6 +10,16 @@ namespace Core.CliniCore.Commands.Admin
 {
     public class ViewAuditLogCommand : AbstractCommand
     {
+        public const string Key = "viewauditlog";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            public const string StartDate = "startdate";
+            public const string EndDate = "enddate";
+            public const string UserId = "userid";
+        }
+
         public override string Description => throw new NotImplementedException();
 
         public override Permission? GetRequiredPermission()

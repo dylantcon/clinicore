@@ -12,6 +12,8 @@ namespace Core.CliniCore.Commands.Scheduling
 {
     public class ListAppointmentsCommand : AbstractCommand
     {
+        public const string Key = "listappointments";
+        public override string CommandKey => Key;
         public static class Parameters
         {
             public const string Date = "date";

@@ -4,9 +4,13 @@ using System.Linq;
 using CLI.CliniCore.Service.Editor;
 using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Commands;
+using Core.CliniCore.Commands.Authentication;
+using Core.CliniCore.Commands.Clinical;
 using Core.CliniCore.Commands.Profile;
+using Core.CliniCore.Commands.Query;
 using Core.CliniCore.Commands.Reports;
 using Core.CliniCore.Commands.Scheduling;
+using Core.CliniCore.Commands.Admin;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Authentication;
 
@@ -19,6 +23,7 @@ namespace CLI.CliniCore.Service
         private readonly ConsoleSessionManager _sessionManager;
         private readonly ConsoleCommandParser _commandParser;
         private readonly IConsoleEngine _console;
+        private readonly Dictionary<Type, string> _commandKeyCache = new Dictionary<Type, string>();
 
         public ConsoleMenuBuilder(
             CommandInvoker commandInvoker,
@@ -51,7 +56,7 @@ namespace CLI.CliniCore.Service
                     Key = "1",
                     Label = "Login",
                     Description = "Authenticate to the system",
-                    Action = () => ExecuteCommand(CommandNames.Login)
+                    Action = () => ExecuteCommand(LoginCommand.Key)
                 });
 
                 menu.Items.Add(new ConsoleMenuItem
@@ -84,7 +89,7 @@ namespace CLI.CliniCore.Service
                     Key = "P",
                     Label = "Change Password",
                     Description = "Change your account password",
-                    Action = () => ExecuteCommand(CommandNames.ChangePassword)
+                    Action = () => ExecuteCommand(ChangePasswordCommand.Key)
                 });
 
                 menu.Items.Add(new ConsoleMenuItem
@@ -92,7 +97,7 @@ namespace CLI.CliniCore.Service
                     Key = "L",
                     Label = "Logout",
                     Description = "End current session",
-                    Action = () => ExecuteCommand(CommandNames.Logout)
+                    Action = () => ExecuteCommand(LogoutCommand.Key)
                 });
 
                 menu.Items.Add(new ConsoleMenuItem
@@ -113,7 +118,7 @@ namespace CLI.CliniCore.Service
             {
                 Key = "1",
                 Label = "User Management",
-                Description = "Manage system users",
+                Description = "Manage all system users",
                 SubMenuFactory = BuildUserManagementMenu
             });
 
@@ -148,22 +153,6 @@ namespace CLI.CliniCore.Service
                 Description = "Manage clinical documentation",
                 SubMenuFactory = BuildClinicalDocumentsMenu
             });
-
-            menu.Items.Add(new ConsoleMenuItem
-            {
-                Key = "6",
-                Label = "Reports",
-                Description = "Generate system reports",
-                SubMenuFactory = BuildReportsMenu
-            });
-
-            menu.Items.Add(new ConsoleMenuItem
-            {
-                Key = "7",
-                Label = "System Administration",
-                Description = "System settings and maintenance",
-                SubMenuFactory = BuildSystemAdminMenu
-            });
         }
 
         private void AddPhysicianMenuItems(ConsoleMenu menu)
@@ -171,22 +160,14 @@ namespace CLI.CliniCore.Service
             menu.Items.Add(new ConsoleMenuItem
             {
                 Key = "1",
-                Label = "My Profile",
-                Description = "View and manage your profile",
-                Action = () => ViewOwnProfile()
-            });
-
-            menu.Items.Add(new ConsoleMenuItem
-            {
-                Key = "2",
-                Label = "Patient Management",
-                Description = "Manage patient profiles",
+                Label = "My Patients",
+                Description = "View and manage patient profiles",
                 SubMenuFactory = BuildPatientManagementMenu
             });
 
             menu.Items.Add(new ConsoleMenuItem
             {
-                Key = "3",
+                Key = "2",
                 Label = "Scheduling",
                 Description = "Manage appointments and availability",
                 SubMenuFactory = BuildPhysicianSchedulingMenu
@@ -194,18 +175,18 @@ namespace CLI.CliniCore.Service
 
             menu.Items.Add(new ConsoleMenuItem
             {
-                Key = "4",
+                Key = "3",
                 Label = "Clinical Documents",
-                Description = "Manage clinical documentation",
+                Description = "Manage patient medical records",
                 SubMenuFactory = BuildClinicalDocumentsMenu
             });
 
             menu.Items.Add(new ConsoleMenuItem
             {
-                Key = "5",
-                Label = "Reports",
-                Description = "Generate reports",
-                SubMenuFactory = BuildPhysicianReportsMenu
+                Key = "4",
+                Label = "My Profile",
+                Description = "View and update your profile",
+                Action = () => ViewOwnProfile()
             });
         }
 
@@ -224,7 +205,7 @@ namespace CLI.CliniCore.Service
                 Key = "2",
                 Label = "My Appointments",
                 Description = "View your appointments",
-                Action = () => ExecuteCommand(CommandNames.ListAppointments)
+                Action = () => ExecuteCommand(ListAppointmentsCommand.Key)
             });
 
             menu.Items.Add(new ConsoleMenuItem
@@ -232,7 +213,7 @@ namespace CLI.CliniCore.Service
                 Key = "3",
                 Label = "My Clinical Documents",
                 Description = "View your medical records",
-                Action = () => ExecuteCommand(CommandNames.ListClinicalDocuments)
+                Action = () => ExecuteCommand(ListClinicalDocumentsCommand.Key)
             });
         }
 
@@ -248,21 +229,28 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Create Administrator",
                         Description = "Create a new administrator account",
-                        Action = () => ExecuteCommand(CommandNames.CreateAdministrator)
+                        Action = () => ExecuteCommand(CreateAdministratorCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "2",
                         Label = "List All Users",
                         Description = "View all system users",
-                        Action = () => ListAllProfiles()
+                        Action = () => ExecuteCommand(ListAllUsersCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
+                        Label = "Update User Profile",
+                        Description = "Update any user profile",
+                        Action = () => ExecuteCommand(UpdateProfileCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "4",
                         Label = "Delete User",
                         Description = "Remove a user from the system",
-                        Action = () => ExecuteCommand(CommandNames.DeleteProfile)
+                        Action = () => ExecuteCommand(DeleteProfileCommand.Key)
                     }
                 }
             };
@@ -280,35 +268,49 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Create Patient",
                         Description = "Register a new patient",
-                        Action = () => ExecuteCommand(CommandNames.CreatePatient)
+                        Action = () => ExecuteCommand(CreatePatientCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "2",
                         Label = "List Patients",
                         Description = "View all patients",
-                        Action = () => ExecuteCommand(CommandNames.ListPatients)
+                        Action = () => ExecuteCommand(ListPatientsCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
                         Label = "View Patient Profile",
                         Description = "View detailed patient information",
-                        Action = () => ExecuteCommand(CommandNames.ViewProfile)
+                        Action = () => ExecuteCommand(ViewPatientProfileCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "4",
-                        Label = "Search Patients",
-                        Description = "Search for patients by name",
-                        Action = () => ExecuteCommand(CommandNames.SearchPatients)
+                        Label = "Update Patient Profile",
+                        Description = "Update patient information",
+                        Action = () => ExecuteCommand("updatepatientprofile")
                     },
                     new ConsoleMenuItem
                     {
                         Key = "5",
+                        Label = "Search Patients",
+                        Description = "Search for patients by name",
+                        Action = () => ExecuteCommand(SearchPatientsCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "6",
                         Label = "Assign Patient to Physician",
                         Description = "Set primary physician for patient",
-                        Action = () => ExecuteCommand(CommandNames.AssignPatientToPhysician)
+                        Action = () => ExecuteCommand(AssignPatientToPhysicianCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "7",
+                        Label = "Delete Patient",
+                        Description = "Remove a patient from the system",
+                        Action = () => ExecuteCommand(DeleteProfileCommand.Key)
                     }
                 }
             };
@@ -326,35 +328,49 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Create Physician",
                         Description = "Register a new physician",
-                        Action = () => ExecuteCommand(CommandNames.CreatePhysician)
+                        Action = () => ExecuteCommand(CreatePhysicianCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "2",
                         Label = "List Physicians",
                         Description = "View all physicians",
-                        Action = () => ExecuteCommand(CommandNames.ListPhysicians)
+                        Action = () => ExecuteCommand(ListPhysiciansCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
                         Label = "View Physician Profile",
                         Description = "View detailed physician information",
-                        Action = () => ExecuteCommand(CommandNames.ViewProfile)
+                        Action = () => ExecuteCommand(ViewPhysicianProfileCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "4",
-                        Label = "Find by Specialization",
-                        Description = "Find physicians by medical specialization",
-                        Action = () => ExecuteCommand(CommandNames.FindPhysiciansBySpecialization)
+                        Label = "Update Physician Profile",
+                        Description = "Update physician information",
+                        Action = () => ExecuteCommand("updatephysicianprofile")
                     },
                     new ConsoleMenuItem
                     {
                         Key = "5",
+                        Label = "Find by Specialization",
+                        Description = "Find physicians by medical specialization",
+                        Action = () => ExecuteCommand(FindPhysiciansBySpecializationCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "6",
                         Label = "Find by Availability",
                         Description = "Find available physicians for a time slot",
-                        Action = () => ExecuteCommand(CommandNames.FindPhysiciansByAvailability)
+                        Action = () => ExecuteCommand(FindPhysiciansByAvailabilityCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "7",
+                        Label = "Delete Physician",
+                        Description = "Remove a physician from the system",
+                        Action = () => ExecuteCommand(DeleteProfileCommand.Key)
                     }
                 }
             };
@@ -372,56 +388,56 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Schedule Appointment",
                         Description = "Create a new appointment",
-                        Action = () => ExecuteCommand(CommandNames.ScheduleAppointment)
+                        Action = () => ExecuteCommand(ScheduleAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "2",
                         Label = "List Appointments",
                         Description = "View all appointments",
-                        Action = () => ExecuteCommand(CommandNames.ListAppointments)
+                        Action = () => ExecuteCommand(ListAppointmentsCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
                         Label = "View Appointment",
                         Description = "View appointment details",
-                        Action = () => ExecuteCommand(CommandNames.ViewAppointment)
+                        Action = () => ExecuteCommand(ViewAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "4",
                         Label = "Reschedule Appointment",
                         Description = "Change appointment time",
-                        Action = () => ExecuteCommand(CommandNames.RescheduleAppointment)
+                        Action = () => ExecuteCommand(RescheduleAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "5",
                         Label = "Cancel Appointment",
                         Description = "Cancel an appointment",
-                        Action = () => ExecuteCommand(CommandNames.CancelAppointment)
+                        Action = () => ExecuteCommand(CancelAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "6",
                         Label = "Check Available Time Slots",
                         Description = "Find available appointment times",
-                        Action = () => ExecuteCommand(CommandNames.GetAvailableTimeSlots)
+                        Action = () => ExecuteCommand(GetAvailableTimeSlotsCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "7",
                         Label = "Check Conflicts",
                         Description = "Check for scheduling conflicts",
-                        Action = () => ExecuteCommand(CommandNames.CheckConflicts)
+                        Action = () => ExecuteCommand(CheckConflictsCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "8",
                         Label = "Set Physician Availability",
                         Description = "Configure physician working hours",
-                        Action = () => ExecuteCommand(CommandNames.SetPhysicianAvailability)
+                        Action = () => ExecuteCommand(SetPhysicianAvailabilityCommand.Key)
                     }
                 }
             };
@@ -439,35 +455,35 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Schedule Appointment",
                         Description = "Create a new appointment",
-                        Action = () => ExecuteCommand(CommandNames.ScheduleAppointment)
+                        Action = () => ExecuteCommand(ScheduleAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "2",
                         Label = "My Appointments",
                         Description = "View your appointments",
-                        Action = () => ExecuteCommand(CommandNames.ListAppointments)
+                        Action = () => ExecuteCommand(ListAppointmentsCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
                         Label = "View Appointment",
                         Description = "View appointment details",
-                        Action = () => ExecuteCommand(CommandNames.ViewAppointment)
+                        Action = () => ExecuteCommand(ViewAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "4",
                         Label = "Reschedule Appointment",
                         Description = "Change appointment time",
-                        Action = () => ExecuteCommand(CommandNames.RescheduleAppointment)
+                        Action = () => ExecuteCommand(RescheduleAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "5",
                         Label = "Cancel Appointment",
                         Description = "Cancel an appointment",
-                        Action = () => ExecuteCommand(CommandNames.CancelAppointment)
+                        Action = () => ExecuteCommand(CancelAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
@@ -481,7 +497,7 @@ namespace CLI.CliniCore.Service
                         Key = "7",
                         Label = "View My Schedule",
                         Description = "View your schedule",
-                        Action = () => ExecuteCommand(CommandNames.GetSchedule)
+                        Action = () => ExecuteCommand(GetScheduleCommand.Key)
                     }
                 }
             };
@@ -516,21 +532,21 @@ namespace CLI.CliniCore.Service
                         Key = "2",
                         Label = "Create Clinical Document",
                         Description = "Start a new clinical document",
-                        Action = () => ExecuteCommand(CommandNames.CreateClinicalDocument)
+                        Action = () => ExecuteCommand(CreateClinicalDocumentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
                         Label = "List Clinical Documents",
                         Description = "View all clinical documents",
-                        Action = () => ExecuteCommand(CommandNames.ListClinicalDocuments)
+                        Action = () => ExecuteCommand(ListClinicalDocumentsCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "4",
                         Label = "View Clinical Document",
                         Description = "View document details",
-                        Action = () => ExecuteCommand(CommandNames.ViewClinicalDocument)
+                        Action = () => ExecuteCommand(ViewClinicalDocumentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
@@ -543,15 +559,29 @@ namespace CLI.CliniCore.Service
                     {
                         Key = "6",
                         Label = "Update Clinical Document",
-                        Description = "Complete or update document status",
-                        Action = () => ExecuteCommand(CommandNames.UpdateClinicalDocument)
+                        Description = "Update document chief complaint",
+                        Action = () => ExecuteUpdateClinicalDocument()
                     },
                     new ConsoleMenuItem
                     {
-                        Key = "6",
+                        Key = "7",
+                        Label = "Finalize Clinical Document",
+                        Description = "Complete and finalize a clinical document",
+                        Action = () => ExecuteFinalizeClinicalDocument()
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "8",
+                        Label = "Delete Clinical Document",
+                        Description = "Delete a clinical document",
+                        Action = () => ExecuteCommand(DeleteClinicalDocumentCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "9",
                         Label = "Search Clinical Notes",
                         Description = "Search within clinical documents",
-                        Action = () => ExecuteCommand(CommandNames.SearchClinicalNotes)
+                        Action = () => ExecuteCommand(SearchClinicalNotesCommand.Key)
                     }
                 }
             };
@@ -569,40 +599,59 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Add Observation (S)",
                         Description = "Add subjective observation",
-                        Action = () => ExecuteCommand(CommandNames.AddObservation)
+                        Action = () => ExecuteCommand(AddObservationCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "2",
                         Label = "Add Diagnosis (O)",
                         Description = "Add objective diagnosis",
-                        Action = () => ExecuteCommand(CommandNames.AddDiagnosis)
+                        Action = () => ExecuteCommand(AddDiagnosisCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
                         Label = "Add Prescription (O)",
                         Description = "Add prescription linked to diagnosis",
-                        Action = () => ExecuteCommand(CommandNames.AddPrescription)
+                        Action = () => ExecuteCommand(AddPrescriptionCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "4",
                         Label = "Add Assessment (A)",
                         Description = "Add clinical assessment",
-                        Action = () => ExecuteCommand(CommandNames.AddAssessment)
+                        Action = () => ExecuteCommand(AddAssessmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "5",
                         Label = "Add Plan (P)",
                         Description = "Add treatment plan",
-                        Action = () => ExecuteCommand(CommandNames.AddPlan)
+                        Action = () => ExecuteCommand(AddPlanCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "",
+                        Label = "━━━ Update Entries ━━━",
+                        Description = "",
+                        IsEnabled = false,
+                        Color = ConsoleColor.DarkGray
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "6",
+                        Label = "Update SOAP Entry",
+                        Description = "Update existing clinical entry",
+                        SubMenuFactory = BuildSOAPUpdateMenu
                     }
                 }
             };
         }
 
+        /// <summary>
+        /// Currently unutilized, will be put to use when facilities are implemented
+        /// </summary>
+        /// <returns></returns>
         private ConsoleMenu BuildReportsMenu()
         {
             return new ConsoleMenu
@@ -615,33 +664,44 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Patient Report",
                         Description = "Generate patient report",
-                        Action = () => ExecuteCommand(CommandNames.GeneratePatientReport)
+                        Action = () => ExecuteCommand(GeneratePatientReportCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "2",
                         Label = "Physician Report",
                         Description = "Generate physician report",
-                        Action = () => ExecuteCommand(CommandNames.GeneratePhysicianReport)
+                        Action = () => ExecuteCommand(GeneratePhysicianReportCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
                         Label = "Appointment Report",
                         Description = "Generate appointment report",
-                        Action = () => ExecuteCommand(CommandNames.GenerateAppointmentReport)
+                        Action = () => ExecuteCommand(GenerateAppointmentReportCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "4",
                         Label = "Facility Report",
                         Description = "Generate facility-wide report",
-                        Action = () => ExecuteCommand(CommandNames.GenerateFacilityReport)
+                        Action = () => ExecuteCommand(GenerateFacilityReportCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "5",
+                        Label = "List All Profiles",
+                        Description = "View all user profiles in the system",
+                        Action = () => ExecuteCommand(ListProfileCommand.Key)
                     }
                 }
             };
         }
 
+        /// <summary>
+        /// Currently unutilized, will be put to use when facilities are implemented
+        /// </summary>
+        /// <returns></returns>
         private ConsoleMenu BuildPhysicianReportsMenu()
         {
             return new ConsoleMenu
@@ -654,7 +714,7 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Patient Report",
                         Description = "Generate patient report",
-                        Action = () => ExecuteCommand(CommandNames.GeneratePatientReport)
+                        Action = () => ExecuteCommand(GeneratePatientReportCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
@@ -668,12 +728,16 @@ namespace CLI.CliniCore.Service
                         Key = "3",
                         Label = "Appointment Report",
                         Description = "Generate appointment report",
-                        Action = () => ExecuteCommand(CommandNames.GenerateAppointmentReport)
+                        Action = () => ExecuteCommand(GenerateAppointmentReportCommand.Key)
                     }
                 }
             };
         }
 
+        /// <summary>
+        /// Currently unutilized, will be put to use when facilities are implemented
+        /// </summary>
+        /// <returns></returns>
         private ConsoleMenu BuildSystemAdminMenu()
         {
             return new ConsoleMenu
@@ -686,35 +750,35 @@ namespace CLI.CliniCore.Service
                         Key = "1",
                         Label = "Create Facility",
                         Description = "Create a new facility",
-                        Action = () => ExecuteCommand(CommandNames.CreateFacility)
+                        Action = () => ExecuteCommand(CreateFacilityCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "2",
                         Label = "Update Facility Settings",
                         Description = "Modify facility configuration",
-                        Action = () => ExecuteCommand(CommandNames.UpdateFacilitySettings)
+                        Action = () => ExecuteCommand(UpdateFacilitySettingsCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "3",
                         Label = "Manage User Roles",
                         Description = "Manage user role assignments",
-                        Action = () => ExecuteCommand(CommandNames.ManageUserRoles)
+                        Action = () => ExecuteCommand(ManageUserRolesCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "4",
                         Label = "View Audit Log",
                         Description = "View system audit trail",
-                        Action = () => ExecuteCommand(CommandNames.ViewAuditLog)
+                        Action = () => ExecuteCommand(ViewAuditLogCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
                         Key = "5",
                         Label = "System Maintenance",
                         Description = "Perform system maintenance tasks",
-                        Action = () => ExecuteCommand(CommandNames.SystemMaintenance)
+                        Action = () => ExecuteCommand(SystemMaintenanceCommand.Key)
                     }
                 }
             };
@@ -725,7 +789,6 @@ namespace CLI.CliniCore.Service
             try
             {
                 _sessionManager.UpdateActivity();
-                
                 var command = _commandFactory.CreateCommand(commandName);
                 if (command == null)
                 {
@@ -753,11 +816,11 @@ namespace CLI.CliniCore.Service
                     _console.DisplayMessage(result.Message ?? "Command executed successfully.", MessageType.Success);
 
                     // Handle special session management cases
-                    if (commandName == CommandNames.Logout)
+                    if (commandName == LogoutCommand.Key)
                     {
                         _sessionManager.EndSession();
                     }
-                    else if (commandName == CommandNames.Login && result.Data is SessionContext session)
+                    else if (commandName == LoginCommand.Key && result.Data is SessionContext session)
                     {
                         _sessionManager.StartSession(session);
                     }
@@ -794,7 +857,7 @@ namespace CLI.CliniCore.Service
                 var parameters = new CommandParameters();
                 parameters[ViewProfileCommand.Parameters.ProfileId] = _sessionManager.CurrentUserId.Value;
                 
-                var command = _commandFactory.CreateCommand(CommandNames.ViewProfile);
+                var command = _commandFactory.CreateCommand(ViewProfileCommand.Key);
                 if (command == null)
                 {
                     _console.DisplayMessage("ViewProfile command not found.", MessageType.Error);
@@ -820,7 +883,7 @@ namespace CLI.CliniCore.Service
         {
             if (_sessionManager.CurrentUserId.HasValue)
             {
-                var command = _commandFactory.CreateCommand(CommandNames.SetPhysicianAvailability);
+                var command = _commandFactory.CreateCommand(SetPhysicianAvailabilityCommand.Key);
                 if (command == null)
                 {
                     _console.DisplayMessage("SetPhysicianAvailability command not found.", MessageType.Error);
@@ -861,7 +924,7 @@ namespace CLI.CliniCore.Service
                 var parameters = new CommandParameters();
                 parameters[GeneratePhysicianReportCommand.Parameters.PhysicianId] = _sessionManager.CurrentUserId.Value;
                 
-                var command = _commandFactory.CreateCommand(CommandNames.GeneratePhysicianReport);
+                var command = _commandFactory.CreateCommand(GeneratePhysicianReportCommand.Key);
                 if (command == null)
                 {
                     _console.DisplayMessage("GeneratePhysicianReport command not found.", MessageType.Error);
@@ -883,10 +946,51 @@ namespace CLI.CliniCore.Service
             }
         }
 
-        private void ListAllProfiles()
+
+        private ConsoleMenu BuildSOAPUpdateMenu()
         {
-            ExecuteCommand(CommandNames.ListPatients);
-            ExecuteCommand(CommandNames.ListPhysicians);
+            return new ConsoleMenu
+            {
+                Title = "Update SOAP Entry",
+                Items = new List<ConsoleMenuItem>
+                {
+                    new ConsoleMenuItem
+                    {
+                        Key = "1",
+                        Label = "Update Observation",
+                        Description = "Update existing observation entry",
+                        Action = () => ExecuteCommand(UpdateObservationCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "2",
+                        Label = "Update Diagnosis",
+                        Description = "Update existing diagnosis entry",
+                        Action = () => ExecuteCommand(UpdateDiagnosisCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "3",
+                        Label = "Update Prescription",
+                        Description = "Update existing prescription entry",
+                        Action = () => ExecuteCommand(UpdatePrescriptionCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "4",
+                        Label = "Update Assessment",
+                        Description = "Update existing assessment entry",
+                        Action = () => ExecuteCommand(UpdateAssessmentCommand.Key)
+                    },
+                    new ConsoleMenuItem
+                    {
+                        Key = "5",
+                        Label = "Update Plan",
+                        Description = "Update existing plan entry",
+                        Action = () => ExecuteCommand(UpdatePlanCommand.Key)
+                    }
+                }
+            };
         }
 
         private void LaunchDocumentEditor()
@@ -968,6 +1072,179 @@ namespace CLI.CliniCore.Service
             {
                 _console.DisplayMessage($"Error selecting document: {ex.Message}", MessageType.Error);
                 return Guid.Empty;
+            }
+        }
+
+        private void ExecuteUpdateClinicalDocument()
+        {
+            try
+            {
+                // Get document selection
+                var documentId = GetClinicalDocumentSelection();
+                if (documentId == Guid.Empty)
+                {
+                    _console.Pause();
+                    return;
+                }
+
+                // Get the document
+                var registry = ClinicalDocumentRegistry.Instance;
+                var document = registry.GetDocumentById(documentId);
+                if (document == null)
+                {
+                    _console.DisplayMessage("Document not found.", MessageType.Error);
+                    _console.Pause();
+                    return;
+                }
+
+                if (document.IsCompleted)
+                {
+                    _console.DisplayMessage("Cannot modify a completed clinical document.", MessageType.Error);
+                    _console.Pause();
+                    return;
+                }
+
+                // Show current chief complaint
+                _console.DisplayMessage("\nCurrent Chief Complaint:", MessageType.Info);
+                _console.DisplayMessage($"  {document.ChiefComplaint ?? "(not set)"}", MessageType.Debug);
+                _console.DisplayMessage("");
+
+                // Prompt for new chief complaint
+                _console.DisplayMessage("Enter new Chief Complaint (or press Enter to keep current): ", MessageType.Info);
+                var newChiefComplaint = _console.GetUserInput("");
+
+                if (string.IsNullOrWhiteSpace(newChiefComplaint))
+                {
+                    _console.DisplayMessage("No changes made.", MessageType.Info);
+                    _console.Pause();
+                    return;
+                }
+
+                // Get command from factory
+                var command = _commandFactory.CreateCommand(UpdateClinicalDocumentCommand.Key);
+                if (command == null)
+                {
+                    _console.DisplayMessage("Update command not available.", MessageType.Error);
+                    _console.Pause();
+                    return;
+                }
+
+                // Build parameters
+                var parameters = new CommandParameters()
+                    .SetParameter(UpdateClinicalDocumentCommand.Parameters.DocumentId, documentId)
+                    .SetParameter(UpdateClinicalDocumentCommand.Parameters.ChiefComplaint, newChiefComplaint.Trim());
+
+                // Execute command
+                var result = _commandInvoker.Execute(command, parameters, _sessionManager.CurrentSession);
+
+                // Display result
+                if (result.Success)
+                {
+                    _console.DisplayMessage("Chief complaint updated successfully!", MessageType.Success);
+                }
+                else
+                {
+                    _console.DisplayMessage($"Failed to update document: {result.Message}", MessageType.Error);
+                }
+
+                _console.Pause();
+            }
+            catch (Exception ex)
+            {
+                _console.DisplayMessage($"Error updating document: {ex.Message}", MessageType.Error);
+                _console.Pause();
+            }
+        }
+
+        private void ExecuteFinalizeClinicalDocument()
+        {
+            try
+            {
+                // Get document selection
+                var documentId = GetClinicalDocumentSelection();
+                if (documentId == Guid.Empty)
+                {
+                    _console.Pause();
+                    return;
+                }
+
+                // Check if document is already completed
+                var registry = ClinicalDocumentRegistry.Instance;
+                var document = registry.GetDocumentById(documentId);
+                if (document == null)
+                {
+                    _console.DisplayMessage("Document not found.", MessageType.Error);
+                    _console.Pause();
+                    return;
+                }
+
+                if (document.IsCompleted)
+                {
+                    _console.DisplayMessage("Document is already finalized.", MessageType.Warning);
+                    _console.Pause();
+                    return;
+                }
+
+                // Show completion status
+                _console.DisplayMessage("\nDocument Completion Check:", MessageType.Info);
+                var validationErrors = document.GetValidationErrors();
+                if (validationErrors.Any())
+                {
+                    _console.DisplayMessage("Document cannot be finalized. Missing required entries:", MessageType.Warning);
+                    foreach (var error in validationErrors)
+                    {
+                        _console.DisplayMessage($"  - {error}", MessageType.Error);
+                    }
+                    _console.Pause();
+                    return;
+                }
+
+                // Confirm finalization
+                _console.DisplayMessage("\nDocument is ready to be finalized.", MessageType.Success);
+                _console.DisplayMessage("Once finalized, the document cannot be modified.", MessageType.Warning);
+                _console.DisplayMessage("Finalize this document? (y/n): ", MessageType.Info);
+                var confirm = _console.GetUserInput("");
+
+                if (confirm?.ToLower() != "y")
+                {
+                    _console.DisplayMessage("Finalization cancelled.", MessageType.Info);
+                    _console.Pause();
+                    return;
+                }
+
+                // Get command from factory
+                var command = _commandFactory.CreateCommand(UpdateClinicalDocumentCommand.Key);
+                if (command == null)
+                {
+                    _console.DisplayMessage("Update command not available.", MessageType.Error);
+                    _console.Pause();
+                    return;
+                }
+
+                // Build parameters
+                var parameters = new CommandParameters()
+                    .SetParameter(UpdateClinicalDocumentCommand.Parameters.DocumentId, documentId)
+                    .SetParameter(UpdateClinicalDocumentCommand.Parameters.Complete, true);
+
+                // Execute command
+                var result = _commandInvoker.Execute(command, parameters, _sessionManager.CurrentSession);
+
+                // Display result
+                if (result.Success)
+                {
+                    _console.DisplayMessage("Clinical document finalized successfully!", MessageType.Success);
+                }
+                else
+                {
+                    _console.DisplayMessage($"Failed to finalize document: {result.Message}", MessageType.Error);
+                }
+
+                _console.Pause();
+            }
+            catch (Exception ex)
+            {
+                _console.DisplayMessage($"Error finalizing document: {ex.Message}", MessageType.Error);
+                _console.Pause();
             }
         }
     }

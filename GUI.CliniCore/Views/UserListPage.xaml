@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels"
+             xmlns:icons="clr-namespace:GUI.CliniCore.Resources.Fonts"
+             x:Class="GUI.CliniCore.Views.UserListPage"
+             x:DataType="viewModels:UserListViewModel"
+             Title="{Binding Title}">
+
+    <!-- Configure Shell back button to trigger Back command -->
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding BackCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <!-- Page Resources -->
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <viewModels:IsStringNotNullOrEmptyConverter x:Key="IsStringNotNullOrEmptyConverter"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <!-- Outer grid to constrain max width on wide screens -->
+    <Grid HorizontalOptions="Center" MaximumWidthRequest="1200">
+        <Grid RowDefinitions="Auto,*" Padding="10">
+
+        <!-- Search and Actions Bar -->
+        <VerticalStackLayout Grid.Row="0" Spacing="10" Margin="0,0,0,10">
+
+            <!-- Back Button -->
+            <Button Text="← Back to Dashboard"
+                    Command="{Binding BackCommand}"
+                    BackgroundColor="#607D8B"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="40"/>
+
+            <!-- Search Box -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="10">
+                <Grid ColumnDefinitions="*,100" ColumnSpacing="10">
+                    <Entry Grid.Column="0"
+                           Placeholder="Search users by name or username"
+                           Text="{Binding SearchText}"
+                           TextColor="#333"
+                           ClearButtonVisibility="WhileEditing"/>
+                    <Button Grid.Column="1"
+                            Text="Search"
+                            BackgroundColor="#2196F3"
+                            TextColor="White"/>
+                </Grid>
+            </Border>
+
+            <!-- Action Buttons -->
+            <Button Text="Create New Administrator"
+                    Command="{Binding CreateAdminCommand}"
+                    BackgroundColor="#F44336"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="45"/>
+
+        </VerticalStackLayout>
+
+        <!-- User List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}">
+
+            <CollectionView ItemsSource="{Binding Users}"
+                           SelectedItem="{Binding SelectedUser}"
+                           SelectionMode="Single"
+                           EmptyView="No users found">
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:UserDisplayModel">
+                        <Border Stroke="LightGray"
+                                StrokeThickness="1"
+                                Background="White"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="15"
+                                Margin="0,5">
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+
+                                <!-- User Info -->
+                                <VerticalStackLayout Grid.Column="0" Spacing="5">
+
+                                    <!-- User Name -->
+                                    <Label Text="{Binding Name}"
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           TextColor="#333"/>
+
+                                    <!-- Username -->
+                                    <HorizontalStackLayout Spacing="5">
+                                        <Label Text="Username:"
+                                               FontSize="12"
+                                               TextColor="Gray"
+                                               FontAttributes="Bold"/>
+                                        <Label Text="{Binding Username}"
+                                               FontSize="12"
+                                               TextColor="Gray"/>
+                                    </HorizontalStackLayout>
+
+                                    <!-- Additional Info -->
+                                    <Label Text="{Binding AdditionalInfo}"
+                                           FontSize="12"
+                                           TextColor="Gray"
+                                           IsVisible="{Binding AdditionalInfo, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+
+                                    <!-- User ID (Truncated) -->
+                                    <Label FontSize="10" TextColor="LightGray">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="ID: " TextColor="LightGray"/>
+                                                <Span Text="{Binding Id, StringFormat='{0:N}'}" TextColor="LightGray"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+
+                                </VerticalStackLayout>
+
+                                <!-- Role Badge -->
+                                <Border Grid.Column="1"
+                                        BackgroundColor="{Binding RoleBadgeColor}"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 12"
+                                        Padding="12,6"
+                                        VerticalOptions="Start">
+                                    <Label Text="{Binding RoleDisplayName}"
+                                           TextColor="White"
+                                           FontSize="12"
+                                           FontAttributes="Bold"/>
+                                </Border>
+
+                            </Grid>
+
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+            </CollectionView>
+
+        </RefreshView>
+
+        <!-- Validation Errors -->
+        <CollectionView Grid.Row="1"
+                       ItemsSource="{Binding ValidationErrors}"
+                       IsVisible="{Binding HasValidationErrors}"
+                       VerticalOptions="Start"
+                       Margin="10">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Stroke="#F44336"
+                            StrokeThickness="1"
+                            Background="#FFEBEE"
+                            StrokeShape="RoundRectangle 8"
+                            Padding="10"
+                            Margin="0,2">
+                        <Label Text="{Binding .}"
+                               TextColor="#D32F2F"
+                               FontSize="12"/>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        </Grid>
+    </Grid>
+
+</ContentPage>

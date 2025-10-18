@@ -13,6 +13,8 @@ namespace Core.CliniCore.Commands.Scheduling
 {
     public class ViewAppointmentCommand : AbstractCommand
     {
+        public const string Key = "viewappointment";
+        public override string CommandKey => Key;
         public static class Parameters
         {
             public const string AppointmentId = "appointment_id";

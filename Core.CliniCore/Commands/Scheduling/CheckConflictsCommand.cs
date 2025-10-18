@@ -12,6 +12,8 @@ namespace Core.CliniCore.Commands.Scheduling
 {
     public class CheckConflictsCommand : AbstractCommand
     {
+        public const string Key = "checkconflicts";
+        public override string CommandKey => Key;
         public static class Parameters
         {
             public const string PhysicianId = "physician_id";

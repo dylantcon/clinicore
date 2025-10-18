@@ -10,8 +10,11 @@ using Core.CliniCore.Domain.Validation;
 
 namespace Core.CliniCore.Commands.Profile
 {
-    public class CreatePatientCommand : AbstractCommand
+    public class CreatePatientCommand(IAuthenticationService authService) : AbstractCommand
     {
+        public const string Key = "createpatient";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string Username = "username";
@@ -24,12 +27,8 @@ namespace Core.CliniCore.Commands.Profile
         }
 
         private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
-        private readonly IAuthenticationService _authService;
-
-        public CreatePatientCommand(IAuthenticationService authService)
-        {
-            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-        }
+        private readonly IAuthenticationService _authService = authService 
+            ?? throw new ArgumentNullException(nameof(authService));
 
         public override string Description => "Creates a new patient profile in the system";
 
@@ -47,7 +46,7 @@ namespace Core.CliniCore.Commands.Profile
                 Parameters.Username, Parameters.Password, Parameters.Name, Parameters.Address,
                 Parameters.Birthdate, Parameters.Gender, Parameters.Race);
 
-            if (missingParams.Any())
+            if (missingParams.Count != 0)
             {
                 foreach (var error in missingParams)
                     result.AddError(error);

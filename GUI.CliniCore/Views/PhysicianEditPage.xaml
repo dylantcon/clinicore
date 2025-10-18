@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels"
+             xmlns:icons="clr-namespace:GUI.CliniCore.Resources.Fonts"
+             x:Class="GUI.CliniCore.Views.PhysicianEditPage"
+             x:DataType="viewModels:PhysicianEditViewModel"
+             Title="{Binding Title}">
+
+    <!-- Configure Shell back button to trigger Cancel command -->
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding CancelCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <ScrollView Padding="15">
+        <VerticalStackLayout Spacing="15">
+
+            <!-- Username (Create Only) -->
+            <VerticalStackLayout Spacing="5" IsVisible="{Binding IsEditMode, Converter={StaticResource InvertedBoolConverter}}">
+                <Label Text="Username *" FontSize="14" FontAttributes="Bold" TextColor="#666"/>
+                <Entry Text="{Binding Username}"
+                       Placeholder="Enter username"
+                       IsEnabled="{Binding IsEditMode, Converter={StaticResource InvertedBoolConverter}}"/>
+            </VerticalStackLayout>
+
+            <!-- Password (Create Only) -->
+            <VerticalStackLayout Spacing="5" IsVisible="{Binding IsEditMode, Converter={StaticResource InvertedBoolConverter}}">
+                <Label Text="Password *" FontSize="14" FontAttributes="Bold" TextColor="#666"/>
+                <Entry Text="{Binding Password}"
+                       Placeholder="Enter password (min 6 characters)"
+                       IsPassword="True"
+                       IsEnabled="{Binding IsEditMode, Converter={StaticResource InvertedBoolConverter}}"/>
+            </VerticalStackLayout>
+
+            <!-- Name -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Full Name *" FontSize="14" FontAttributes="Bold" TextColor="#666"/>
+                <Entry Text="{Binding Name}"
+                       Placeholder="Enter physician's full name"/>
+            </VerticalStackLayout>
+
+            <!-- Address -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Address *" FontSize="14" FontAttributes="Bold" TextColor="#666"/>
+                <Entry Text="{Binding Address}"
+                       Placeholder="Enter address"/>
+            </VerticalStackLayout>
+
+            <!-- Birth Date -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Birth Date *" FontSize="14" FontAttributes="Bold" TextColor="#666"/>
+                <DatePicker Date="{Binding BirthDate}"
+                           MinimumDate="1940-01-01"/>
+            </VerticalStackLayout>
+
+            <!-- License Number -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Medical License Number *" FontSize="14" FontAttributes="Bold" TextColor="#666"/>
+                <Entry Text="{Binding LicenseNumber}"
+                       Placeholder="Enter license number"/>
+            </VerticalStackLayout>
+
+            <!-- Graduation Date -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Graduation Date *" FontSize="14" FontAttributes="Bold" TextColor="#666"/>
+                <DatePicker Date="{Binding GraduationDate}"
+                           MinimumDate="1960-01-01"/>
+            </VerticalStackLayout>
+
+            <!-- Specializations (Multi-Select) -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Specializations * (Select 1-5)" FontSize="14" FontAttributes="Bold" TextColor="#666"/>
+                <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="10">
+                    <CollectionView ItemsSource="{Binding SpecializationItems}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:SpecializationItem">
+                                <HorizontalStackLayout Spacing="10" Padding="5">
+                                    <CheckBox IsChecked="{Binding IsSelected}"/>
+                                    <Label Text="{Binding Specialization}" VerticalOptions="Center" TextColor="#333"/>
+                                </HorizontalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Border>
+                <!-- Specialization Count Feedback -->
+                <HorizontalStackLayout Spacing="5" Margin="0,5,0,0">
+                    <Label Text="{x:Static icons:MaterialIcons.Warning}"
+                           FontFamily="MaterialIconsRegular"
+                           TextColor="{Binding SpecializationCountColor}"
+                           FontSize="14"
+                           VerticalOptions="Center"
+                           IsVisible="{Binding ShowSpecializationWarningIcon}"/>
+                    <Label Text="{Binding SpecializationCountMessage}"
+                           TextColor="{Binding SpecializationCountColor}"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- Required Fields Note -->
+            <Label Text="* Required fields"
+                   FontSize="12"
+                   TextColor="Gray"
+                   Margin="0,10,0,0"/>
+
+            <!-- Action Buttons -->
+            <VerticalStackLayout Spacing="10" Margin="0,20,0,0">
+
+                <Button Text="{Binding Title}"
+                        Command="{Binding SaveCommand}"
+                        BackgroundColor="#4CAF50"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"/>
+
+                <Button Text="Cancel"
+                        Command="{Binding CancelCommand}"
+                        BackgroundColor="#607D8B"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"/>
+
+            </VerticalStackLayout>
+
+            <!-- Validation Errors -->
+            <CollectionView ItemsSource="{Binding ValidationErrors}"
+                           IsVisible="{Binding HasValidationErrors}"
+                           Margin="0,10,0,0">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="#F44336"
+                                StrokeThickness="1"
+                                Background="#FFEBEE"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="10"
+                                Margin="0,2">
+                            <Label Text="{Binding .}"
+                                   TextColor="#D32F2F"
+                                   FontSize="12"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Inverted Bool Converter for showing/hiding fields based on edit mode -->
+            <viewModels:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+</ContentPage>

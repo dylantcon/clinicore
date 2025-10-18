@@ -11,6 +11,9 @@ namespace Core.CliniCore.Commands.Profile
 {
     public class ListPatientsCommand : AbstractCommand
     {
+        public const string Key = "listpatients";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string PhysicianId = "physician_id";
@@ -94,6 +97,7 @@ namespace Core.CliniCore.Commands.Profile
                 foreach (var patient in patientList)
                 {
                     sb.AppendLine(FormatPatientInfo(patient));
+                    sb.AppendLine("  ---");
                 }
 
                 return CommandResult.Ok(sb.ToString(), patientList);
@@ -106,23 +110,23 @@ namespace Core.CliniCore.Commands.Profile
 
         private string FormatPatientInfo(PatientProfile patient)
         {
-            var primaryPhysician = patient.PrimaryPhysicianId.HasValue
-                ? _registry.GetProfileById(patient.PrimaryPhysicianId.Value) as PhysicianProfile
-                : null;
+            // Get the primary physician info and replace the generic ID with physician name
+            var patientInfo = patient.ToString();
 
-            var primaryPhysicianStr = primaryPhysician != null
-                ? $"Dr. {primaryPhysician.Name}"
-                : "None";
+            if (patient.PrimaryPhysicianId.HasValue)
+            {
+                var primaryPhysician = _registry.GetProfileById(patient.PrimaryPhysicianId.Value) as PhysicianProfile;
+                if (primaryPhysician != null)
+                {
+                    // Replace the generic "Primary Physician ID" line with physician name
+                    patientInfo = patientInfo.Replace(
+                        $"  Primary Physician ID: {patient.PrimaryPhysicianId.Value:N}",
+                        $"  Primary Physician: Dr. {primaryPhysician.Name}"
+                    );
+                }
+            }
 
-            var age = DateTime.Now.Year - patient.BirthDate.Year;
-
-            return $"  ID: {patient.Id:N}\n" +
-                   $"  Name: {patient.Name} (Age: {age})\n" +
-                   $"  Username: {patient.Username}\n" +
-                   $"  Gender: {patient.Gender.GetDisplayName()}\n" +
-                   $"  Address: {patient.Address}\n" +
-                   $"  Primary Physician: {primaryPhysicianStr}\n" +
-                   $"  ---";
+            return patientInfo.TrimEnd('\r', '\n');
         }
     }
 }

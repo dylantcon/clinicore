@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels"
+             x:Class="GUI.CliniCore.Views.ClinicalDocumentEditPage"
+             x:DataType="viewModels:ClinicalDocumentEditViewModel"
+             Title="{Binding Title}">
+
+    <!-- Configure Shell back button to trigger Back command -->
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding BackCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <ScrollView Padding="15">
+        <VerticalStackLayout Spacing="15">
+
+            <!-- Patient/Physician Selection (Create Mode) -->
+            <Border Stroke="#2196F3" StrokeThickness="2" Background="White" StrokeShape="RoundRectangle 8" Padding="15" IsVisible="{Binding IsCreateMode}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Select Patient, Physician, and Appointment *" FontSize="14" FontAttributes="Bold" TextColor="#333"/>
+
+                    <Label Text="Patient *" FontSize="13" TextColor="#666"/>
+                    <Border Stroke="#2196F3" StrokeThickness="2" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="5">
+                        <Picker ItemsSource="{Binding AvailablePatients}"
+                                ItemDisplayBinding="{Binding Name}"
+                                SelectedItem="{Binding SelectedPatient}"
+                                Title="Select Patient"
+                                FontSize="13"
+                                TextColor="#333"/>
+                    </Border>
+
+                    <Label Text="Physician *" FontSize="13" TextColor="#666"/>
+                    <Border Stroke="#2196F3" StrokeThickness="2" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="5">
+                        <Picker ItemsSource="{Binding AvailablePhysicians}"
+                                ItemDisplayBinding="{Binding Name}"
+                                SelectedItem="{Binding SelectedPhysician}"
+                                Title="Select Physician"
+                                FontSize="13"
+                                TextColor="#333"/>
+                    </Border>
+
+                    <Label Text="Appointment *" FontSize="13" TextColor="#666" Margin="0,10,0,0"/>
+                    <Border Stroke="#2196F3" StrokeThickness="2" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="5">
+                        <Picker ItemsSource="{Binding AvailableAppointments}"
+                                ItemDisplayBinding="{Binding Display}"
+                                SelectedItem="{Binding SelectedAppointment}"
+                                Title="Select Appointment"
+                                FontSize="13"
+                                TextColor="#333"/>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Document Info Header (Edit Mode) -->
+            <Border Stroke="#2196F3" StrokeThickness="2" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="15" IsVisible="{Binding IsEditMode}">
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="{Binding PatientInfo}"
+                           FontSize="13"
+                           TextColor="#1976D2"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding PhysicianInfo}"
+                           FontSize="13"
+                           TextColor="#1976D2"
+                           FontAttributes="Bold"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Chief Complaint Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Chief Complaint *" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+                    <Entry Text="{Binding ChiefComplaint}"
+                           Placeholder="Enter chief complaint"
+                           FontSize="14"
+                           TextColor="#333"
+                           PlaceholderColor="#999"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Subjective Observations Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Subjective - Observations" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+
+                    <!-- Existing Observations -->
+                    <CollectionView ItemsSource="{Binding Observations}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:ObservationDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <Label Text="{Binding Display}"
+                                           FontSize="12"
+                                           TextColor="#333"/>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Add New Observation Form (Edit Mode Only) -->
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
+                        <Label Text="Add Observation" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+
+                        <Border Stroke="#2196F3" StrokeThickness="2" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="5">
+                            <Picker Title="Type *"
+                                    ItemsSource="{Binding SubjectiveObservationTypes}"
+                                    SelectedItem="{Binding NewObservationType}"
+                                    FontSize="13"
+                                    TextColor="#333"/>
+                        </Border>
+
+                        <Editor Text="{Binding NewObservation}"
+                                Placeholder="Observation text *"
+                                HeightRequest="60"
+                                FontSize="13"
+                                TextColor="#333"
+                                PlaceholderColor="#999"/>
+
+                        <Button Text="+ Add Observation"
+                                Command="{Binding AddObservationCommand}"
+                                BackgroundColor="#2196F3"
+                                TextColor="White"
+                                CornerRadius="5"
+                                HeightRequest="40"
+                                FontSize="13"/>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Objective Observations Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Objective - Observations" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+
+                    <!-- Existing Objective Observations (displayed from all Observations collection) -->
+                    <CollectionView ItemsSource="{Binding Observations}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:ObservationDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <Label Text="{Binding Display}"
+                                           FontSize="12"
+                                           TextColor="#333"/>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Add New Objective Observation Form (Edit Mode Only) -->
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
+                        <Label Text="Add Objective Observation" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+
+                        <Border Stroke="#2196F3" StrokeThickness="2" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="5">
+                            <Picker Title="Type *"
+                                    ItemsSource="{Binding ObjectiveObservationTypes}"
+                                    SelectedItem="{Binding NewObjectiveObservationType}"
+                                    FontSize="13"
+                                    TextColor="#333"/>
+                        </Border>
+
+                        <Editor Text="{Binding NewObjectiveObservation}"
+                                Placeholder="Objective observation text (e.g., physical exam findings, vital signs) *"
+                                HeightRequest="60"
+                                FontSize="13"
+                                TextColor="#333"
+                                PlaceholderColor="#999"/>
+
+                        <Button Text="+ Add Objective Observation"
+                                Command="{Binding AddObjectiveObservationCommand}"
+                                BackgroundColor="#2196F3"
+                                TextColor="White"
+                                CornerRadius="5"
+                                HeightRequest="40"
+                                FontSize="13"/>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Assessment Section (Objective) -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Objective - Assessment" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+
+                    <!-- Existing Assessments -->
+                    <CollectionView ItemsSource="{Binding Assessments}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:AssessmentDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <Label Text="{Binding Display}"
+                                           FontSize="12"
+                                           TextColor="#333"/>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Add New Assessment Form (Edit Mode Only) -->
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
+                        <Label Text="Add Assessment" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+
+                        <Editor Text="{Binding NewClinicalImpression}"
+                                Placeholder="Clinical impression *"
+                                HeightRequest="80"
+                                FontSize="13"
+                                TextColor="#333"
+                                PlaceholderColor="#999"/>
+
+                        <Button Text="+ Add Assessment"
+                                Command="{Binding AddAssessmentCommand}"
+                                BackgroundColor="#2196F3"
+                                TextColor="White"
+                                CornerRadius="5"
+                                HeightRequest="40"
+                                FontSize="13"/>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Diagnosis Section (Assessment) -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Assessment - Diagnosis" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+
+                    <!-- Existing Diagnoses -->
+                    <CollectionView ItemsSource="{Binding Diagnoses}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:DiagnosisDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <Label Text="{Binding Display}"
+                                           FontSize="12"
+                                           TextColor="#333"/>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Add New Diagnosis Form (Edit Mode Only) -->
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
+                        <Label Text="Add Diagnosis" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+
+                        <Editor Text="{Binding NewDiagnosisDescription}"
+                                Placeholder="Diagnosis description *"
+                                HeightRequest="60"
+                                FontSize="13"
+                                TextColor="#333"
+                                PlaceholderColor="#999"/>
+
+                        <Entry Text="{Binding NewDiagnosisICD10Code}"
+                               Placeholder="ICD-10 Code (optional)"
+                               FontSize="13"
+                               TextColor="#333"
+                               PlaceholderColor="#999"/>
+
+                        <Button Text="+ Add Diagnosis"
+                                Command="{Binding AddDiagnosisCommand}"
+                                BackgroundColor="#2196F3"
+                                TextColor="White"
+                                CornerRadius="5"
+                                HeightRequest="40"
+                                FontSize="13"/>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Plan Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Plan - Treatment Plan" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+
+                    <!-- Existing Plans -->
+                    <CollectionView ItemsSource="{Binding Plans}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:PlanDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <Label Text="{Binding Display}"
+                                           FontSize="12"
+                                           TextColor="#333"/>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Add New Plan Form (Edit Mode Only) -->
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
+                        <Label Text="Add Plan" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+
+                        <Editor Text="{Binding NewPlanDescription}"
+                                Placeholder="Plan description *"
+                                HeightRequest="80"
+                                FontSize="13"
+                                TextColor="#333"
+                                PlaceholderColor="#999"/>
+
+                        <Button Text="+ Add Plan"
+                                Command="{Binding AddPlanCommand}"
+                                BackgroundColor="#2196F3"
+                                TextColor="White"
+                                CornerRadius="5"
+                                HeightRequest="40"
+                                FontSize="13"/>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Prescription Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Prescriptions" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+
+                    <!-- Existing Prescriptions -->
+                    <CollectionView ItemsSource="{Binding Prescriptions}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:PrescriptionDisplayModel">
+                                <Border Stroke="#4CAF50"
+                                        StrokeThickness="2"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <Label Text="{Binding Display}"
+                                           FontSize="12"
+                                           TextColor="#333"/>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!-- Add New Prescription Form (Edit Mode Only) -->
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsEditMode}">
+                        <Label Text="Add Prescription" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+
+                        <Entry Text="{Binding NewPrescriptionMedication}"
+                               Placeholder="Medication Name *"
+                               FontSize="13"
+                               TextColor="#333"
+                               PlaceholderColor="#999"/>
+
+                        <Entry Text="{Binding NewPrescriptionDosage}"
+                               Placeholder="Dosage *"
+                               FontSize="13"
+                               TextColor="#333"
+                               PlaceholderColor="#999"/>
+
+                        <Entry Text="{Binding NewPrescriptionFrequency}"
+                               Placeholder="Frequency *"
+                               FontSize="13"
+                               TextColor="#333"
+                               PlaceholderColor="#999"/>
+
+                        <Entry Text="{Binding NewPrescriptionRoute}"
+                               Placeholder="Route (e.g., Oral, IV, Topical)"
+                               FontSize="13"
+                               TextColor="#333"
+                               PlaceholderColor="#999"/>
+
+                        <Entry Text="{Binding NewPrescriptionDuration}"
+                               Placeholder="Duration (optional)"
+                               FontSize="13"
+                               TextColor="#333"
+                               PlaceholderColor="#999"/>
+
+                        <Border Stroke="#2196F3" StrokeThickness="2" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="5">
+                            <Picker x:Name="DiagnosisPicker"
+                                    Title="For Diagnosis *"
+                                    ItemsSource="{Binding AvailableDiagnoses}"
+                                    ItemDisplayBinding="{Binding Display}"
+                                    SelectedItem="{Binding SelectedDiagnosisForPrescription}"
+                                    FontSize="13"
+                                    TextColor="#333"/>
+                        </Border>
+
+                        <Button Text="+ Add Prescription"
+                                Command="{Binding AddPrescriptionCommand}"
+                                BackgroundColor="#4CAF50"
+                                TextColor="White"
+                                CornerRadius="5"
+                                HeightRequest="40"
+                                FontSize="13"/>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Action Buttons -->
+            <VerticalStackLayout Spacing="10" Margin="0,10,0,0">
+
+                <Grid ColumnDefinitions="*,10,*" IsVisible="{Binding IsEditMode}">
+                    <Button Grid.Column="0"
+                            Text="Save as Draft"
+                            Command="{Binding SaveCommand}"
+                            BackgroundColor="#4CAF50"
+                            TextColor="White"
+                            CornerRadius="8"
+                            HeightRequest="50"/>
+
+                    <Button Grid.Column="2"
+                            Text="Finalize Document"
+                            Command="{Binding FinalizeCommand}"
+                            BackgroundColor="#2196F3"
+                            TextColor="White"
+                            CornerRadius="8"
+                            HeightRequest="50"/>
+                </Grid>
+
+                <Button Text="{Binding SaveButtonText}"
+                        Command="{Binding SaveCommand}"
+                        BackgroundColor="#4CAF50"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"
+                        IsVisible="{Binding IsCreateMode}"/>
+
+                <Button Text="← Back"
+                        Command="{Binding BackCommand}"
+                        BackgroundColor="#607D8B"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"/>
+
+            </VerticalStackLayout>
+
+            <!-- Validation Errors -->
+            <CollectionView ItemsSource="{Binding ValidationErrors}"
+                           IsVisible="{Binding HasValidationErrors}"
+                           Margin="0,10,0,0">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="#F44336"
+                                StrokeThickness="1"
+                                Background="#FFEBEE"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="10"
+                                Margin="0,2">
+                            <Label Text="{Binding .}"
+                                   TextColor="#D32F2F"
+                                   FontSize="12"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

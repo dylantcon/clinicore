@@ -8,6 +8,14 @@ namespace Core.CliniCore.Commands.Authentication
 {
     public class LogoutCommand : AbstractCommand
     {
+        public const string Key = "logout";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            // LogoutCommand requires no parameters
+        }
+
         public LogoutCommand()
         {
         }

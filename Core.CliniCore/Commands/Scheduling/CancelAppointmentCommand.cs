@@ -9,6 +9,14 @@ namespace Core.CliniCore.Commands.Scheduling
 {
     public class CancelAppointmentCommand : AbstractCommand
     {
+        public const string Key = "cancelappointment";
+        public override string CommandKey => Key;
+        public static class Parameters
+        {
+            public const string AppointmentId = "appointment_id";
+            public const string Reason = "reason";
+        }
+
         private readonly ScheduleManager _scheduleManager;
 
         public CancelAppointmentCommand(ScheduleManager scheduleManager)
@@ -27,14 +35,14 @@ namespace Core.CliniCore.Commands.Scheduling
         {
             var result = CommandValidationResult.Success();
 
-            var missingParams = parameters.GetMissingRequired("appointment_id", "physician_id");
+            var missingParams = parameters.GetMissingRequired(Parameters.AppointmentId);
             if (missingParams.Any())
             {
                 foreach (var error in missingParams)
                     result.AddError(error);
             }
 
-            var reason = parameters.GetParameter<string>("reason");
+            var reason = parameters.GetParameter<string>(Parameters.Reason);
             if (string.IsNullOrWhiteSpace(reason))
             {
                 result.AddWarning("No cancellation reason provided");
@@ -47,11 +55,17 @@ namespace Core.CliniCore.Commands.Scheduling
         {
             try
             {
-                var appointmentId = parameters.GetRequiredParameter<Guid>("appointment_id");
-                var physicianId = parameters.GetRequiredParameter<Guid>("physician_id");
-                var reason = parameters.GetParameter<string>("reason") ?? "Cancelled by user";
+                var appointmentId = parameters.GetRequiredParameter<Guid>(Parameters.AppointmentId);
+                var reason = parameters.GetParameter<string>(Parameters.Reason) ?? "Cancelled by user";
 
-                if (_scheduleManager.CancelAppointment(physicianId, appointmentId, reason))
+                // Get existing appointment to determine physician
+                var existingAppointment = _scheduleManager.FindAppointmentById(appointmentId);
+                if (existingAppointment == null)
+                {
+                    return CommandResult.Fail("Appointment not found");
+                }
+
+                if (_scheduleManager.CancelAppointment(existingAppointment.PhysicianId, appointmentId, reason))
                 {
                     return CommandResult.Ok($"Appointment {appointmentId} cancelled successfully");
                 }

@@ -10,6 +10,9 @@ namespace Core.CliniCore.Commands.Clinical
 {
     public class ViewClinicalDocumentCommand : AbstractCommand
     {
+        public const string Key = "viewclinicaldocument";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string DocumentId = "document_id";

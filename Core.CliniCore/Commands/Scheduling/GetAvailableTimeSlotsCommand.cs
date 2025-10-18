@@ -13,6 +13,8 @@ namespace Core.CliniCore.Commands.Scheduling
 {
     public class GetAvailableTimeSlotsCommand : AbstractCommand
     {
+        public const string Key = "getavailabletimeslots";
+        public override string CommandKey => Key;
         public static class Parameters
         {
             public const string PhysicianId = "physician_id";

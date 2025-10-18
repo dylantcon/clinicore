@@ -10,12 +10,14 @@ namespace Core.CliniCore.Commands.Scheduling
 {
     public class SetPhysicianAvailabilityCommand : AbstractCommand
     {
+        public const string Key = "setphysicianavailability";
+        public override string CommandKey => Key;
         public static class Parameters
         {
-            public const string PhysicianId = CommandParameterKeys.PhysicianId;
-            public const string DayOfWeek = CommandParameterKeys.DayOfWeek;
-            public const string StartTime = CommandParameterKeys.StartTime;
-            public const string EndTime = CommandParameterKeys.EndTime;
+            public const string PhysicianId = "physician_id";
+            public const string DayOfWeek = "day_of_week";
+            public const string StartTime = "start_time";
+            public const string EndTime = "end_time";
         }
 
         public override string Description => "Set the availability schedule for a physician";

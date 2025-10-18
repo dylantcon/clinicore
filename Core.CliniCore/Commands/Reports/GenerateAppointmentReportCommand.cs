@@ -10,6 +10,17 @@ namespace Core.CliniCore.Commands.Reports
 {
     public class GenerateAppointmentReportCommand : AbstractCommand
     {
+        public const string Key = "generateappointmentreport";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            public const string StartDate = "startDate";
+            public const string EndDate = "endDate";
+            public const string PhysicianId = "physicianId";
+            public const string PatientId = "patientId";
+        }
+
         public override string Description => throw new NotImplementedException();
 
         public override Permission? GetRequiredPermission()
