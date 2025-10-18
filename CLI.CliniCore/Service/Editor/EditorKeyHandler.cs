@@ -334,39 +334,111 @@ namespace CLI.CliniCore.Service.Editor
             // Start editing using the status bar input handler
             _entryBeingEdited = entry;
             _isEditingText = true;
-            
-            // Determine what we're editing and set the prompt
-            string prompt = "Edit content (Enter to submit, Shift+Enter for newline, Esc to cancel): ";
-            string initialText = entry.Content;
-            
-            // For prescription entries, we might want to edit specific fields
+
+            // For prescription entries, show field selection menu
             if (entry is PrescriptionEntry rx)
             {
-                // For now, just edit the medication name/content
-                // Could be extended to show a menu for which field to edit
-                _editMode = "content";
+                var prompt = "Edit: [M]edication [D]osage [F]requency [R]oute [U]ration [I]nstructions (Esc=cancel): ";
+                _editMode = "prescription_field_selection";
+                _inputHandler.StartEditing(prompt, "", 200);
             }
             else
             {
+                // For other entry types, edit content directly
                 _editMode = "content";
+                string prompt = "Edit content (Enter to submit, Shift+Enter for newline, Esc to cancel): ";
+                string initialText = entry.Content;
+                var (width, _) = _console.GetDimensions();
+                _inputHandler.StartEditing(prompt, initialText, width - 4);
             }
-            
-            var (width, _) = _console.GetDimensions();
-            _inputHandler.StartEditing(prompt, initialText, width - 4);
-            
+
             return true; // The actual update happens in HandleKeyInput when editing completes
         }
         
         private void ApplyEditToEntry(AbstractClinicalEntry entry, string newText, string? editMode)
         {
-            switch (editMode)
+            if (entry is PrescriptionEntry rx && editMode == "prescription_field_selection")
             {
-                case "content":
-                default:
-                    entry.Content = newText;
-                    break;
-                    
-                // Could add other modes for prescription fields, etc.
+                // Handle prescription field selection - start editing the selected field
+                var lastChar = newText.Length > 0 ? char.ToUpper(newText.Last()) : ' ';
+                string prompt;
+                string initialText;
+
+                switch (lastChar)
+                {
+                    case 'M': // Medication
+                        _editMode = "prescription_medication";
+                        prompt = "Edit medication name: ";
+                        initialText = rx.MedicationName;
+                        break;
+                    case 'D': // Dosage
+                        _editMode = "prescription_dosage_edit";
+                        prompt = "Edit dosage: ";
+                        initialText = rx.Dosage ?? "";
+                        break;
+                    case 'F': // Frequency
+                        _editMode = "prescription_frequency_edit";
+                        prompt = "Edit frequency: ";
+                        initialText = rx.Frequency ?? "";
+                        break;
+                    case 'R': // Route
+                        _editMode = "prescription_route_edit";
+                        prompt = "Edit route: ";
+                        initialText = rx.Route ?? "Oral";
+                        break;
+                    case 'U': // Duration
+                        _editMode = "prescription_duration_edit";
+                        prompt = "Edit duration: ";
+                        initialText = rx.Duration ?? "";
+                        break;
+                    case 'I': // Instructions
+                        _editMode = "prescription_instructions_edit";
+                        prompt = "Edit instructions: ";
+                        initialText = rx.Instructions ?? "";
+                        break;
+                    default:
+                        // Invalid selection - clear edit state
+                        _isEditingText = false;
+                        _entryBeingEdited = null;
+                        _editMode = null;
+                        return;
+                }
+
+                // Start editing the selected field
+                var (width, _) = _console.GetDimensions();
+                _inputHandler.StartEditing(prompt, initialText, width - 4);
+                return; // Don't apply yet, wait for actual field input
+            }
+
+            // Apply the edit based on mode
+            if (entry is PrescriptionEntry prescription)
+            {
+                switch (editMode)
+                {
+                    case "prescription_medication":
+                        prescription.MedicationName = newText;
+                        break;
+                    case "prescription_dosage_edit":
+                        prescription.Dosage = string.IsNullOrWhiteSpace(newText) ? null : newText;
+                        break;
+                    case "prescription_frequency_edit":
+                        prescription.Frequency = string.IsNullOrWhiteSpace(newText) ? null : newText;
+                        break;
+                    case "prescription_route_edit":
+                        prescription.Route = string.IsNullOrWhiteSpace(newText) ? "Oral" : newText;
+                        break;
+                    case "prescription_duration_edit":
+                        prescription.Duration = string.IsNullOrWhiteSpace(newText) ? null : newText;
+                        break;
+                    case "prescription_instructions_edit":
+                        prescription.Instructions = string.IsNullOrWhiteSpace(newText) ? null : newText;
+                        break;
+                }
+            }
+            else
+            {
+                // For non-prescription entries, just update content
+                entry.Content = newText;
             }
         }
         
@@ -406,10 +478,19 @@ namespace CLI.CliniCore.Service.Editor
                     
                 case "prescription_dosage":
                     return HandlePrescriptionDosageInput(input, state);
-                    
+
+                case "prescription_frequency":
+                    return HandlePrescriptionFrequencyInput(input, state);
+
+                case "prescription_route":
+                    return HandlePrescriptionRouteInput(input, state);
+
+                case "prescription_duration":
+                    return HandlePrescriptionDurationInput(input, state);
+
                 case "prescription_instructions":
                     return HandlePrescriptionInstructionsInput(input, state);
-                    
+
                 default:
                     return CancelAddEntry("Unknown add entry step");
             }
@@ -547,9 +628,57 @@ namespace CLI.CliniCore.Service.Editor
         private EditorKeyResult HandlePrescriptionDosageInput(string input, EditorState state)
         {
             _addEntryData["dosage"] = input ?? "";
+            _addEntryStep = "prescription_frequency";
+
+            var prompt = "Frequency (e.g., 'once daily', 'twice daily', '3 times daily') *: ";
+            _inputHandler.StartEditing(prompt, "", 200);
+            return new EditorKeyResult(EditorAction.Continue);
+        }
+
+        /// <summary>
+        /// Handles prescription frequency input (required)
+        /// </summary>
+        private EditorKeyResult HandlePrescriptionFrequencyInput(string input, EditorState state)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return CancelAddEntry("Frequency is required for prescriptions");
+            }
+
+            _addEntryData["frequency"] = input.Trim();
+            _addEntryStep = "prescription_route";
+
+            var prompt = "Route (e.g., 'Oral', 'IV', 'Topical') [default: Oral]: ";
+            _inputHandler.StartEditing(prompt, "Oral", 100);
+            return new EditorKeyResult(EditorAction.Continue);
+        }
+
+        /// <summary>
+        /// Handles prescription route input (optional, defaults to Oral)
+        /// </summary>
+        private EditorKeyResult HandlePrescriptionRouteInput(string input, EditorState state)
+        {
+            _addEntryData["route"] = string.IsNullOrWhiteSpace(input) ? "Oral" : input.Trim();
+            _addEntryStep = "prescription_duration";
+
+            var prompt = "Duration (e.g., '7 days', '2 weeks') [optional]: ";
+            _inputHandler.StartEditing(prompt, "", 100);
+            return new EditorKeyResult(EditorAction.Continue);
+        }
+
+        /// <summary>
+        /// Handles prescription duration input (optional)
+        /// </summary>
+        private EditorKeyResult HandlePrescriptionDurationInput(string input, EditorState state)
+        {
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                _addEntryData["duration"] = input.Trim();
+            }
+
             _addEntryStep = "prescription_instructions";
-            
-            var prompt = "Instructions: ";
+
+            var prompt = "Instructions (e.g., 'Take with food', 'Take at bedtime') [optional]: ";
             _inputHandler.StartEditing(prompt, "", 200);
             return new EditorKeyResult(EditorAction.Continue);
         }
@@ -669,28 +798,45 @@ namespace CLI.CliniCore.Service.Editor
         private PrescriptionEntry CreatePrescriptionFromData(Guid authorId)
         {
             // Get required fields
-            if (!_addEntryData.TryGetValue("medication_name", out var medicationName) || 
+            if (!_addEntryData.TryGetValue("medication_name", out var medicationName) ||
                 string.IsNullOrWhiteSpace(medicationName))
             {
                 throw new InvalidOperationException("Medication name is required for prescription entry");
             }
-            
+
             if (!_addEntryData.TryGetValue("selected_diagnosis_id", out var diagnosisIdStr) ||
                 !Guid.TryParse(diagnosisIdStr, out var diagnosisId))
             {
                 throw new InvalidOperationException("Valid diagnosis selection is required for prescription entry");
             }
-            
+
+            if (!_addEntryData.TryGetValue("frequency", out var frequency) ||
+                string.IsNullOrWhiteSpace(frequency))
+            {
+                throw new InvalidOperationException("Frequency is required for prescription entry");
+            }
+
             // Create prescription with proper diagnosis link
             var rx = new PrescriptionEntry(authorId, diagnosisId, medicationName.Trim());
-            
-            // Set optional fields
+
+            // Set required fields
+            rx.Frequency = frequency.Trim();
+
+            // Set optional fields with defaults
             if (_addEntryData.TryGetValue("dosage", out var dosage) && !string.IsNullOrWhiteSpace(dosage))
                 rx.Dosage = dosage.Trim();
-                
+
+            if (_addEntryData.TryGetValue("route", out var route) && !string.IsNullOrWhiteSpace(route))
+                rx.Route = route.Trim();
+            else
+                rx.Route = "Oral"; // Default
+
+            if (_addEntryData.TryGetValue("duration", out var duration) && !string.IsNullOrWhiteSpace(duration))
+                rx.Duration = duration.Trim();
+
             if (_addEntryData.TryGetValue("instructions", out var instructions) && !string.IsNullOrWhiteSpace(instructions))
                 rx.Instructions = instructions.Trim();
-                
+
             return rx;
         }
         

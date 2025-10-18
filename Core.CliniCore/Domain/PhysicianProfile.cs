@@ -1,4 +1,5 @@
 ﻿using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Domain.ProfileTemplates;
 using Core.CliniCore.Scheduling;
 using System;
@@ -27,5 +28,38 @@ namespace Core.CliniCore.Domain
 
         protected override IProfileTemplate GetProfileTemplate()
             => new PhysicianProfileTemplate();
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Physician: Dr. {Name}");
+            sb.AppendLine($"  ID: {Id:N}");
+            sb.AppendLine($"  Username: {Username}");
+            sb.AppendLine($"  License Number: {LicenseNumber}");
+            sb.AppendLine($"  Graduation Date: {GraduationDate:yyyy-MM-dd}");
+
+            if (Specializations != null && Specializations.Any())
+            {
+                sb.Append("  Specializations: ");
+                var specializationNames = Specializations.Select(s => s.GetDisplayName());
+                sb.AppendLine(string.Join(", ", specializationNames));
+            }
+            else
+            {
+                sb.AppendLine("  Specializations: None");
+            }
+
+            if (PatientIds.Any())
+            {
+                sb.AppendLine($"  Patients Under Care: {PatientIds.Count}");
+            }
+
+            if (AppointmentIds.Any())
+            {
+                sb.AppendLine($"  Scheduled Appointments: {AppointmentIds.Count}");
+            }
+
+            return sb.ToString();
+        }
     }
 }

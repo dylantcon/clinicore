@@ -10,6 +10,16 @@ namespace Core.CliniCore.Commands.Admin
 {
     public class CreateFacilityCommand : AbstractCommand
     {
+        public const string Key = "createfacility";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            public const string FacilityName = "facility_name";
+            public const string FacilityAddress = "facility_address";
+            public const string FacilityPhone = "facility_phone";
+        }
+
         public override string Description => throw new NotImplementedException();
 
         public override Permission? GetRequiredPermission()

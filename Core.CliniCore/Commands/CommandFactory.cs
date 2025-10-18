@@ -80,15 +80,23 @@ namespace Core.CliniCore.Commands
             RegisterCommandWithKey(() => new LogoutCommand());
             //RegisterCommandWithKey(() => new ChangePasswordCommand(_authService)); // Skip if constructor issue
 
-            // Profile Management Commands  
+            // Profile Management Commands
             RegisterCommandWithKey(() => new CreatePatientCommand(_authService));
             RegisterCommandWithKey(() => new CreatePhysicianCommand(_authService));
+            RegisterCommandWithKey(() => new CreateAdministratorCommand(_authService));
             RegisterCommandWithKey(() => new AssignPatientToPhysicianCommand());
             RegisterCommandWithKey(() => new ListPatientsCommand());
             RegisterCommandWithKey(() => new ListPhysiciansCommand());
+            RegisterCommandWithKey(() => new ListProfileCommand());
             RegisterCommandWithKey(() => new ViewProfileCommand());
-            //RegisterCommandWithKey(() => new UpdateProfileCommand()); // Skip - not implemented
-            //RegisterCommandWithKey(() => new DeleteProfileCommand()); // Skip - not implemented
+            RegisterCommandWithKey(() => new ViewPatientProfileCommand());
+            RegisterCommandWithKey(() => new ViewPhysicianProfileCommand());
+            RegisterCommandWithKey(() => new ViewAdministratorProfileCommand());
+            RegisterCommandWithKey(() => new UpdateProfileCommand());
+            RegisterCommandWithKey(() => new UpdatePatientProfileCommand());
+            RegisterCommandWithKey(() => new UpdatePhysicianProfileCommand());
+            RegisterCommandWithKey(() => new UpdateAdministratorProfileCommand());
+            RegisterCommandWithKey(() => new DeleteProfileCommand());
 
             // Scheduling Commands
             RegisterCommandWithKey(() => new ScheduleAppointmentCommand(_scheduleManager));
@@ -110,21 +118,28 @@ namespace Core.CliniCore.Commands
             RegisterCommandWithKey(() => new ListClinicalDocumentsCommand());
             RegisterCommandWithKey(() => new ViewClinicalDocumentCommand());
             RegisterCommandWithKey(() => new UpdateClinicalDocumentCommand());
+            RegisterCommandWithKey(() => new DeleteClinicalDocumentCommand());
+            RegisterCommandWithKey(() => new UpdateObservationCommand());
+            RegisterCommandWithKey(() => new UpdateDiagnosisCommand());
+            RegisterCommandWithKey(() => new UpdatePrescriptionCommand());
+            RegisterCommandWithKey(() => new UpdateAssessmentCommand());
+            RegisterCommandWithKey(() => new UpdatePlanCommand());
 
-            // Query Commands (skip those with constructor issues for now)
-            //RegisterCommandWithKey(() => new SearchPatientsCommand());
-            //RegisterCommandWithKey(() => new SearchClinicalNotesCommand());
-            //RegisterCommandWithKey(() => new FindPhysiciansBySpecializationCommand());
-            //RegisterCommandWithKey(() => new FindPhysiciansByAvailabilityCommand());
-            //RegisterCommandWithKey(() => new GetScheduleCommand(_scheduleManager)); // Skip if constructor issue
+            // Query Commands
+            RegisterCommandWithKey(() => new SearchPatientsCommand());
+            RegisterCommandWithKey(() => new SearchClinicalNotesCommand());
+            RegisterCommandWithKey(() => new FindPhysiciansBySpecializationCommand());
+            RegisterCommandWithKey(() => new FindPhysiciansByAvailabilityCommand());
+            RegisterCommandWithKey(() => new GetScheduleCommand());
+            RegisterCommandWithKey(() => new ListAllUsersCommand());
 
-            // Report Commands (skip those with constructor issues for now)
+            // Report Commands (unimplemented)
             //RegisterCommandWithKey(() => new GeneratePatientReportCommand());
             //RegisterCommandWithKey(() => new GeneratePhysicianReportCommand());
             //RegisterCommandWithKey(() => new GenerateAppointmentReportCommand());
             //RegisterCommandWithKey(() => new GenerateFacilityReportCommand());
 
-            // Admin Commands (skip those with constructor issues for now)
+            // Admin Commands (unimplemented)
             //RegisterCommandWithKey(() => new CreateFacilityCommand());
             //RegisterCommandWithKey(() => new UpdateFacilitySettingsCommand());
             //RegisterCommandWithKey(() => new ManageUserRolesCommand());

@@ -1,17 +1,21 @@
 using System;
 using CLI.CliniCore.Service;
+using Core.CliniCore.Bootstrap;
 using Core.CliniCore.Commands;
+using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Scheduling.Management;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CLI.CliniCore.Service
 {
     /// <summary>
-    /// Simple dependency injection container to resolve circular dependencies
-    /// and provide clean service lifecycle management.
+    /// Dependency injection container that leverages Microsoft.Extensions.DependencyInjection
+    /// and the CoreServiceBootstrapper for consistent service configuration.
     /// </summary>
     public sealed class ServiceContainer : IDisposable
     {
+        private readonly ServiceProvider _serviceProvider;
         private readonly IAuthenticationService _authService;
         private readonly ScheduleManager _scheduleManager;
         private readonly CommandFactory _commandFactory;
@@ -23,6 +27,7 @@ namespace CLI.CliniCore.Service
         private bool _disposed = false;
 
         private ServiceContainer(
+            ServiceProvider serviceProvider,
             IAuthenticationService authService,
             ScheduleManager scheduleManager,
             CommandFactory commandFactory,
@@ -32,6 +37,7 @@ namespace CLI.CliniCore.Service
             ConsoleMenuBuilder menuBuilder,
             TTYConsoleEngine consoleEngine)
         {
+            _serviceProvider = serviceProvider;
             _authService = authService;
             _scheduleManager = scheduleManager;
             _commandFactory = commandFactory;
@@ -42,14 +48,32 @@ namespace CLI.CliniCore.Service
             _consoleEngine = consoleEngine;
         }
 
-        public static ServiceContainer Create()
+        public static ServiceContainer Create(bool includeDevelopmentData = false)
         {
-            // Initialize core services
-            var authService = new BasicAuthenticationService();
-            var scheduleManager = ScheduleManager.Instance;
-            var commandFactory = new CommandFactory(authService, scheduleManager);
-            var commandInvoker = new CommandInvoker();
-            var sessionManager = new ConsoleSessionManager();
+            // Configure services using the bootstrapper
+            var services = new ServiceCollection();
+
+            // Add core CliniCore services from the bootstrapper
+            services.AddCliniCoreServices();
+
+            // Add CLI-specific services
+            services.AddSingleton<ConsoleSessionManager>();
+
+            // Build the service provider
+            var serviceProvider = services.BuildServiceProvider();
+
+            // Initialize development data if requested (after building provider)
+            if (includeDevelopmentData)
+            {
+                CoreServiceBootstrapper.InitializeDevelopmentData(serviceProvider, createSampleData: true);
+            }
+
+            // Get core services from DI
+            var authService = serviceProvider.GetRequiredService<IAuthenticationService>();
+            var scheduleManager = serviceProvider.GetRequiredService<ScheduleManager>();
+            var commandFactory = serviceProvider.GetRequiredService<CommandFactory>();
+            var commandInvoker = serviceProvider.GetRequiredService<CommandInvoker>();
+            var sessionManager = serviceProvider.GetRequiredService<ConsoleSessionManager>();
 
             // Create console engine with placeholder dependencies
             var consoleEngine = new TTYConsoleEngine(
@@ -76,6 +100,7 @@ namespace CLI.CliniCore.Service
             consoleEngine.SetCommandParser(commandParser);
 
             return new ServiceContainer(
+                serviceProvider,
                 authService,
                 scheduleManager,
                 commandFactory,
@@ -96,6 +121,7 @@ namespace CLI.CliniCore.Service
             if (!_disposed)
             {
                 _consoleEngine?.Dispose();
+                _serviceProvider?.Dispose();
                 _disposed = true;
             }
         }

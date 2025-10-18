@@ -9,6 +9,16 @@ namespace Core.CliniCore.Commands.Profile
 {
     public class AssignPatientToPhysicianCommand : AbstractCommand
     {
+        public const string Key = "assignpatienttophysician";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            public const string PatientId = "patient_id";
+            public const string PhysicianId = "physician_id";
+            public const string SetPrimary = "set_primary";
+        }
+
         private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
         private Guid? _patientId;
         private Guid? _physicianId;
@@ -26,7 +36,7 @@ namespace Core.CliniCore.Commands.Profile
             var result = CommandValidationResult.Success();
 
             // Check required parameters
-            var missingParams = parameters.GetMissingRequired("patient_id", "physician_id");
+            var missingParams = parameters.GetMissingRequired(Parameters.PatientId, Parameters.PhysicianId);
             if (missingParams.Any())
             {
                 foreach (var error in missingParams)
@@ -35,7 +45,7 @@ namespace Core.CliniCore.Commands.Profile
             }
 
             // Validate patient exists and is actually a patient
-            var patientId = parameters.GetParameter<Guid?>("patient_id");
+            var patientId = parameters.GetParameter<Guid?>(Parameters.PatientId);
             if (!patientId.HasValue || patientId.Value == Guid.Empty)
             {
                 result.AddError("Invalid patient ID");
@@ -54,7 +64,7 @@ namespace Core.CliniCore.Commands.Profile
             }
 
             // Validate physician exists and is actually a physician
-            var physicianId = parameters.GetParameter<Guid?>("physician_id");
+            var physicianId = parameters.GetParameter<Guid?>(Parameters.PhysicianId);
             if (!physicianId.HasValue || physicianId.Value == Guid.Empty)
             {
                 result.AddError("Invalid physician ID");
@@ -92,7 +102,7 @@ namespace Core.CliniCore.Commands.Profile
             // Physicians can only assign patients to themselves
             if (session?.UserRole == UserRole.Physician)
             {
-                var physicianId = parameters.GetParameter<Guid?>("physician_id");
+                var physicianId = parameters.GetParameter<Guid?>(Parameters.PhysicianId);
                 if (physicianId.HasValue && physicianId.Value != session.UserId)
                 {
                     result.AddError("Physicians can only assign patients to themselves");
@@ -106,9 +116,9 @@ namespace Core.CliniCore.Commands.Profile
         {
             try
             {
-                _patientId = parameters.GetRequiredParameter<Guid>("patient_id");
-                _physicianId = parameters.GetRequiredParameter<Guid>("physician_id");
-                var setPrimary = parameters.GetParameter<bool?>("set_primary") ?? false;
+                _patientId = parameters.GetRequiredParameter<Guid>(Parameters.PatientId);
+                _physicianId = parameters.GetRequiredParameter<Guid>(Parameters.PhysicianId);
+                var setPrimary = parameters.GetParameter<bool?>(Parameters.SetPrimary) ?? false;
 
                 // Get profiles for display
                 var patient = _registry.GetProfileById(_patientId.Value) as PatientProfile;

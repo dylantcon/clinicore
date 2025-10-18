@@ -10,8 +10,11 @@ using Core.CliniCore.Domain.Enumerations.Extensions;
 
 namespace Core.CliniCore.Commands.Profile
 {
-    public class CreatePhysicianCommand : AbstractCommand
+    public class CreatePhysicianCommand(IAuthenticationService authService) : AbstractCommand
     {
+        public const string Key = "createphysician";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string Username = "username";
@@ -25,12 +28,9 @@ namespace Core.CliniCore.Commands.Profile
         }
 
         private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
-        private readonly IAuthenticationService _authService;
-
-        public CreatePhysicianCommand(IAuthenticationService authService)
-        {
-            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-        }
+        private readonly IAuthenticationService _authService = authService ?? 
+            throw new ArgumentNullException(nameof(authService));
+        public static readonly int MEDSPECMAXCOUNT = 5;
 
         public override string Description => "Creates a new physician profile in the system";
 
@@ -48,7 +48,7 @@ namespace Core.CliniCore.Commands.Profile
                 Parameters.Username, Parameters.Password, Parameters.Name, Parameters.Address, Parameters.Birthdate,
                 Parameters.LicenseNumber, Parameters.GraduationDate, Parameters.Specializations);
             
-            if (missingParams.Any())
+            if (missingParams.Count != 0)
             {
                 foreach (var error in missingParams)
                     result.AddError(error);
@@ -75,9 +75,9 @@ namespace Core.CliniCore.Commands.Profile
             {
                 result.AddError("At least one specialization is required");
             }
-            else if (specializations.Count > 3)
+            else if (specializations.Count > MEDSPECMAXCOUNT)
             {
-                result.AddError("Maximum of 3 specializations allowed");
+                result.AddError($"Maximum of {MEDSPECMAXCOUNT} specializations allowed");
             }
 
             return result;

@@ -11,6 +11,17 @@ namespace Core.CliniCore.Commands.Reports
 {
     public class GenerateFacilityReportCommand : AbstractCommand
     {
+        public const string Key = "generatefacilityreport";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            public const string FacilityId = "facilityId";
+            public const string StartDate = "startDate";
+            public const string EndDate = "endDate";
+            public const string ReportType = "reportType";
+        }
+
         public override string Description => throw new NotImplementedException();
 
         public override Permission? GetRequiredPermission()

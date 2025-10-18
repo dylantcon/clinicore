@@ -39,7 +39,7 @@ namespace Core.CliniCore.ClinicalDoc
         /// <summary>
         /// When this entry was last modified
         /// </summary>
-        public DateTime? ModifiedAt { get; protected set; }
+        public DateTime? ModifiedAt { get; set; }
 
         /// <summary>
         /// The actual content/text of the entry

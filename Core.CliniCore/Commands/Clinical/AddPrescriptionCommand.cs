@@ -9,6 +9,9 @@ namespace Core.CliniCore.Commands.Clinical
 {
     public class AddPrescriptionCommand : AbstractCommand
     {
+        public const string Key = "addprescription";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string DocumentId = "document_id";

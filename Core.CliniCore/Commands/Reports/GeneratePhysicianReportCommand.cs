@@ -10,6 +10,9 @@ namespace Core.CliniCore.Commands.Reports
 {
     public class GeneratePhysicianReportCommand : AbstractCommand
     {
+        public const string Key = "generatephysicianreport";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string PhysicianId = "physicianId";

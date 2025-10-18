@@ -11,6 +11,9 @@ namespace Core.CliniCore.Commands.Clinical
 {
     public class ListClinicalDocumentsCommand : AbstractCommand
     {
+        public const string Key = "listclinicaldocuments";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string PatientId = "patient_id";
@@ -28,7 +31,7 @@ namespace Core.CliniCore.Commands.Clinical
         public override bool CanUndo => false;
 
         public override Permission? GetRequiredPermission()
-            => Permission.ViewOwnClinicalDocuments;
+            => Permission.CreateClinicalDocument;
 
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {

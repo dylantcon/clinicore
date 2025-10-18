@@ -9,6 +9,14 @@ namespace Core.CliniCore.Commands.Scheduling
 {
     public class RescheduleAppointmentCommand : AbstractCommand
     {
+        public const string Key = "rescheduleappointment";
+        public override string CommandKey => Key;
+        public static class Parameters
+        {
+            public const string AppointmentId = "appointment_id";
+            public const string NewDateTime = "newDateTime";
+        }
+
         private readonly ScheduleManager _scheduleManager;
 
         public RescheduleAppointmentCommand(ScheduleManager scheduleManager)
@@ -28,7 +36,7 @@ namespace Core.CliniCore.Commands.Scheduling
             var result = CommandValidationResult.Success();
 
             var missingParams = parameters.GetMissingRequired(
-                "appointment_id", "physician_id", "new_start_time", "duration_minutes");
+                Parameters.AppointmentId, Parameters.NewDateTime);
 
             if (missingParams.Any())
             {
@@ -37,7 +45,7 @@ namespace Core.CliniCore.Commands.Scheduling
             }
 
             // Validate new time is in future
-            var newStart = parameters.GetParameter<DateTime?>("new_start_time");
+            var newStart = parameters.GetParameter<DateTime?>(Parameters.NewDateTime);
             if (newStart.HasValue && newStart.Value < DateTime.Now)
             {
                 result.AddError("Cannot reschedule to a past time");
@@ -50,15 +58,21 @@ namespace Core.CliniCore.Commands.Scheduling
         {
             try
             {
-                var appointmentId = parameters.GetRequiredParameter<Guid>("appointment_id");
-                var physicianId = parameters.GetRequiredParameter<Guid>("physician_id");
-                var newStart = parameters.GetRequiredParameter<DateTime>("new_start_time");
-                var durationMinutes = parameters.GetRequiredParameter<int>("duration_minutes");
+                var appointmentId = parameters.GetRequiredParameter<Guid>(Parameters.AppointmentId);
+                var newStart = parameters.GetRequiredParameter<DateTime>(Parameters.NewDateTime);
 
+                // Get existing appointment to determine physician and duration
+                var existingAppointment = _scheduleManager.FindAppointmentById(appointmentId);
+                if (existingAppointment == null)
+                {
+                    return CommandResult.Fail("Appointment not found");
+                }
+
+                var durationMinutes = (int)(existingAppointment.End - existingAppointment.Start).TotalMinutes;
                 var newEnd = newStart.AddMinutes(durationMinutes);
 
                 var result = _scheduleManager.RescheduleAppointment(
-                    physicianId, appointmentId, newStart, newEnd);
+                    existingAppointment.PhysicianId, appointmentId, newStart, newEnd);
 
                 if (result.Success)
                 {

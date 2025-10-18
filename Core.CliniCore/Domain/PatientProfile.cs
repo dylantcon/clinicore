@@ -26,5 +26,41 @@ namespace Core.CliniCore.Domain
 
         protected override IProfileTemplate GetProfileTemplate()
             => new PatientProfileTemplate();
+
+        public override string ToString()
+        {
+            var age = DateTime.Now.Year - BirthDate.Year;
+            if (DateTime.Now.DayOfYear < BirthDate.DayOfYear) age--;
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Patient: {Name} (Age: {age})");
+            sb.AppendLine($"  ID: {Id:N}");
+            sb.AppendLine($"  Username: {Username}");
+            sb.AppendLine($"  Gender: {Gender}");
+            sb.AppendLine($"  Race: {Race}");
+            sb.AppendLine($"  Birth Date: {BirthDate:yyyy-MM-dd}");
+            sb.AppendLine($"  Address: {Address}");
+
+            if (PrimaryPhysicianId.HasValue)
+            {
+                sb.AppendLine($"  Primary Physician ID: {PrimaryPhysicianId.Value:N}");
+            }
+            else
+            {
+                sb.AppendLine("  Primary Physician: None");
+            }
+
+            if (AppointmentIds.Any())
+            {
+                sb.AppendLine($"  Appointments: {AppointmentIds.Count}");
+            }
+
+            if (ClinicalDocumentIds.Any())
+            {
+                sb.AppendLine($"  Clinical Documents: {ClinicalDocumentIds.Count}");
+            }
+
+            return sb.ToString();
+        }
     }
 }

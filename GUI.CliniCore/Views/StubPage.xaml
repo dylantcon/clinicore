@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels"
+             x:Class="GUI.CliniCore.Views.StubPage"
+             x:DataType="viewModels:StubViewModel"
+             Title="{Binding Title}">
+
+    <ScrollView Padding="20">
+        <VerticalStackLayout Spacing="20" MaximumWidthRequest="800" HorizontalOptions="Center">
+
+            <!-- Icon and Title -->
+            <VerticalStackLayout Spacing="15" HorizontalOptions="Center">
+                <Label Text="{Binding Icon}"
+                       FontFamily="MaterialIconsRegular"
+                       FontSize="80"
+                       HorizontalOptions="Center"
+                       TextColor="#FF9800"/>
+                <Label Text="{Binding FeatureName}"
+                       FontSize="28"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"
+                       TextColor="#333"/>
+            </VerticalStackLayout>
+
+            <!-- Information Card -->
+            <Border Stroke="#FF9800"
+                    StrokeThickness="2"
+                    Background="#FFF3E0"
+                    StrokeShape="RoundRectangle 12"
+                    Padding="25">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Feature Status"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="#E65100"/>
+
+                    <Label Text="{Binding Description}"
+                           FontSize="14"
+                           TextColor="#555"
+                           LineBreakMode="WordWrap"/>
+
+                    <BoxView HeightRequest="1" Color="#FFB74D" Margin="0,10"/>
+
+                    <Label Text="{Binding Reason}"
+                           FontSize="13"
+                           TextColor="#666"
+                           FontAttributes="Italic"
+                           LineBreakMode="WordWrap"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Implementation Note -->
+            <Border Stroke="LightGray"
+                    StrokeThickness="1"
+                    Background="White"
+                    StrokeShape="RoundRectangle 8"
+                    Padding="20">
+                <VerticalStackLayout Spacing="10">
+                    <Label FontSize="16" FontAttributes="Bold" TextColor="#333">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="&#xe88e; " FontFamily="MaterialIconsRegular"/>
+                                <Span Text="Implementation Note"/>
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+                    <Label Text="This feature is planned for future implementations of the CliniCore architecture. The current version focuses on core clinical documentation, scheduling, and patient management workflows."
+                           FontSize="12"
+                           TextColor="#666"
+                           LineBreakMode="WordWrap"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Back Button -->
+            <Button Text="← Back to Dashboard"
+                    Command="{Binding BackCommand}"
+                    BackgroundColor="#607D8B"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="50"
+                    Margin="0,10,0,0"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

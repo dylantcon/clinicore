@@ -15,7 +15,7 @@ namespace Core.CliniCore.Domain
     {
         private readonly Dictionary<Guid, IUserProfile> _profilesById;
         private readonly Dictionary<string, IUserProfile> _profilesByUsername;
-        private readonly object _lock = new object();
+        private readonly static object _lock = new object();
         private static ProfileRegistry? _instance;
 
         private ProfileRegistry()
@@ -31,9 +31,12 @@ namespace Core.CliniCore.Domain
         {
             get
             {
-                if (_instance == null)
+                lock(_lock)
                 {
-                    _instance = new ProfileRegistry();
+                    if (_instance == null)
+                    {
+                        _instance = new ProfileRegistry();
+                    }
                 }
                 return _instance;
             }
@@ -128,7 +131,10 @@ namespace Core.CliniCore.Domain
         /// </summary>
         public IEnumerable<PatientProfile> GetAllPatients()
         {
-            return GetProfilesByType<PatientProfile>();
+            lock (_lock)
+            {
+                return GetProfilesByType<PatientProfile>();
+            }
         }
 
         /// <summary>
@@ -136,7 +142,10 @@ namespace Core.CliniCore.Domain
         /// </summary>
         public IEnumerable<PhysicianProfile> GetAllPhysicians()
         {
-            return GetProfilesByType<PhysicianProfile>();
+            lock (_lock)
+            {
+                return GetProfilesByType<PhysicianProfile>();
+            }
         }
 
         /// <summary>
@@ -144,7 +153,10 @@ namespace Core.CliniCore.Domain
         /// </summary>
         public IEnumerable<AdministratorProfile> GetAllAdministrators()
         {
-            return GetProfilesByType<AdministratorProfile>();
+            lock (_lock)
+            {
+                return GetProfilesByType<AdministratorProfile>();
+            }
         }
 
         /// <summary>
@@ -191,6 +203,17 @@ namespace Core.CliniCore.Domain
                 {
                     return _profilesById.Count;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Gets all profiles in the registry
+        /// </summary>
+        public IEnumerable<IUserProfile> GetAllProfiles()
+        {
+            lock (_lock)
+            {
+                return _profilesById.Values.ToList();
             }
         }
 

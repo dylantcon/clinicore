@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,7 +22,7 @@ namespace Core.CliniCore.Commands
         public CommandParameters(Dictionary<string, object?> initialParameters)
         {
             _parameters = new Dictionary<string, object?>(
-                initialParameters ?? new Dictionary<string, object?>(),
+                initialParameters ?? [],
                 StringComparer.OrdinalIgnoreCase);
         }
 
@@ -63,32 +64,22 @@ namespace Core.CliniCore.Commands
             if (value is T typedValue)
                 return typedValue;
 
-            // Special handling for enums
             var targetType = typeof(T);
             var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
-            
-            if (underlyingType.IsEnum)
+
+            // Handle collections of enums separately
+            if (IsEnumCollection(underlyingType))
             {
-                try
-                {
-                    // If value is already an enum of the right type (boxed as object)
-                    if (value.GetType() == underlyingType)
-                        return (T)value;
-                    
-                    // Try to parse from string
-                    if (value is string stringValue)
-                        return (T)Enum.Parse(underlyingType, stringValue);
-                    
-                    // Try to convert from numeric value
-                    return (T)Enum.ToObject(underlyingType, value);
-                }
-                catch
-                {
-                    return default;
-                }
+                return TryConvertToEnumCollection<T>(value, underlyingType);
             }
 
-            // Try to convert
+            // Special handling for single enums
+            if (underlyingType.IsEnum)
+            {
+                return TryConvertToEnum<T>(value, underlyingType);
+            }
+
+            // Try standard conversion
             try
             {
                 return (T)Convert.ChangeType(value, typeof(T));
@@ -99,16 +90,94 @@ namespace Core.CliniCore.Commands
             }
         }
 
+        private static bool IsEnumCollection(Type type)
+        {
+            if (!type.IsGenericType)
+                return false;
+
+            var genericDef = type.GetGenericTypeDefinition();
+            if (genericDef != typeof(List<>) && genericDef != typeof(IList<>) && genericDef != typeof(IEnumerable<>))
+                return false;
+
+            var elementType = type.GetGenericArguments()[0];
+            return elementType.IsEnum;
+        }
+
+        private static T? TryConvertToEnumCollection<T>(object value, Type targetType)
+        {
+            try
+            {
+                var elementType = targetType.GetGenericArguments()[0];
+
+                if (value is System.Collections.IEnumerable enumerable)
+                {
+                    var listType = typeof(List<>).MakeGenericType(elementType);
+                    var list = Activator.CreateInstance(listType);
+                    var addMethod = listType.GetMethod("Add");
+
+                    foreach (var item in enumerable)
+                    {
+                        if (item == null) continue;
+
+                        object? enumValue = ConvertToEnumValue(item, elementType);
+                        if (enumValue != null)
+                        {
+                            addMethod?.Invoke(list, [enumValue]);
+                        }
+                    }
+
+                    return (T?)list;
+                }
+            }
+            catch
+            {
+                // Fall through to return default
+            }
+
+            return default;
+        }
+
+        private static T? TryConvertToEnum<T>(object value, Type enumType)
+        {
+            try
+            {
+                object? enumValue = ConvertToEnumValue(value, enumType);
+                return enumValue != null ? (T?)enumValue : default;
+            }
+            catch
+            {
+                return default;
+            }
+        }
+
+        private static object? ConvertToEnumValue(object value, Type enumType)
+        {
+            try
+            {
+                // If already the right enum type
+                if (value.GetType() == enumType)
+                    return value;
+
+                // Try to parse from string
+                if (value is string stringValue)
+                    return Enum.Parse(enumType, stringValue);
+
+                // Try to convert from numeric value
+                return Enum.ToObject(enumType, value);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         /// <summary>
         /// Gets a required parameter value (throws if not found or null)
         /// </summary>
         public T GetRequiredParameter<T>(string key)
         {
-            var value = GetParameter<T>(key);
-            if (value == null)
-            {
+            var value = GetParameter<T>(key) ?? 
                 throw new ArgumentException($"Required parameter '{key}' is missing or null.");
-            }
             return value;
         }
 
@@ -193,10 +262,9 @@ namespace Core.CliniCore.Commands
         /// </summary>
         public List<string> GetMissingRequired(params string[] requiredKeys)
         {
-            return requiredKeys
+            return [.. requiredKeys
                 .Where(key => !HasValue(key))
-                .Select(key => $"Missing required parameter: {key}")
-                .ToList();
+                .Select(key => $"Missing required parameter: {key}")];
         }
 
         /// <summary>

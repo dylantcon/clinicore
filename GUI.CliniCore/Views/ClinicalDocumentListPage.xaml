@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels"
+             xmlns:icons="clr-namespace:GUI.CliniCore.Resources.Fonts"
+             x:Class="GUI.CliniCore.Views.ClinicalDocumentListPage"
+             x:DataType="viewModels:ClinicalDocumentListViewModel"
+             Title="{Binding Title}">
+
+    <!-- Configure Shell back button to trigger Back command -->
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding BackCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <!-- Outer grid to constrain max width on wide screens -->
+    <Grid HorizontalOptions="Center" MaximumWidthRequest="1200">
+        <Grid RowDefinitions="Auto,*,Auto" Padding="10">
+
+        <!-- Actions Bar -->
+        <VerticalStackLayout Grid.Row="0" Spacing="10" Margin="0,0,0,10">
+
+            <!-- Back Button -->
+            <Button Text="← Back to Dashboard"
+                    Command="{Binding BackCommand}"
+                    BackgroundColor="#607D8B"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="40"/>
+
+            <!-- Filter Toggle -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <HorizontalStackLayout Spacing="10">
+                    <CheckBox IsChecked="{Binding ShowIncompleteOnly}"/>
+                    <Label Text="Show incomplete documents only"
+                           VerticalOptions="Center"
+                           TextColor="#333"/>
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Action Button (RBAC: Only visible to physicians and admins) -->
+            <Button Text="Create New Document"
+                    Command="{Binding CreateDocumentCommand}"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="45"
+                    IsVisible="{Binding CanCreateDocument}"/>
+
+        </VerticalStackLayout>
+
+        <!-- Document List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}"
+                     Margin="0,0,0,10">
+
+            <CollectionView ItemsSource="{Binding Documents}"
+                           SelectedItem="{Binding SelectedDocument}"
+                           SelectionMode="Single">
+
+                <!-- Empty View with proper layout -->
+                <CollectionView.EmptyView>
+                    <ContentView Padding="20" VerticalOptions="Center">
+                        <Border Stroke="#BDBDBD"
+                                StrokeThickness="1"
+                                Background="#F5F5F5"
+                                StrokeShape="RoundRectangle 12"
+                                Padding="40"
+                                HorizontalOptions="Center">
+                            <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                                <Label Text="{x:Static icons:MaterialIcons.Description}"
+                                       FontFamily="MaterialIconsRegular"
+                                       FontSize="64"
+                                       TextColor="#BDBDBD"
+                                       HorizontalOptions="Center"/>
+                                <Label Text="No clinical documents found"
+                                       FontSize="16"
+                                       TextColor="#757575"
+                                       HorizontalOptions="Center"
+                                       FontAttributes="Bold"/>
+                                <Label Text="Try adjusting your filters or create a new document"
+                                       FontSize="12"
+                                       TextColor="#9E9E9E"
+                                       HorizontalOptions="Center"/>
+                            </VerticalStackLayout>
+                        </Border>
+                    </ContentView>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:ClinicalDocumentDisplayModel">
+                        <Border Stroke="LightGray"
+                                StrokeThickness="1"
+                                Background="White"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="15"
+                                Margin="0,5">
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+
+                                <!-- Document Info -->
+                                <VerticalStackLayout Grid.Column="0" Spacing="5">
+
+                                    <!-- Date & Status -->
+                                    <HorizontalStackLayout Spacing="10">
+                                        <Label Text="{Binding CreatedAtDisplay}"
+                                               FontSize="16"
+                                               FontAttributes="Bold"
+                                               TextColor="#333"/>
+                                        <Border BackgroundColor="{Binding StatusColor}"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 10"
+                                                Padding="8,4">
+                                            <Label Text="{Binding StatusDisplay}"
+                                                   TextColor="White"
+                                                   FontSize="11"
+                                                   FontAttributes="Bold"/>
+                                        </Border>
+                                    </HorizontalStackLayout>
+
+                                    <!-- Patient & Physician -->
+                                    <Label FontSize="12" TextColor="Gray">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="Patient: " FontAttributes="Bold" TextColor="Gray"/>
+                                                <Span Text="{Binding PatientName}" TextColor="Gray"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+
+                                    <Label FontSize="12" TextColor="Gray">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="Physician: " FontAttributes="Bold" TextColor="Gray"/>
+                                                <Span Text="{Binding PhysicianName}" TextColor="Gray"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+
+                                    <!-- Chief Complaint -->
+                                    <Label Text="{Binding ChiefComplaint}"
+                                           FontSize="13"
+                                           TextColor="#333"
+                                           FontAttributes="Italic"
+                                           Margin="0,5,0,0"/>
+
+                                    <!-- Summary -->
+                                    <Label Text="{Binding Summary}"
+                                           FontSize="11"
+                                           TextColor="#666"/>
+
+                                    <!-- Document ID -->
+                                    <Label FontSize="10" TextColor="LightGray">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="ID: " TextColor="LightGray"/>
+                                                <Span Text="{Binding Id, StringFormat='{0:N}'}" TextColor="LightGray"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+
+                                </VerticalStackLayout>
+
+                            </Grid>
+
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+            </CollectionView>
+
+        </RefreshView>
+
+        <!-- Validation Errors -->
+        <CollectionView Grid.Row="2"
+                       ItemsSource="{Binding ValidationErrors}"
+                       IsVisible="{Binding HasValidationErrors}"
+                       Margin="10">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Stroke="#F44336"
+                            StrokeThickness="1"
+                            Background="#FFEBEE"
+                            StrokeShape="RoundRectangle 8"
+                            Padding="10"
+                            Margin="0,2">
+                        <Label Text="{Binding .}"
+                               TextColor="#D32F2F"
+                               FontSize="12"/>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        </Grid>
+    </Grid>
+
+</ContentPage>

@@ -10,6 +10,15 @@ namespace Core.CliniCore.Commands.Admin
 {
     public class ManageUserRolesCommand : AbstractCommand
     {
+        public const string Key = "manageuserroles";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            public const string UserId = "userid";
+            public const string UserRole = "userrole";
+        }
+
         public override string Description => throw new NotImplementedException();
 
         public override Permission? GetRequiredPermission()

@@ -11,6 +11,9 @@ namespace Core.CliniCore.Commands.Profile
 {
     public class ListPhysiciansCommand : AbstractCommand
     {
+        public const string Key = "listphysicians";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string Specialization = "specialization";
@@ -69,6 +72,7 @@ namespace Core.CliniCore.Commands.Profile
                 foreach (var physician in physicianList)
                 {
                     sb.AppendLine(FormatPhysicianInfo(physician));
+                    sb.AppendLine("  ---");
                 }
 
                 return CommandResult.Ok(sb.ToString(), physicianList);
@@ -81,19 +85,17 @@ namespace Core.CliniCore.Commands.Profile
 
         private string FormatPhysicianInfo(PhysicianProfile physician)
         {
-            var patientCount = physician.PatientIds.Count;
-            var specializations = string.Join(", ",
-                physician.Specializations.Select(s => s.GetDisplayName()));
-
+            // Get the base physician info from ToString and add years of experience
+            var physicianInfo = physician.ToString();
             var yearsExperience = DateTime.Now.Year - physician.GraduationDate.Year;
 
-            return $"  ID: {physician.Id:N}\n" +
-                   $"  Name: Dr. {physician.Name}\n" +
-                   $"  License: {physician.LicenseNumber}\n" +
-                   $"  Specializations: {specializations}\n" +
-                   $"  Years Experience: {yearsExperience}\n" +
-                   $"  Active Patients: {patientCount}\n" +
-                   $"  ---";
+            // Insert years of experience after graduation date
+            var graduationLine = $"  Graduation Date: {physician.GraduationDate:yyyy-MM-dd}";
+            var graduationWithExperience = $"{graduationLine}\n  Years Experience: {yearsExperience}";
+
+            physicianInfo = physicianInfo.Replace(graduationLine, graduationWithExperience);
+
+            return physicianInfo.TrimEnd('\r', '\n');
         }
     }
 }

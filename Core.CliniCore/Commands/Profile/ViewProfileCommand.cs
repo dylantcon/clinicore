@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Domain;
@@ -10,6 +11,9 @@ namespace Core.CliniCore.Commands.Profile
 {
     public class ViewProfileCommand : AbstractCommand
     {
+        public const string Key = "viewprofile";
+        public override string CommandKey => Key;
+
         public static class Parameters
         {
             public const string ProfileId = "profile_id";
@@ -54,6 +58,7 @@ namespace Core.CliniCore.Commands.Profile
                 result.AddError($"Profile with ID {profileId} not found in the registry.");
                 return result;
             }
+
 
             return result;
         }

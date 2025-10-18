@@ -8,6 +8,15 @@ namespace Core.CliniCore.Commands.Authentication
 {
     public class LoginCommand : AbstractCommand
     {
+        public const string Key = "login";
+        public override string CommandKey => Key;
+
+        public static class Parameters
+        {
+            public const string Username = "username";
+            public const string Password = "password";
+        }
+
         private readonly IAuthenticationService _authService;
 
         public LoginCommand(IAuthenticationService authService)
@@ -26,7 +35,7 @@ namespace Core.CliniCore.Commands.Authentication
             var result = CommandValidationResult.Success();
 
             // Check for required parameters
-            var missingParams = parameters.GetMissingRequired("username", "password");
+            var missingParams = parameters.GetMissingRequired(Parameters.Username, Parameters.Password);
             if (missingParams.Any())
             {
                 foreach (var error in missingParams)
@@ -35,14 +44,14 @@ namespace Core.CliniCore.Commands.Authentication
             }
 
             // Validate username is not empty
-            var username = parameters.GetParameter<string>("username");
+            var username = parameters.GetParameter<string>(Parameters.Username);
             if (string.IsNullOrWhiteSpace(username))
             {
                 result.AddError("Username cannot be empty");
             }
 
             // Validate password is not empty
-            var password = parameters.GetParameter<string>("password");
+            var password = parameters.GetParameter<string>(Parameters.Password);
             if (string.IsNullOrWhiteSpace(password))
             {
                 result.AddError("Password cannot be empty");
@@ -68,8 +77,8 @@ namespace Core.CliniCore.Commands.Authentication
         {
             try
             {
-                var username = parameters.GetRequiredParameter<string>("username");
-                var password = parameters.GetRequiredParameter<string>("password");
+                var username = parameters.GetRequiredParameter<string>(Parameters.Username);
+                var password = parameters.GetRequiredParameter<string>(Parameters.Password);
 
                 // Attempt authentication
                 var userProfile = _authService.Authenticate(username, password);

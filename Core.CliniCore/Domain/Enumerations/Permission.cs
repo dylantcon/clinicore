@@ -13,13 +13,23 @@
         ViewAllPatients,
         CreatePatientProfile,
         ViewPatientProfile,
+        UpdatePatientProfile,
+        DeletePatientProfile,
+        ViewPhysicianProfile,
         CreateClinicalDocument,
+        UpdateClinicalDocument,
+        DeleteClinicalDocument,
         ViewAllAppointments,
         ScheduleAnyAppointment,
         EditOwnAvailability,
 
         // admin permissions
         CreatePhysicianProfile,
+        UpdatePhysicianProfile,
+        DeletePhysicianProfile,
+        ViewAdministratorProfile,
+        UpdateAdministratorProfile,
+        ViewAllProfiles,
         ViewSystemReports,
         EditFacilitySettings
     }

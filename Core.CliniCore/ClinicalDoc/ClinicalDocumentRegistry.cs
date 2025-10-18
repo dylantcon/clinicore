@@ -17,7 +17,7 @@ namespace Core.CliniCore.ClinicalDoc
         private readonly Dictionary<Guid, List<ClinicalDocument>> _documentsByPatient;
         private readonly Dictionary<Guid, List<ClinicalDocument>> _documentsByPhysician;
         private readonly Dictionary<Guid, ClinicalDocument> _documentsByAppointment;
-        private readonly object _lock = new object();
+        private readonly static object _lock = new object();
         private static ClinicalDocumentRegistry? _instance;
 
         private ClinicalDocumentRegistry()
@@ -35,9 +35,12 @@ namespace Core.CliniCore.ClinicalDoc
         {
             get
             {
-                if (_instance == null)
+                lock (_lock)
                 {
-                    _instance = new ClinicalDocumentRegistry();
+                    if (_instance == null)
+                    {
+                        _instance = new ClinicalDocumentRegistry();
+                    }
                 }
                 return _instance;
             }
