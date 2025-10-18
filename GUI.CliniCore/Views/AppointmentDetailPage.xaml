@@ -91,6 +91,14 @@
                         HeightRequest="50"
                         IsVisible="{Binding CanCancel}"/>
 
+                <Button Text="Delete Appointment"
+                        Command="{Binding DeleteCommand}"
+                        BackgroundColor="#D32F2F"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"
+                        IsVisible="{Binding CanDelete}"/>
+
                 <Button Text="← Back to List"
                         Command="{Binding BackCommand}"
                         BackgroundColor="#607D8B"

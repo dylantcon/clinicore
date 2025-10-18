@@ -167,6 +167,18 @@ namespace Core.CliniCore.Scheduling.Management
         }
 
         /// <summary>
+        /// Deletes an appointment from the schedule
+        /// </summary>
+        public bool DeleteAppointment(Guid physicianId, Guid appointmentId)
+        {
+            lock (_lock)
+            {
+                var schedule = GetPhysicianSchedule(physicianId);
+                return schedule.RemoveAppointment(appointmentId);
+            }
+        }
+
+        /// <summary>
         /// Reschedules an appointment
         /// </summary>
         public ScheduleResult RescheduleAppointment(

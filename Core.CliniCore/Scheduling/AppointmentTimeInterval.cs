@@ -157,6 +157,19 @@ namespace Core.CliniCore.Scheduling
         }
 
         /// <summary>
+        /// Updates the duration of this appointment by changing the end time
+        /// </summary>
+        public void UpdateDuration(int durationMinutes)
+        {
+            if (durationMinutes <= 0)
+                throw new ArgumentException("Duration must be positive", nameof(durationMinutes));
+
+            End = Start.AddMinutes(durationMinutes);
+            AppointmentType = DetermineAppointmentType(Duration);
+            ModifiedAt = DateTime.Now;
+        }
+
+        /// <summary>
         /// Creates a rescheduled copy of this appointment
         /// </summary>
         public AppointmentTimeInterval Reschedule(DateTime newStart, DateTime newEnd)

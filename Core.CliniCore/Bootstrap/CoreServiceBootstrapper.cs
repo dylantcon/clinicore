@@ -176,8 +176,8 @@ namespace Core.CliniCore.Bootstrap
                             Console.WriteLine($"  Created sample patient: {SampleCredentials.PatientDisplayName}");
                         }
 
-                        // Create sample appointments
-                        var baseAppointmentTime = DateTime.Now.AddDays(7).Date.AddHours(10); // Next week at 10 AM
+                        // Create sample appointments - start on next Monday at 10 AM
+                        var baseAppointmentTime = GetNextWeekday(DateTime.Now.AddDays(7).Date).AddHours(10);
 
                         // Create appointment for Jane Doe
                         if (physician != null && patient != null)
@@ -229,6 +229,37 @@ namespace Core.CliniCore.Bootstrap
         }
 
         /// <summary>
+        /// Gets the next weekday (Monday-Friday) from the given date
+        /// </summary>
+        private static DateTime GetNextWeekday(DateTime date)
+        {
+            while (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+            {
+                date = date.AddDays(1);
+            }
+            return date;
+        }
+
+        /// <summary>
+        /// Advances time to next business day slot, respecting weekends and business hours (8 AM - 5 PM)
+        /// </summary>
+        private static DateTime GetNextBusinessSlot(DateTime time, int slotMinutes)
+        {
+            var nextSlot = time.AddMinutes(slotMinutes);
+
+            // If we go past 5 PM, move to next day at 8 AM
+            if (nextSlot.Hour >= 17 || nextSlot.TimeOfDay > new TimeSpan(17, 0, 0))
+            {
+                nextSlot = nextSlot.Date.AddDays(1).AddHours(8);
+            }
+
+            // Skip weekends
+            nextSlot = GetNextWeekday(nextSlot);
+
+            return nextSlot;
+        }
+
+        /// <summary>
         /// Schedules a sample appointment for a patient with conflict-aware time slot allocation
         /// </summary>
         private static void ScheduleSampleAppointment(
@@ -239,10 +270,12 @@ namespace Core.CliniCore.Bootstrap
             string reason)
         {
             const int SLOT_DURATION_MINUTES = 30;
-            const int MAX_ATTEMPTS = 20; // Try up to 20 slots (10 hours)
+            const int MAX_ATTEMPTS = 50; // Try up to 50 slots to account for weekends
 
             var physicianSchedule = scheduleManager.GetPhysicianSchedule(physician.Id);
-            var attemptTime = baseTime;
+
+            // Ensure we start on a weekday during business hours
+            var attemptTime = GetNextWeekday(baseTime.Date).AddHours(Math.Max(8, Math.Min(16, baseTime.Hour)));
             var scheduled = false;
 
             for (int attempt = 0; attempt < MAX_ATTEMPTS && !scheduled; attempt++)
@@ -259,13 +292,13 @@ namespace Core.CliniCore.Bootstrap
                 if (physicianSchedule.TryAddAppointment(appointment))
                 {
                     Console.WriteLine($"  Scheduled appointment: {patient.GetValue<string>(CommonEntryTypeExtensions.GetKey(CommonEntryType.Name))} on {attemptTime:yyyy-MM-dd HH:mm}");
-                    baseTime = attemptTime.AddMinutes(SLOT_DURATION_MINUTES); // Next slot starts after this one
+                    baseTime = GetNextBusinessSlot(attemptTime, SLOT_DURATION_MINUTES); // Next slot on next business day
                     scheduled = true;
                 }
                 else
                 {
-                    // Conflict detected, try next 30-minute slot
-                    attemptTime = attemptTime.AddMinutes(SLOT_DURATION_MINUTES);
+                    // Conflict detected, try next business slot
+                    attemptTime = GetNextBusinessSlot(attemptTime, SLOT_DURATION_MINUTES);
                 }
             }
 

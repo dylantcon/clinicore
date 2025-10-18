@@ -109,9 +109,12 @@ namespace GUI.CliniCore.ViewModels
         public bool CanCancel => _appointment != null &&
                                 _appointment.Status != AppointmentStatus.Cancelled;
 
+        public bool CanDelete => _appointment != null; // Can delete any appointment
+
         public MauiCommand LoadAppointmentCommand { get; }
         public MauiCommand RescheduleCommand { get; }
         public MauiCommand CancelCommand { get; }
+        public MauiCommand DeleteCommand { get; }
         public MauiCommand BackCommand { get; }
 
         public AppointmentDetailViewModel(
@@ -138,6 +141,12 @@ namespace GUI.CliniCore.ViewModels
             CancelCommand = new AsyncRelayCommand(
                 execute: async () => await ExecuteCancelAsync(),
                 canExecute: () => CanCancel
+            );
+
+            // Delete command
+            DeleteCommand = new AsyncRelayCommand(
+                execute: async () => await ExecuteDeleteAsync(),
+                canExecute: () => CanDelete
             );
 
             // Back command
@@ -193,9 +202,15 @@ namespace GUI.CliniCore.ViewModels
 
                 ClearValidation();
 
-                // Update action button states
+                // Update action button states and visibility
                 (RescheduleCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
                 (CancelCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+                (DeleteCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+
+                // Notify UI about button visibility changes
+                OnPropertyChanged(nameof(CanReschedule));
+                OnPropertyChanged(nameof(CanCancel));
+                OnPropertyChanged(nameof(CanDelete));
             }
             catch (Exception ex)
             {
@@ -258,6 +273,59 @@ namespace GUI.CliniCore.ViewModels
 
                 ValidationErrors.Clear();
                 ValidationErrors.Add("Appointment cancelled successfully!");
+
+                // Update button visibility since status changed
+                OnPropertyChanged(nameof(CanReschedule));
+                OnPropertyChanged(nameof(CanCancel));
+                OnPropertyChanged(nameof(CanDelete));
+            }
+        }
+
+        private async Task ExecuteDeleteAsync()
+        {
+            if (_appointment == null || !_appointmentId.HasValue) return;
+
+            try
+            {
+                // Confirm deletion
+                bool confirmed = await Application.Current!.MainPage!.DisplayAlert(
+                    "Confirm Deletion",
+                    $"Are you sure you want to permanently delete this appointment with {PatientName}? This action cannot be undone.",
+                    "Delete",
+                    "Cancel");
+
+                if (!confirmed) return;
+
+                var deleteCoreCommand = _commandFactory.CreateCommand(DeleteAppointmentCommand.Key);
+                var parameters = new CommandParameters()
+                    .SetParameter(DeleteAppointmentCommand.Parameters.AppointmentId, _appointmentId.Value);
+
+                var deleteCommand = new MauiCommandAdapter(
+                    deleteCoreCommand!,
+                    parameterBuilder: () => parameters,
+                    sessionProvider: () => _sessionManager.CurrentSession,
+                    resultHandler: HandleDeleteResult,
+                    viewModel: this
+                );
+
+                deleteCommand.Execute(null);
+            }
+            catch (Exception ex)
+            {
+                ValidationErrors.Clear();
+                ValidationErrors.Add($"Error deleting appointment: {ex.Message}");
+            }
+        }
+
+        private void HandleDeleteResult(CommandResult result)
+        {
+            if (result.Success)
+            {
+                // Navigate back to list after successful deletion
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    await _navigationService.NavigateToAsync("AppointmentListPage");
+                });
             }
         }
     }

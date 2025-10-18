@@ -271,47 +271,79 @@ namespace GUI.CliniCore.ViewModels
                     return;
                 }
 
-                // Use ScheduleAppointmentCommand or RescheduleAppointmentCommand
-                var commandKey = _appointmentId.HasValue
-                    ? RescheduleAppointmentCommand.Key
-                    : ScheduleAppointmentCommand.Key;
+                if (_appointmentId.HasValue)
+                {
+                    // Editing existing appointment
+                    // Check if time has changed
+                    bool timeChanged = _appointment!.Start != startDateTime;
 
-                var coreCommand = _commandFactory.CreateCommand(commandKey);
-
-                var saveCommand = new MauiCommandAdapter(
-                    coreCommand!,
-                    parameterBuilder: () =>
+                    if (timeChanged)
                     {
-                        var parameters = new CommandParameters();
+                        // Reschedule to new time first
+                        var rescheduleCommand = _commandFactory.CreateCommand(RescheduleAppointmentCommand.Key);
+                        var rescheduleParams = new CommandParameters()
+                            .SetParameter(RescheduleAppointmentCommand.Parameters.AppointmentId, _appointmentId.Value)
+                            .SetParameter(RescheduleAppointmentCommand.Parameters.NewDateTime, startDateTime);
 
-                        if (_appointmentId.HasValue)
-                        {
-                            // Reschedule - note: RescheduleAppointmentCommand only changes start time, not duration
-                            parameters.SetParameter(RescheduleAppointmentCommand.Parameters.AppointmentId, _appointmentId.Value);
-                            parameters.SetParameter(RescheduleAppointmentCommand.Parameters.NewDateTime, startDateTime);
-                        }
-                        else
-                        {
-                            // New appointment
-                            parameters.SetParameter(ScheduleAppointmentCommand.Parameters.PatientId, SelectedPatient.Id);
-                            parameters.SetParameter(ScheduleAppointmentCommand.Parameters.PhysicianId, SelectedPhysician.Id);
-                            parameters.SetParameter(ScheduleAppointmentCommand.Parameters.StartTime, startDateTime);
-                            parameters.SetParameter(ScheduleAppointmentCommand.Parameters.DurationMinutes, DurationMinutes);
-                            parameters.SetParameter(ScheduleAppointmentCommand.Parameters.Reason, Reason);
-                            if (!string.IsNullOrWhiteSpace(Notes))
-                            {
-                                parameters.SetParameter(ScheduleAppointmentCommand.Parameters.Notes, Notes);
-                            }
-                        }
+                        var rescheduleAdapter = new MauiCommandAdapter(
+                            rescheduleCommand!,
+                            parameterBuilder: () => rescheduleParams,
+                            sessionProvider: () => _sessionManager.CurrentSession,
+                            resultHandler: (result) => { }, // Silent, we'll update next
+                            viewModel: this
+                        );
 
-                        return parameters;
-                    },
-                    sessionProvider: () => _sessionManager.CurrentSession,
-                    resultHandler: HandleSaveResult,
-                    viewModel: this
-                );
+                        rescheduleAdapter.Execute(null);
+                    }
 
-                saveCommand.Execute(null);
+                    // Always update reason, notes, and duration
+                    var updateCommand = _commandFactory.CreateCommand(UpdateAppointmentCommand.Key);
+                    var updateParams = new CommandParameters()
+                        .SetParameter(UpdateAppointmentCommand.Parameters.AppointmentId, _appointmentId.Value)
+                        .SetParameter(UpdateAppointmentCommand.Parameters.ReasonForVisit, Reason)
+                        .SetParameter(UpdateAppointmentCommand.Parameters.DurationMinutes, DurationMinutes);
+
+                    if (!string.IsNullOrWhiteSpace(Notes))
+                    {
+                        updateParams.SetParameter(UpdateAppointmentCommand.Parameters.Notes, Notes);
+                    }
+
+                    var updateAdapter = new MauiCommandAdapter(
+                        updateCommand!,
+                        parameterBuilder: () => updateParams,
+                        sessionProvider: () => _sessionManager.CurrentSession,
+                        resultHandler: HandleSaveResult,
+                        viewModel: this
+                    );
+
+                    updateAdapter.Execute(null);
+                }
+                else
+                {
+                    // Creating new appointment
+                    var coreCommand = _commandFactory.CreateCommand(ScheduleAppointmentCommand.Key);
+                    var parameters = new CommandParameters()
+                        .SetParameter(ScheduleAppointmentCommand.Parameters.PatientId, SelectedPatient.Id)
+                        .SetParameter(ScheduleAppointmentCommand.Parameters.PhysicianId, SelectedPhysician.Id)
+                        .SetParameter(ScheduleAppointmentCommand.Parameters.StartTime, startDateTime)
+                        .SetParameter(ScheduleAppointmentCommand.Parameters.DurationMinutes, DurationMinutes)
+                        .SetParameter(ScheduleAppointmentCommand.Parameters.Reason, Reason);
+
+                    if (!string.IsNullOrWhiteSpace(Notes))
+                    {
+                        parameters.SetParameter(ScheduleAppointmentCommand.Parameters.Notes, Notes);
+                    }
+
+                    var saveCommand = new MauiCommandAdapter(
+                        coreCommand!,
+                        parameterBuilder: () => parameters,
+                        sessionProvider: () => _sessionManager.CurrentSession,
+                        resultHandler: HandleSaveResult,
+                        viewModel: this
+                    );
+
+                    saveCommand.Execute(null);
+                }
             }
             catch (Exception ex)
             {
