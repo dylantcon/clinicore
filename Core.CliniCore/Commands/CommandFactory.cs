@@ -103,7 +103,6 @@ namespace Core.CliniCore.Commands
             RegisterCommandWithKey(() => new ListAppointmentsCommand(_scheduleManager));
             RegisterCommandWithKey(() => new ViewAppointmentCommand(_scheduleManager));
             RegisterCommandWithKey(() => new CancelAppointmentCommand(_scheduleManager));
-            RegisterCommandWithKey(() => new RescheduleAppointmentCommand(_scheduleManager));
             RegisterCommandWithKey(() => new UpdateAppointmentCommand(_scheduleManager));
             RegisterCommandWithKey(() => new DeleteAppointmentCommand(_scheduleManager));
             RegisterCommandWithKey(() => new CheckConflictsCommand(_scheduleManager));

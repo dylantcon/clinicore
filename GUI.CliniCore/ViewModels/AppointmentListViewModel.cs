@@ -190,7 +190,7 @@ namespace GUI.CliniCore.ViewModels
 
         private async Task NavigateToCreateAsync()
         {
-            var route = "AppointmentEditPage";
+            var route = "CreateAppointmentPage";
             if (_patientId.HasValue)
             {
                 route += $"?patientId={_patientId.Value}";
@@ -227,16 +227,16 @@ namespace GUI.CliniCore.ViewModels
         public string DurationDisplay => $"{DurationMinutes} min";
         public AppointmentStatus Status => _appointment.Status;
         public string StatusDisplay => Status.ToString();
-        public string StatusColor => Status switch
+        public Color StatusColor => Status switch
         {
-            AppointmentStatus.Scheduled => "#4CAF50",   // Green
-            AppointmentStatus.Tentative => "#2196F3",   // Blue
-            AppointmentStatus.InProgress => "#FF9800",  // Orange
-            AppointmentStatus.Completed => "#9E9E9E",   // Gray
-            AppointmentStatus.Cancelled => "#F44336",   // Red
-            AppointmentStatus.NoShow => "#F44336",      // Red
-            AppointmentStatus.Rescheduled => "#9C27B0", // Purple
-            _ => "#757575"                              // Default gray
+            AppointmentStatus.Scheduled => Color.FromArgb("#4CAF50"),   // Green
+            AppointmentStatus.Tentative => Color.FromArgb("#2196F3"),   // Blue
+            AppointmentStatus.InProgress => Color.FromArgb("#FF9800"),  // Orange
+            AppointmentStatus.Completed => Color.FromArgb("#9E9E9E"),   // Gray
+            AppointmentStatus.Cancelled => Color.FromArgb("#F44336"),   // Red
+            AppointmentStatus.NoShow => Color.FromArgb("#F44336"),      // Red
+            AppointmentStatus.Rescheduled => Color.FromArgb("#9C27B0"), // Purple
+            _ => Color.FromArgb("#757575")                              // Default gray
         };
 
         public string PatientName

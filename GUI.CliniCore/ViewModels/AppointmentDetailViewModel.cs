@@ -94,8 +94,8 @@ namespace GUI.CliniCore.ViewModels
             set => SetProperty(ref _status, value);
         }
 
-        private string _statusColor = string.Empty;
-        public string StatusColor
+        private Color _statusColor = Colors.Gray;
+        public Color StatusColor
         {
             get => _statusColor;
             set => SetProperty(ref _statusColor, value);
@@ -188,14 +188,14 @@ namespace GUI.CliniCore.ViewModels
                 Status = _appointment.Status.ToString();
                 StatusColor = _appointment.Status switch
                 {
-                    AppointmentStatus.Scheduled => "#4CAF50",   // Green
-                    AppointmentStatus.Tentative => "#2196F3",   // Blue
-                    AppointmentStatus.InProgress => "#FF9800",  // Orange
-                    AppointmentStatus.Completed => "#9E9E9E",   // Gray
-                    AppointmentStatus.Cancelled => "#F44336",   // Red
-                    AppointmentStatus.NoShow => "#F44336",      // Red
-                    AppointmentStatus.Rescheduled => "#9C27B0", // Purple
-                    _ => "#757575"                              // Default gray
+                    AppointmentStatus.Scheduled => Color.FromArgb("#4CAF50"),   // Green
+                    AppointmentStatus.Tentative => Color.FromArgb("#2196F3"),   // Blue
+                    AppointmentStatus.InProgress => Color.FromArgb("#FF9800"),  // Orange
+                    AppointmentStatus.Completed => Color.FromArgb("#9E9E9E"),   // Gray
+                    AppointmentStatus.Cancelled => Color.FromArgb("#F44336"),   // Red
+                    AppointmentStatus.NoShow => Color.FromArgb("#F44336"),      // Red
+                    AppointmentStatus.Rescheduled => Color.FromArgb("#9C27B0"), // Purple
+                    _ => Color.FromArgb("#757575")                              // Default gray
                 };
 
                 AppointmentInfo = $"Appointment ID: {_appointment.Id:N}";

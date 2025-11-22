@@ -60,7 +60,7 @@ namespace Core.CliniCore.Bootstrap
             // Scheduling Management
             // Note: ScheduleManager uses Singleton pattern internally, but we register it for DI
             services.AddSingleton<ScheduleManager>(sp => ScheduleManager.Instance);
-            services.AddSingleton<ScheduleConflictResolver>();
+            services.AddSingleton<ScheduleConflictDetector>();
 
             // Command Infrastructure
             services.AddSingleton<CommandInvoker>();
@@ -94,7 +94,7 @@ namespace Core.CliniCore.Bootstrap
             services.AddSingleton<ProfileRegistry>(sp => ProfileRegistry.Instance);
             services.AddSingleton<ClinicalDocumentRegistry>(sp => ClinicalDocumentRegistry.Instance);
             services.AddSingleton<ScheduleManager>(sp => ScheduleManager.Instance);
-            services.AddSingleton<ScheduleConflictResolver>();
+            services.AddSingleton<ScheduleConflictDetector>();
             services.AddSingleton<CommandInvoker>();
 
             services.AddSingleton<CommandFactory>(serviceProvider =>

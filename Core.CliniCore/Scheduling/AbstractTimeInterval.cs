@@ -39,12 +39,12 @@ namespace Core.CliniCore.Scheduling
         /// <summary>
         /// Start time of the interval
         /// </summary>
-        public DateTime Start { get; protected set; }
+        public DateTime Start { get; protected internal set; }
 
         /// <summary>
         /// End time of the interval
         /// </summary>
-        public DateTime End { get; protected set; }
+        public DateTime End { get; protected internal set; }
 
         /// <summary>
         /// Duration of the interval

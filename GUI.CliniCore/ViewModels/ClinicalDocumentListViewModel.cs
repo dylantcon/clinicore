@@ -225,7 +225,7 @@ namespace GUI.CliniCore.ViewModels
         public string CreatedAtDisplay => CreatedAt.ToString("yyyy-MM-dd HH:mm");
         public bool IsCompleted => _document.IsCompleted;
         public string StatusDisplay => IsCompleted ? "Completed" : "Draft";
-        public string StatusColor => IsCompleted ? "#4CAF50" : "#FF9800"; // Green or Orange
+        public Color StatusColor => IsCompleted ? Color.FromArgb("#4CAF50") : Color.FromArgb("#FF9800"); // Green or Orange
 
         public string ChiefComplaint => string.IsNullOrWhiteSpace(_document.ChiefComplaint)
             ? "No chief complaint recorded"

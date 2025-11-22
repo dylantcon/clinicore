@@ -10,18 +10,17 @@
              BackgroundColor="#F5F5F5">
 
     <ScrollView>
-        <Grid RowDefinitions="*,Auto,*" Padding="20">
-
-            <!-- Login Card -->
-            <Border Grid.Row="1"
-                    Stroke="#E0E0E0"
-                    StrokeThickness="1"
-                    Background="White"
-                    StrokeShape="RoundRectangle 16"
-                    Shadow="{Shadow Brush=Black, Opacity=0.1, Radius=10, Offset='0,2'}"
-                    MaximumWidthRequest="450"
-                    HorizontalOptions="Center"
-                    Padding="40,40,40,30">
+        <!-- Fixed WidthRequest prevents card from resizing when validation messages appear/disappear -->
+        <Border Stroke="#E0E0E0"
+                StrokeThickness="1"
+                Background="White"
+                StrokeShape="RoundRectangle 16"
+                Shadow="{Shadow Brush=Black, Opacity=0.1, Radius=10, Offset='0,2'}"
+                WidthRequest="450"
+                HorizontalOptions="Center"
+                VerticalOptions="Center"
+                Margin="20"
+                Padding="40,40,40,30">
 
                 <VerticalStackLayout Spacing="20">
 
@@ -104,45 +103,46 @@
                         </Border>
                     </VerticalStackLayout>
 
-                    <!-- Validation Errors -->
-                    <CollectionView ItemsSource="{Binding ValidationErrors}"
-                                    IsVisible="{Binding HasValidationErrors}"
-                                    Margin="0,5,0,0">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate>
-                                <Border Stroke="#F44336"
-                                        StrokeThickness="1"
-                                        Background="#FFEBEE"
-                                        StrokeShape="RoundRectangle 6"
-                                        Margin="0,2"
-                                        Padding="12,8">
-                                    <Label Text="{Binding .}"
-                                           TextColor="#D32F2F"
-                                           FontSize="12"/>
-                                </Border>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                    <!-- Validation Messages Container -->
+                    <VerticalStackLayout Margin="0,5,0,0">
+                        <!-- Validation Errors -->
+                        <CollectionView ItemsSource="{Binding ValidationErrors}"
+                                        IsVisible="{Binding HasValidationErrors}">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Stroke="#F44336"
+                                            StrokeThickness="1"
+                                            Background="#FFEBEE"
+                                            StrokeShape="RoundRectangle 6"
+                                            Margin="0,2"
+                                            Padding="12,8">
+                                        <Label Text="{Binding .}"
+                                               TextColor="#D32F2F"
+                                               FontSize="12"/>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
 
-                    <!-- Validation Warnings -->
-                    <CollectionView ItemsSource="{Binding ValidationWarnings}"
-                                    IsVisible="{Binding HasValidationWarnings}"
-                                    Margin="0,5,0,0">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate>
-                                <Border Stroke="#FF9800"
-                                        StrokeThickness="1"
-                                        Background="#FFF3E0"
-                                        StrokeShape="RoundRectangle 6"
-                                        Margin="0,2"
-                                        Padding="12,8">
-                                    <Label Text="{Binding .}"
-                                           TextColor="#F57C00"
-                                           FontSize="12"/>
-                                </Border>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                        <!-- Validation Warnings -->
+                        <CollectionView ItemsSource="{Binding ValidationWarnings}"
+                                        IsVisible="{Binding HasValidationWarnings}">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Stroke="#FF9800"
+                                            StrokeThickness="1"
+                                            Background="#FFF3E0"
+                                            StrokeShape="RoundRectangle 6"
+                                            Margin="0,2"
+                                            Padding="12,8">
+                                        <Label Text="{Binding .}"
+                                               TextColor="#F57C00"
+                                               FontSize="12"/>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
 
                     <!-- Login Button -->
                     <Button Text="Sign In"
@@ -228,8 +228,6 @@
                 </VerticalStackLayout>
 
             </Border>
-
-        </Grid>
     </ScrollView>
 
 </ContentPage>

@@ -178,10 +178,6 @@ namespace CLI.CliniCore.Service
                     parameters[CancelAppointmentCommand.Parameters.AppointmentId] = GetGuidInput("Appointment ID");
                     break;
 
-                case RescheduleAppointmentCommand.Key:
-                    parameters[RescheduleAppointmentCommand.Parameters.AppointmentId] = GetGuidInput("Appointment ID");
-                    parameters[RescheduleAppointmentCommand.Parameters.NewDateTime] = GetDateTimeInput("New Date and Time");
-                    break;
 
                 case ViewClinicalDocumentCommand.Key:
                     parameters[ViewClinicalDocumentCommand.Parameters.DocumentId] = GetClinicalDocumentSelection();

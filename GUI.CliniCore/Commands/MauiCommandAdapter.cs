@@ -58,17 +58,31 @@ namespace GUI.CliniCore.Commands
                 // Call the core command's validation
                 var validationResult = _coreCommand.Validate(commandParams, session);
 
-                System.Diagnostics.Debug.WriteLine($"CanExecute: IsValid={validationResult.IsValid}, Errors={validationResult.Errors?.Count ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"[CanExecute] Command={_coreCommand.GetType().Name}, IsValid={validationResult.IsValid}");
+                if (!validationResult.IsValid && validationResult.Errors != null)
+                {
+                    foreach (var error in validationResult.Errors)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[CanExecute] Error: {error}");
+                    }
+                }
 
-                // Don't update validation messages during CanExecute - this prevents button flicker
-                // Validation messages will be shown during Execute if the command fails
-                // UpdateValidationMessages(validationResult);
+                // Update validation messages in UI so user sees WHY button is disabled
+                // Must run on main thread since we're updating observable collections
+                if (MainThread.IsMainThread)
+                {
+                    UpdateValidationMessages(validationResult);
+                }
+                else
+                {
+                    MainThread.BeginInvokeOnMainThread(() => UpdateValidationMessages(validationResult));
+                }
 
                 return validationResult.IsValid;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"CanExecute exception: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[CanExecute] EXCEPTION: {ex.Message}\n{ex.StackTrace}");
                 // Handle parameter building errors
                 return false;
             }
@@ -138,7 +152,15 @@ namespace GUI.CliniCore.Commands
         /// </summary>
         public void RaiseCanExecuteChanged()
         {
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            // MAUI requires CanExecuteChanged to be raised on the main thread
+            if (MainThread.IsMainThread)
+            {
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            }
+            else
+            {
+                MainThread.BeginInvokeOnMainThread(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+            }
         }
 
         /// <summary>

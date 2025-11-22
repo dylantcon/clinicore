@@ -158,61 +158,6 @@ namespace Core.CliniCore.Scheduling.BookingStrategies
             return slots;
         }
 
-        /// <summary>
-        /// Evaluates how good a time slot is
-        /// </summary>
-        public double EvaluateSlot(AppointmentSlot slot, PhysicianSchedule physicianSchedule)
-        {
-            double score = 100.0;
-
-            // Prefer morning appointments
-            if (slot.Start.Hour >= 8 && slot.Start.Hour < 12)
-            {
-                score += 10;
-            }
-
-            // Slightly penalize late afternoon
-            if (slot.Start.Hour >= 16)
-            {
-                score -= 10;
-            }
-
-            // Penalize slots right after lunch
-            if (slot.Start.Hour == 13)
-            {
-                score -= 5;
-            }
-
-            // Bonus for slots that start on the hour or half-hour
-            if (slot.Start.Minute == 0 || slot.Start.Minute == 30)
-            {
-                score += 5;
-            }
-
-            // Check utilization for the day
-            var daySchedule = physicianSchedule.GetAppointmentsForDate(slot.Start.Date);
-            var utilization = daySchedule.Sum(a => a.Duration.TotalHours) / 8.0; // Assume 8-hour day
-
-            // Prefer days with moderate utilization (not too empty, not too full)
-            if (utilization > 0.3 && utilization < 0.7)
-            {
-                score += 10;
-            }
-            else if (utilization > 0.85)
-            {
-                score -= 15; // Heavily booked day
-            }
-
-            // Penalize slots far in the future
-            var daysOut = (slot.Start.Date - DateTime.Today).Days;
-            if (daysOut > 14)
-            {
-                score -= daysOut * 0.5; // Lose 0.5 points per day beyond 2 weeks
-            }
-
-            return Math.Max(0, Math.Min(100, score)); // Clamp between 0-100
-        }
-
         #region Helper Methods
 
         /// <summary>

@@ -244,14 +244,14 @@
                                     </HorizontalStackLayout>
 
                                     <!-- Primary Physician Assignment Status -->
-                                    <Border BackgroundColor="#E8F5E9"
+                                        <Border BackgroundColor="#2E7D32"
                                             StrokeThickness="0"
                                             StrokeShape="RoundRectangle 6"
                                             Padding="8,4"
                                             HorizontalOptions="Start"
                                             Margin="0,5,0,0">
-                                        <Label FontSize="11" TextColor="#2E7D32">
-                                            <Label.FormattedText>
+                                            <Label FontSize="11" TextColor="#E8F5E9">
+                                                <Label.FormattedText>
                                                 <FormattedString>
                                                     <Span Text="{x:Static icons:MaterialIcons.LocalHospital}"
                                                           FontFamily="MaterialIconsRegular"

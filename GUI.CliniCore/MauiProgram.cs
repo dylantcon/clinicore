@@ -60,6 +60,7 @@ namespace GUI.CliniCore
             // Appointment ViewModels
             builder.Services.AddTransient<AppointmentListViewModel>();
             builder.Services.AddTransient<AppointmentDetailViewModel>();
+            builder.Services.AddTransient<CreateAppointmentViewModel>();
             builder.Services.AddTransient<AppointmentEditViewModel>();
 
             // Stub ViewModel
@@ -91,6 +92,7 @@ namespace GUI.CliniCore
             // Appointment Pages
             builder.Services.AddTransient<AppointmentListPage>();
             builder.Services.AddTransient<AppointmentDetailPage>();
+            builder.Services.AddTransient<CreateAppointmentPage>();
             builder.Services.AddTransient<AppointmentEditPage>();
 
             // Stub Page

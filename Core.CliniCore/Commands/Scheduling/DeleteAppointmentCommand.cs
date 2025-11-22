@@ -39,6 +39,21 @@ namespace Core.CliniCore.Commands.Scheduling
             if (!appointmentId.HasValue || appointmentId.Value == Guid.Empty)
             {
                 result.AddError("Appointment ID is required");
+                return result;
+            }
+
+            // Validate appointment exists
+            var appointment = _scheduleManager.FindAppointmentById(appointmentId.Value);
+            if (appointment == null)
+            {
+                result.AddError($"Appointment with ID {appointmentId.Value} not found");
+                return result;
+            }
+
+            // Add warning for completed appointments
+            if (appointment.Status == AppointmentStatus.Completed)
+            {
+                result.AddWarning("Deleting a completed appointment will remove it from historical records");
             }
 
             return result;
@@ -50,19 +65,15 @@ namespace Core.CliniCore.Commands.Scheduling
             {
                 var appointmentId = parameters.GetRequiredParameter<Guid>(Parameters.AppointmentId);
 
-                // Find appointment to get physician ID
-                var appointment = _scheduleManager.FindAppointmentById(appointmentId);
-                if (appointment == null)
-                {
-                    return CommandResult.Fail("Appointment not found");
-                }
+                // Appointment existence already validated in ValidateParameters
+                var appointment = _scheduleManager.FindAppointmentById(appointmentId)!;
 
                 // Delete from physician's schedule
                 bool deleted = _scheduleManager.DeleteAppointment(appointment.PhysicianId, appointmentId);
 
                 if (deleted)
                 {
-                    return CommandResult.Ok("Appointment deleted successfully", appointmentId);
+                    return CommandResult.Ok($"Appointment deleted successfully (ID: {appointmentId})", appointmentId);
                 }
 
                 return CommandResult.Fail("Failed to delete appointment");

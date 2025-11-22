@@ -407,9 +407,9 @@ namespace CLI.CliniCore.Service
                     new ConsoleMenuItem
                     {
                         Key = "4",
-                        Label = "Reschedule Appointment",
-                        Description = "Change appointment time",
-                        Action = () => ExecuteCommand(RescheduleAppointmentCommand.Key)
+                        Label = "Update Appointment",
+                        Description = "Change appointment time, duration, or details",
+                        Action = () => ExecuteCommand(UpdateAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {
@@ -474,9 +474,9 @@ namespace CLI.CliniCore.Service
                     new ConsoleMenuItem
                     {
                         Key = "4",
-                        Label = "Reschedule Appointment",
-                        Description = "Change appointment time",
-                        Action = () => ExecuteCommand(RescheduleAppointmentCommand.Key)
+                        Label = "Update Appointment",
+                        Description = "Change appointment time, duration, or details",
+                        Action = () => ExecuteCommand(UpdateAppointmentCommand.Key)
                     },
                     new ConsoleMenuItem
                     {

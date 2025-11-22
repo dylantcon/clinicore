@@ -1,38 +1,43 @@
 ﻿using Core.CliniCore.Domain.Enumerations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Core.CliniCore.Scheduling.BookingStrategies;
 
 namespace Core.CliniCore.Scheduling.Management
 {
     /// <summary>
-    /// Resolves scheduling conflicts using Chain of Responsibility pattern
+    /// Resolves scheduling conflicts using Chain of Responsibility pattern.
+    /// Uses IBookingStrategy to find alternative time slots when conflicts are detected.
     /// </summary>
-    public class ScheduleConflictResolver
+    public class ScheduleConflictDetector
     {
-        private readonly List<IConflictResolutionStrategy> _strategies;
+        private readonly List<IConflictDetectionStrategy> _strategies;
+        private readonly IBookingStrategy _bookingStrategy;
 
-        public ScheduleConflictResolver()
+        public ScheduleConflictDetector() : this(new FirstAvailableBookingStrategy())
         {
-            _strategies = new List<IConflictResolutionStrategy>
+        }
+
+        public ScheduleConflictDetector(IBookingStrategy bookingStrategy)
+        {
+            _bookingStrategy = bookingStrategy ?? throw new ArgumentNullException(nameof(bookingStrategy));
+            _strategies = new List<IConflictDetectionStrategy>
             {
-                new DoubleBookingResolver(),
-                new UnavailableTimeResolver(),
-                new BusinessHoursResolver(),
-                new MinimumDurationResolver(),
-                new OverlapResolver()
+                new DoubleBookingDetector(),
+                new UnavailableTimeDetector(),
+                // Note: OutsideHoursDetector removed - business hours are enforced via
+                // facility unavailable blocks in ScheduleManager.InitializeFacilitySchedule()
+                new InvalidDurationDetector()
             };
         }
 
         /// <summary>
         /// Detects all conflicts for a proposed appointment
         /// </summary>
+        /// <param name="excludeAppointmentId">Optional appointment ID to exclude from conflict checking (for updates)</param>
         public ConflictCheckResult CheckForConflicts(
             AppointmentTimeInterval proposedAppointment,
             PhysicianSchedule physicianSchedule,
-            List<UnavailableTimeInterval>? facilityUnavailable = null)
+            List<UnavailableTimeInterval>? facilityUnavailable = null,
+            Guid? excludeAppointmentId = null)
         {
             var result = new ConflictCheckResult
             {
@@ -43,7 +48,7 @@ namespace Core.CliniCore.Scheduling.Management
             // Run through each conflict detection strategy
             foreach (var strategy in _strategies)
             {
-                var conflicts = strategy.DetectConflicts(proposedAppointment, physicianSchedule, facilityUnavailable);
+                var conflicts = strategy.DetectConflicts(proposedAppointment, physicianSchedule, facilityUnavailable, excludeAppointmentId);
                 if (conflicts.Any())
                 {
                     result.Conflicts.AddRange(conflicts);
@@ -55,13 +60,15 @@ namespace Core.CliniCore.Scheduling.Management
         }
 
         /// <summary>
-        /// Attempts to resolve conflicts by suggesting alternative times
+        /// Attempts to resolve conflicts by suggesting alternative times.
+        /// Uses the injected IBookingStrategy to find and evaluate alternatives.
         /// </summary>
-        public ConflictResolutionResult ResolveConflicts(
+        public ConflictDetectionResult FindAlternative(
             ConflictCheckResult conflictResult,
-            PhysicianSchedule physicianSchedule)
+            PhysicianSchedule physicianSchedule,
+            List<UnavailableTimeInterval>? facilityUnavailable = null)
         {
-            var resolution = new ConflictResolutionResult
+            var resolution = new ConflictDetectionResult
             {
                 OriginalAppointment = conflictResult.ProposedAppointment,
                 Conflicts = conflictResult.Conflicts
@@ -73,26 +80,24 @@ namespace Core.CliniCore.Scheduling.Management
                 return resolution;
             }
 
-            // Try each strategy to resolve conflicts
-            foreach (var strategy in _strategies)
-            {
-                var suggestions = strategy.SuggestAlternatives(
-                    conflictResult.ProposedAppointment,
-                    conflictResult.Conflicts,
-                    physicianSchedule);
+            // Find the first available alternative slot
+            var proposedAppointment = conflictResult.ProposedAppointment;
+            var nextSlot = _bookingStrategy.FindNextAvailableSlot(
+                physicianSchedule,
+                proposedAppointment.Duration,
+                proposedAppointment.Start,
+                facilityUnavailable);
 
-                if (suggestions.Any())
+            if (nextSlot != null)
+            {
+                var suggestion = new TimeSlotSuggestion
                 {
-                    resolution.AlternativeSlots.AddRange(suggestions);
-                }
-            }
-
-            // Find the best alternative (earliest available)
-            if (resolution.AlternativeSlots.Any())
-            {
-                resolution.RecommendedSlot = resolution.AlternativeSlots
-                    .OrderBy(s => s.Start)
-                    .First();
+                    Start = nextSlot.Start,
+                    End = nextSlot.End,
+                    Reason = "First available"
+                };
+                resolution.AlternativeSlots.Add(suggestion);
+                resolution.RecommendedSlot = suggestion;
                 resolution.Resolved = true;
             }
 
@@ -102,32 +107,27 @@ namespace Core.CliniCore.Scheduling.Management
         /// <summary>
         /// Adds a custom conflict resolution strategy
         /// </summary>
-        public void AddStrategy(IConflictResolutionStrategy strategy)
+        public void AddStrategy(IConflictDetectionStrategy strategy)
         {
             _strategies.Add(strategy);
         }
     }
 
     /// <summary>
-    /// Interface for conflict resolution strategies
+    /// Interface for conflict detection strategies.
+    /// Alternative suggestions are handled centrally by ScheduleConflictDetector using IBookingStrategy.
     /// </summary>
-    public interface IConflictResolutionStrategy
+    public interface IConflictDetectionStrategy
     {
         /// <summary>
         /// Detects conflicts based on this strategy's rules
         /// </summary>
+        /// <param name="excludeAppointmentId">Optional appointment ID to exclude from conflict checking (for updates)</param>
         List<ScheduleConflict> DetectConflicts(
             AppointmentTimeInterval proposedAppointment,
             PhysicianSchedule physicianSchedule,
-            List<UnavailableTimeInterval>? facilityUnavailable);
-
-        /// <summary>
-        /// Suggests alternative time slots to resolve conflicts
-        /// </summary>
-        List<TimeSlotSuggestion> SuggestAlternatives(
-            AppointmentTimeInterval proposedAppointment,
-            List<ScheduleConflict> conflicts,
-            PhysicianSchedule physicianSchedule);
+            List<UnavailableTimeInterval>? facilityUnavailable,
+            Guid? excludeAppointmentId = null);
     }
 
     /// <summary>
@@ -138,6 +138,7 @@ namespace Core.CliniCore.Scheduling.Management
         public AppointmentTimeInterval ProposedAppointment { get; set; } = null!;
         public bool HasConflicts { get; set; }
         public List<ScheduleConflict> Conflicts { get; set; } = new List<ScheduleConflict>();
+        public List<TimeSlotSuggestion> AlternativeSuggestions { get; set; } = new List<TimeSlotSuggestion>();
 
         public string GetSummary()
         {
@@ -150,6 +151,25 @@ namespace Core.CliniCore.Scheduling.Management
                 summary += $"- {conflict.Type}: {conflict.Description}\n";
             }
             return summary;
+        }
+
+        /// <summary>
+        /// Returns formatted validation error strings for use in command validation.
+        /// Includes conflict descriptions and alternative slot suggestions.
+        /// </summary>
+        public IEnumerable<string> GetValidationErrors()
+        {
+            foreach (var conflict in Conflicts)
+            {
+                yield return conflict.Description;
+            }
+
+            // Add suggestion as a separate validation message (info-level)
+            if (AlternativeSuggestions.Any())
+            {
+                var suggestion = AlternativeSuggestions.First();
+                yield return $"Suggested alternative: {suggestion.Start:MMM dd, yyyy} at {suggestion.Start:h:mm tt} ({suggestion.Reason})";
+            }
         }
     }
 
@@ -182,7 +202,7 @@ namespace Core.CliniCore.Scheduling.Management
     /// <summary>
     /// Result of conflict resolution attempt
     /// </summary>
-    public class ConflictResolutionResult
+    public class ConflictDetectionResult
     {
         public AppointmentTimeInterval OriginalAppointment { get; set; } = null!;
         public List<ScheduleConflict> Conflicts { get; set; } = new List<ScheduleConflict>();
@@ -199,7 +219,6 @@ namespace Core.CliniCore.Scheduling.Management
         public DateTime Start { get; set; }
         public DateTime End { get; set; }
         public string Reason { get; set; } = string.Empty;
-        public double Score { get; set; } // Higher is better
     }
 
     #region Concrete Resolution Strategies
@@ -207,17 +226,22 @@ namespace Core.CliniCore.Scheduling.Management
     /// <summary>
     /// Resolves double-booking conflicts
     /// </summary>
-    public class DoubleBookingResolver : IConflictResolutionStrategy
+    public class DoubleBookingDetector : IConflictDetectionStrategy
     {
         public List<ScheduleConflict> DetectConflicts(
             AppointmentTimeInterval proposedAppointment,
             PhysicianSchedule physicianSchedule,
-            List<UnavailableTimeInterval>? facilityUnavailable)
+            List<UnavailableTimeInterval>? facilityUnavailable,
+            Guid? excludeAppointmentId = null)
         {
             var conflicts = new List<ScheduleConflict>();
 
             foreach (var existing in physicianSchedule.Appointments)
             {
+                // Skip the appointment being updated (whitelist it)
+                if (excludeAppointmentId.HasValue && existing.Id == excludeAppointmentId.Value)
+                    continue;
+
                 if (existing.Status == AppointmentStatus.Scheduled &&
                     existing.Overlaps(proposedAppointment))
                 {
@@ -233,54 +257,18 @@ namespace Core.CliniCore.Scheduling.Management
 
             return conflicts;
         }
-
-        public List<TimeSlotSuggestion> SuggestAlternatives(
-            AppointmentTimeInterval proposedAppointment,
-            List<ScheduleConflict> conflicts,
-            PhysicianSchedule physicianSchedule)
-        {
-            var suggestions = new List<TimeSlotSuggestion>();
-            var duration = proposedAppointment.Duration;
-
-            // Find next available slot
-            var nextSlot = physicianSchedule.FindNextAvailableSlot(duration, proposedAppointment.Start);
-            if (nextSlot.HasValue)
-            {
-                suggestions.Add(new TimeSlotSuggestion
-                {
-                    Start = nextSlot.Value,
-                    End = nextSlot.Value.Add(duration),
-                    Reason = "Next available slot",
-                    Score = 100
-                });
-            }
-
-            // Try same time next day
-            var nextDay = proposedAppointment.Start.AddDays(1);
-            if (physicianSchedule.IsTimeSlotAvailable(nextDay, nextDay.Add(duration)))
-            {
-                suggestions.Add(new TimeSlotSuggestion
-                {
-                    Start = nextDay,
-                    End = nextDay.Add(duration),
-                    Reason = "Same time next day",
-                    Score = 90
-                });
-            }
-
-            return suggestions;
-        }
     }
 
     /// <summary>
-    /// Resolves unavailable time conflicts
+    /// Detects unavailable time conflicts
     /// </summary>
-    public class UnavailableTimeResolver : IConflictResolutionStrategy
+    public class UnavailableTimeDetector : IConflictDetectionStrategy
     {
         public List<ScheduleConflict> DetectConflicts(
             AppointmentTimeInterval proposedAppointment,
             PhysicianSchedule physicianSchedule,
-            List<UnavailableTimeInterval>? facilityUnavailable)
+            List<UnavailableTimeInterval>? facilityUnavailable,
+            Guid? excludeAppointmentId = null)
         {
             var conflicts = new List<ScheduleConflict>();
 
@@ -319,26 +307,18 @@ namespace Core.CliniCore.Scheduling.Management
 
             return conflicts;
         }
-
-        public List<TimeSlotSuggestion> SuggestAlternatives(
-            AppointmentTimeInterval proposedAppointment,
-            List<ScheduleConflict> conflicts,
-            PhysicianSchedule physicianSchedule)
-        {
-            // Suggest times around the unavailable period
-            return new List<TimeSlotSuggestion>();
-        }
     }
 
     /// <summary>
-    /// Ensures appointments are within business hours
+    /// Detects appointments outside business hours
     /// </summary>
-    public class BusinessHoursResolver : IConflictResolutionStrategy
+    public class OutsideHoursDetector : IConflictDetectionStrategy
     {
         public List<ScheduleConflict> DetectConflicts(
             AppointmentTimeInterval proposedAppointment,
             PhysicianSchedule physicianSchedule,
-            List<UnavailableTimeInterval>? facilityUnavailable)
+            List<UnavailableTimeInterval>? facilityUnavailable,
+            Guid? excludeAppointmentId = null)
         {
             var conflicts = new List<ScheduleConflict>();
 
@@ -354,40 +334,12 @@ namespace Core.CliniCore.Scheduling.Management
 
             return conflicts;
         }
-
-        public List<TimeSlotSuggestion> SuggestAlternatives(
-            AppointmentTimeInterval proposedAppointment,
-            List<ScheduleConflict> conflicts,
-            PhysicianSchedule physicianSchedule)
-        {
-            var suggestions = new List<TimeSlotSuggestion>();
-
-            // If on weekend, suggest Monday
-            if (proposedAppointment.Start.DayOfWeek == DayOfWeek.Saturday ||
-                proposedAppointment.Start.DayOfWeek == DayOfWeek.Sunday)
-            {
-                var monday = proposedAppointment.Start;
-                while (monday.DayOfWeek != DayOfWeek.Monday)
-                    monday = monday.AddDays(1);
-
-                monday = monday.Date.AddHours(9); // 9 AM Monday
-                suggestions.Add(new TimeSlotSuggestion
-                {
-                    Start = monday,
-                    End = monday.Add(proposedAppointment.Duration),
-                    Reason = "First available Monday morning",
-                    Score = 80
-                });
-            }
-
-            return suggestions;
-        }
     }
 
     /// <summary>
-    /// Validates appointment duration
+    /// Detects invalid appointment durations
     /// </summary>
-    public class MinimumDurationResolver : IConflictResolutionStrategy
+    public class InvalidDurationDetector : IConflictDetectionStrategy
     {
         private static readonly TimeSpan MinDuration = TimeSpan.FromMinutes(15);
         private static readonly TimeSpan MaxDuration = TimeSpan.FromHours(3);
@@ -395,7 +347,8 @@ namespace Core.CliniCore.Scheduling.Management
         public List<ScheduleConflict> DetectConflicts(
             AppointmentTimeInterval proposedAppointment,
             PhysicianSchedule physicianSchedule,
-            List<UnavailableTimeInterval>? facilityUnavailable)
+            List<UnavailableTimeInterval>? facilityUnavailable,
+            Guid? excludeAppointmentId = null)
         {
             var conflicts = new List<ScheduleConflict>();
 
@@ -420,38 +373,6 @@ namespace Core.CliniCore.Scheduling.Management
             }
 
             return conflicts;
-        }
-
-        public List<TimeSlotSuggestion> SuggestAlternatives(
-            AppointmentTimeInterval proposedAppointment,
-            List<ScheduleConflict> conflicts,
-            PhysicianSchedule physicianSchedule)
-        {
-            // No alternatives for duration issues - must be fixed by user
-            return new List<TimeSlotSuggestion>();
-        }
-    }
-
-    /// <summary>
-    /// General overlap detection
-    /// </summary>
-    public class OverlapResolver : IConflictResolutionStrategy
-    {
-        public List<ScheduleConflict> DetectConflicts(
-            AppointmentTimeInterval proposedAppointment,
-            PhysicianSchedule physicianSchedule,
-            List<UnavailableTimeInterval>? facilityUnavailable)
-        {
-            // This is handled by other resolvers, so we return empty
-            return new List<ScheduleConflict>();
-        }
-
-        public List<TimeSlotSuggestion> SuggestAlternatives(
-            AppointmentTimeInterval proposedAppointment,
-            List<ScheduleConflict> conflicts,
-            PhysicianSchedule physicianSchedule)
-        {
-            return new List<TimeSlotSuggestion>();
         }
     }
 

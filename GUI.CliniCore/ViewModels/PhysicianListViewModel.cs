@@ -63,7 +63,7 @@ namespace GUI.CliniCore.ViewModels
         }
 
         // RBAC: Only administrators can create physicians
-        public bool CanCreatePhysician => HasPermission(_sessionManager, Core.CliniCore.Domain.Enumerations.Permission.CreatePhysicianProfile);
+        public bool CanCreatePhysician => HasPermission(_sessionManager, Permission.CreatePhysicianProfile);
 
         public MauiCommand LoadPhysiciansCommand { get; }
         public MauiCommand SearchCommand { get; }
@@ -156,7 +156,7 @@ namespace GUI.CliniCore.ViewModels
                         else
                         {
                             // Patient has no assigned physician, show none
-                            filteredPhysicians = Enumerable.Empty<PhysicianProfile>();
+                            filteredPhysicians = [];
                         }
                     }
                 }

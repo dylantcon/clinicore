@@ -34,6 +34,7 @@ namespace GUI.CliniCore
             // Appointment routes
             Routing.RegisterRoute("AppointmentListPage", typeof(AppointmentListPage));
             Routing.RegisterRoute("AppointmentDetailPage", typeof(AppointmentDetailPage));
+            Routing.RegisterRoute("CreateAppointmentPage", typeof(CreateAppointmentPage));
             Routing.RegisterRoute("AppointmentEditPage", typeof(AppointmentEditPage));
 
             // Stub route

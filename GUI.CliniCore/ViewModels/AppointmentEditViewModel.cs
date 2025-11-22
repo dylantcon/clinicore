@@ -1,38 +1,26 @@
-using System.Collections.ObjectModel;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Scheduling;
-using Core.CliniCore.Domain;
 using Core.CliniCore.Scheduling;
-using Core.CliniCore.Scheduling.Management;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
-using MauiCommand = System.Windows.Input.ICommand;
 
 namespace GUI.CliniCore.ViewModels
 {
     /// <summary>
-    /// ViewModel for Appointment Edit page
-    /// Supports scheduling and rescheduling appointments with validation
+    /// ViewModel for editing existing appointments.
+    /// Uses UpdateAppointmentCommand for saving.
     /// </summary>
     [QueryProperty(nameof(AppointmentIdString), "appointmentId")]
-    [QueryProperty(nameof(PatientIdString), "patientId")]
-    [QueryProperty(nameof(PhysicianIdString), "physicianId")]
-    public partial class AppointmentEditViewModel : BaseViewModel
+    public class AppointmentEditViewModel : AppointmentFormViewModelBase
     {
-        private readonly CommandFactory _commandFactory;
-        private readonly INavigationService _navigationService;
-        private readonly SessionManager _sessionManager;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
-        private readonly ScheduleManager _scheduleManager = ScheduleManager.Instance;
-
-        private Guid? _appointmentId;
+        private Guid _appointmentId;
         private AppointmentTimeInterval? _appointment;
 
         public string AppointmentIdString
         {
             set
             {
-                if (Guid.TryParse(value, out var guid))
+                if (Guid.TryParse(value, out var guid) && guid != Guid.Empty)
                 {
                     _appointmentId = guid;
                     LoadAppointment();
@@ -40,175 +28,49 @@ namespace GUI.CliniCore.ViewModels
             }
         }
 
-        public string PatientIdString
-        {
-            set
-            {
-                if (Guid.TryParse(value, out var guid) && guid != Guid.Empty)
-                {
-                    SelectedPatient = AvailablePatients.FirstOrDefault(p => p.Id == guid);
-                }
-            }
-        }
-
-        public string PhysicianIdString
-        {
-            set
-            {
-                if (Guid.TryParse(value, out var guid) && guid != Guid.Empty)
-                {
-                    SelectedPhysician = AvailablePhysicians.FirstOrDefault(p => p.Id == guid);
-                }
-            }
-        }
-
-        public ObservableCollection<PatientPickerModel> AvailablePatients { get; } = new();
-        public ObservableCollection<PhysicianPickerModel> AvailablePhysicians { get; } = new();
-        public List<int> AvailableDurations { get; } = new List<int> { 15, 30, 60, 90, 120 };
-
-        private PatientPickerModel? _selectedPatient;
-        public PatientPickerModel? SelectedPatient
-        {
-            get => _selectedPatient;
-            set
-            {
-                if (SetProperty(ref _selectedPatient, value))
-                {
-                    (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
-        }
-
-        private PhysicianPickerModel? _selectedPhysician;
-        public PhysicianPickerModel? SelectedPhysician
-        {
-            get => _selectedPhysician;
-            set
-            {
-                if (SetProperty(ref _selectedPhysician, value))
-                {
-                    (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
-        }
-
-        private DateTime _selectedDate = DateTime.Today.AddDays(1);
-        public DateTime SelectedDate
-        {
-            get => _selectedDate;
-            set => SetProperty(ref _selectedDate, value);
-        }
-
-        private TimeSpan _selectedTime = new TimeSpan(9, 0, 0);
-        public TimeSpan SelectedTime
-        {
-            get => _selectedTime;
-            set => SetProperty(ref _selectedTime, value);
-        }
-
-        private int _durationMinutes = 30;
-        public int DurationMinutes
-        {
-            get => _durationMinutes;
-            set => SetProperty(ref _durationMinutes, value);
-        }
-
-        private string _reason = "General Consultation";
-        public string Reason
-        {
-            get => _reason;
-            set
-            {
-                if (SetProperty(ref _reason, value))
-                {
-                    (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
-        }
-
-        private string _notes = string.Empty;
-        public string Notes
-        {
-            get => _notes;
-            set => SetProperty(ref _notes, value);
-        }
-
-        public MauiCommand SaveCommand { get; }
-        public MauiCommand CancelCommand { get; }
-        public MauiCommand BackCommand { get; }
-
         public AppointmentEditViewModel(
             CommandFactory commandFactory,
             INavigationService navigationService,
             SessionManager sessionManager)
+            : base(commandFactory, navigationService, sessionManager)
         {
-            _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
-            _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
-            _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
+            Title = "Edit Appointment";
+        }
 
-            Title = "Schedule Appointment";
-
-            // Populate pickers
-            LoadAvailablePatients();
-            LoadAvailablePhysicians();
-
-            // Save command
-            SaveCommand = new RelayCommand(
-                execute: ExecuteSave,
-                canExecute: CanSave
+        protected override MauiCommandAdapter CreateSaveCommand()
+        {
+            var coreCommand = _commandFactory.CreateCommand(UpdateAppointmentCommand.Key);
+            return new MauiCommandAdapter(
+                coreCommand!,
+                parameterBuilder: BuildParameters,
+                sessionProvider: () => _sessionManager.CurrentSession,
+                resultHandler: HandleSaveResult,
+                viewModel: this
             );
-
-            // Cancel command
-            CancelCommand = new AsyncRelayCommand(async () =>
-            {
-                await _navigationService.NavigateToAsync("AppointmentListPage");
-            });
-
-            // Back command - navigate to list
-            BackCommand = new AsyncRelayCommand(async () =>
-            {
-                await _navigationService.NavigateToAsync("AppointmentListPage");
-            });
         }
 
-        private void LoadAvailablePatients()
+        private CommandParameters BuildParameters()
         {
-            AvailablePatients.Clear();
-            var patients = _profileRegistry.GetAllPatients();
-            foreach (var patient in patients.OrderBy(p => p.Name))
-            {
-                AvailablePatients.Add(new PatientPickerModel
-                {
-                    Id = patient.Id,
-                    Name = patient.Name ?? "Unknown",
-                    Display = patient.Name ?? "Unknown"
-                });
-            }
-        }
+            var parameters = new CommandParameters()
+                .SetParameter(UpdateAppointmentCommand.Parameters.AppointmentId, _appointmentId)
+                .SetParameter(UpdateAppointmentCommand.Parameters.NewStartTime, GetStartDateTime())
+                .SetParameter(UpdateAppointmentCommand.Parameters.DurationMinutes, DurationMinutes)
+                .SetParameter(UpdateAppointmentCommand.Parameters.ReasonForVisit, Reason ?? string.Empty);
 
-        private void LoadAvailablePhysicians()
-        {
-            AvailablePhysicians.Clear();
-            var physicians = _profileRegistry.GetAllPhysicians();
-            foreach (var physician in physicians.OrderBy(p => p.Name))
+            if (!string.IsNullOrWhiteSpace(Notes))
             {
-                AvailablePhysicians.Add(new PhysicianPickerModel
-                {
-                    Id = physician.Id,
-                    Name = physician.Name ?? "Unknown",
-                    Display = $"Dr. {physician.Name ?? "Unknown"}"
-                });
+                parameters.SetParameter(UpdateAppointmentCommand.Parameters.Notes, Notes);
             }
+
+            return parameters;
         }
 
         private void LoadAppointment()
         {
-            if (!_appointmentId.HasValue) return;
-
             try
             {
                 var allAppointments = _scheduleManager.GetAllAppointments();
-                _appointment = allAppointments.FirstOrDefault(a => a.Id == _appointmentId.Value);
+                _appointment = allAppointments.FirstOrDefault(a => a.Id == _appointmentId);
 
                 if (_appointment == null)
                 {
@@ -216,9 +78,7 @@ namespace GUI.CliniCore.ViewModels
                     return;
                 }
 
-                Title = "Reschedule Appointment";
-
-                // Load existing data
+                // Populate form with existing appointment data
                 SelectedPatient = AvailablePatients.FirstOrDefault(p => p.Id == _appointment.PatientId);
                 SelectedPhysician = AvailablePhysicians.FirstOrDefault(p => p.Id == _appointment.PhysicianId);
                 SelectedDate = _appointment.Start.Date;
@@ -232,156 +92,5 @@ namespace GUI.CliniCore.ViewModels
                 ValidationErrors.Add($"Error loading appointment: {ex.Message}");
             }
         }
-
-        private bool CanSave()
-        {
-            return SelectedPatient != null &&
-                   SelectedPhysician != null &&
-                   !string.IsNullOrWhiteSpace(Reason);
-        }
-
-        private void ExecuteSave()
-        {
-            if (SelectedPatient == null || SelectedPhysician == null)
-            {
-                ValidationErrors.Clear();
-                ValidationErrors.Add("Please select both patient and physician");
-                return;
-            }
-
-            try
-            {
-                // Combine date and time
-                var startDateTime = SelectedDate.Date.Add(SelectedTime);
-
-                // Validate business hours (8am-5pm Monday-Friday)
-                if (startDateTime.DayOfWeek == DayOfWeek.Saturday ||
-                    startDateTime.DayOfWeek == DayOfWeek.Sunday)
-                {
-                    ValidationErrors.Clear();
-                    ValidationErrors.Add("Appointments can only be scheduled Monday through Friday");
-                    return;
-                }
-
-                var endDateTime = startDateTime.AddMinutes(DurationMinutes);
-                if (startDateTime.Hour < 8 || endDateTime.Hour > 17)
-                {
-                    ValidationErrors.Clear();
-                    ValidationErrors.Add("Appointments must be scheduled between 8:00 AM and 5:00 PM");
-                    return;
-                }
-
-                if (_appointmentId.HasValue)
-                {
-                    // Editing existing appointment
-                    // Check if time has changed
-                    bool timeChanged = _appointment!.Start != startDateTime;
-
-                    if (timeChanged)
-                    {
-                        // Reschedule to new time first
-                        var rescheduleCommand = _commandFactory.CreateCommand(RescheduleAppointmentCommand.Key);
-                        var rescheduleParams = new CommandParameters()
-                            .SetParameter(RescheduleAppointmentCommand.Parameters.AppointmentId, _appointmentId.Value)
-                            .SetParameter(RescheduleAppointmentCommand.Parameters.NewDateTime, startDateTime);
-
-                        var rescheduleAdapter = new MauiCommandAdapter(
-                            rescheduleCommand!,
-                            parameterBuilder: () => rescheduleParams,
-                            sessionProvider: () => _sessionManager.CurrentSession,
-                            resultHandler: (result) => { }, // Silent, we'll update next
-                            viewModel: this
-                        );
-
-                        rescheduleAdapter.Execute(null);
-                    }
-
-                    // Always update reason, notes, and duration
-                    var updateCommand = _commandFactory.CreateCommand(UpdateAppointmentCommand.Key);
-                    var updateParams = new CommandParameters()
-                        .SetParameter(UpdateAppointmentCommand.Parameters.AppointmentId, _appointmentId.Value)
-                        .SetParameter(UpdateAppointmentCommand.Parameters.ReasonForVisit, Reason)
-                        .SetParameter(UpdateAppointmentCommand.Parameters.DurationMinutes, DurationMinutes);
-
-                    if (!string.IsNullOrWhiteSpace(Notes))
-                    {
-                        updateParams.SetParameter(UpdateAppointmentCommand.Parameters.Notes, Notes);
-                    }
-
-                    var updateAdapter = new MauiCommandAdapter(
-                        updateCommand!,
-                        parameterBuilder: () => updateParams,
-                        sessionProvider: () => _sessionManager.CurrentSession,
-                        resultHandler: HandleSaveResult,
-                        viewModel: this
-                    );
-
-                    updateAdapter.Execute(null);
-                }
-                else
-                {
-                    // Creating new appointment
-                    var coreCommand = _commandFactory.CreateCommand(ScheduleAppointmentCommand.Key);
-                    var parameters = new CommandParameters()
-                        .SetParameter(ScheduleAppointmentCommand.Parameters.PatientId, SelectedPatient.Id)
-                        .SetParameter(ScheduleAppointmentCommand.Parameters.PhysicianId, SelectedPhysician.Id)
-                        .SetParameter(ScheduleAppointmentCommand.Parameters.StartTime, startDateTime)
-                        .SetParameter(ScheduleAppointmentCommand.Parameters.DurationMinutes, DurationMinutes)
-                        .SetParameter(ScheduleAppointmentCommand.Parameters.Reason, Reason);
-
-                    if (!string.IsNullOrWhiteSpace(Notes))
-                    {
-                        parameters.SetParameter(ScheduleAppointmentCommand.Parameters.Notes, Notes);
-                    }
-
-                    var saveCommand = new MauiCommandAdapter(
-                        coreCommand!,
-                        parameterBuilder: () => parameters,
-                        sessionProvider: () => _sessionManager.CurrentSession,
-                        resultHandler: HandleSaveResult,
-                        viewModel: this
-                    );
-
-                    saveCommand.Execute(null);
-                }
-            }
-            catch (Exception ex)
-            {
-                ValidationErrors.Clear();
-                ValidationErrors.Add($"Error saving appointment: {ex.Message}");
-            }
-        }
-
-        private void HandleSaveResult(CommandResult result)
-        {
-            if (result.Success)
-            {
-                // Navigate back to list on success
-                MainThread.BeginInvokeOnMainThread(async () =>
-                {
-                    await _navigationService.NavigateToAsync("AppointmentListPage");
-                });
-            }
-        }
-    }
-
-    /// <summary>
-    /// Display model for patient picker
-    /// </summary>
-    public class PatientPickerModel
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Display { get; set; } = string.Empty;
-    }
-
-    /// <summary>
-    /// Display model for physician picker
-    /// </summary>
-    public class PhysicianPickerModel
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Display { get; set; } = string.Empty;
     }
 }

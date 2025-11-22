@@ -18,7 +18,7 @@ namespace Core.CliniCore.Scheduling.Management
         
         private readonly Dictionary<Guid, PhysicianSchedule> _physicianSchedules;
         private readonly List<UnavailableTimeInterval> _facilityUnavailableBlocks;
-        private readonly ScheduleConflictResolver _conflictResolver;
+        private readonly ScheduleConflictDetector _conflictResolver;
         private readonly IBookingStrategy _defaultBookingStrategy;
         private readonly object _lock = new object();
 
@@ -41,7 +41,7 @@ namespace Core.CliniCore.Scheduling.Management
         {
             _physicianSchedules = new Dictionary<Guid, PhysicianSchedule>();
             _facilityUnavailableBlocks = new List<UnavailableTimeInterval>();
-            _conflictResolver = new ScheduleConflictResolver();
+            _conflictResolver = new ScheduleConflictDetector();
             _defaultBookingStrategy = new FirstAvailableBookingStrategy();
             InitializeFacilitySchedule();
         }
@@ -111,8 +111,9 @@ namespace Core.CliniCore.Scheduling.Management
 
                 if (conflictResult.HasConflicts)
                 {
-                    // Try to resolve conflicts
-                    var resolution = _conflictResolver.ResolveConflicts(conflictResult, physicianSchedule);
+                    // Try to resolve conflicts - pass facility unavailable blocks for accurate alternatives
+                    var resolution = _conflictResolver.FindAlternative(
+                        conflictResult, physicianSchedule, _facilityUnavailableBlocks);
 
                     return new ScheduleResult
                     {
@@ -179,42 +180,113 @@ namespace Core.CliniCore.Scheduling.Management
         }
 
         /// <summary>
-        /// Reschedules an appointment
+        /// Updates an appointment's details (start time, duration, reason, notes)
+        /// Validates that time/duration changes don't create conflicts using whitelist pattern
         /// </summary>
-        public ScheduleResult RescheduleAppointment(
-            Guid physicianId,
+        public ScheduleResult UpdateAppointment(
             Guid appointmentId,
-            DateTime newStart,
-            DateTime newEnd)
+            string? reason = null,
+            string? notes = null,
+            int? durationMinutes = null,
+            DateTime? newStartTime = null)
         {
             lock (_lock)
             {
-                var schedule = GetPhysicianSchedule(physicianId);
-                var originalAppointment = schedule.Appointments.FirstOrDefault(a => a.Id == appointmentId);
-
-                if (originalAppointment == null)
+                var appointment = FindAppointmentById(appointmentId);
+                if (appointment == null)
                 {
                     return new ScheduleResult
                     {
                         Success = false,
-                        Message = "Original appointment not found."
+                        Message = "Appointment not found."
                     };
                 }
 
-                // Create the rescheduled appointment
-                var newAppointment = originalAppointment.Reschedule(newStart, newEnd);
+                // Store original values in case we need to revert
+                var originalStart = appointment.Start;
+                var originalEnd = appointment.End;
+                bool timeChanged = false;
+                bool durationChanged = false;
 
-                // Try to schedule the new appointment
-                var result = ScheduleAppointment(newAppointment);
+                // Calculate the current duration (needed for time change calculations)
+                var currentDuration = (int)(originalEnd - originalStart).TotalMinutes;
 
-                if (!result.Success)
+                // Handle start time change
+                if (newStartTime.HasValue && newStartTime.Value != originalStart)
                 {
-                    // Restore original if rescheduling fails
-                    originalAppointment.Status = AppointmentStatus.Scheduled;
-                    originalAppointment.CancellationReason = null;
+                    // Determine duration to use: new duration if provided, otherwise keep current
+                    var effectiveDuration = durationMinutes ?? currentDuration;
+
+                    appointment.Start = newStartTime.Value;
+                    appointment.End = newStartTime.Value.AddMinutes(effectiveDuration);
+                    timeChanged = true;
+
+                    // If we're also changing duration, mark it so we don't double-process
+                    if (durationMinutes.HasValue && durationMinutes.Value != currentDuration)
+                    {
+                        durationChanged = true;
+                    }
+                }
+                // Handle duration change only (no time change)
+                else if (durationMinutes.HasValue && durationMinutes.Value > 0 && durationMinutes.Value != currentDuration)
+                {
+                    appointment.UpdateDuration(durationMinutes.Value);
+                    durationChanged = true;
                 }
 
-                return result;
+                // If time or duration changed, check for conflicts
+                if (timeChanged || durationChanged)
+                {
+                    var physicianSchedule = GetPhysicianSchedule(appointment.PhysicianId);
+                    var conflictResult = _conflictResolver.CheckForConflicts(
+                        appointment,
+                        physicianSchedule,
+                        _facilityUnavailableBlocks,
+                        excludeAppointmentId: appointmentId); // Whitelist this appointment
+
+                    if (conflictResult.HasConflicts)
+                    {
+                        // Revert all changes
+                        appointment.Start = originalStart;
+                        appointment.End = originalEnd;
+
+                        // Provide detailed error message with alternatives
+                        var resolution = _conflictResolver.FindAlternative(
+                            conflictResult, physicianSchedule, _facilityUnavailableBlocks);
+                        var changeType = timeChanged && durationChanged
+                            ? "time and duration"
+                            : (timeChanged ? "time" : "duration");
+
+                        return new ScheduleResult
+                        {
+                            Success = false,
+                            AppointmentId = appointmentId,
+                            Conflicts = conflictResult.Conflicts,
+                            AlternativeSuggestions = resolution.AlternativeSlots,
+                            Message = $"Cannot update appointment {changeType}: " + conflictResult.GetSummary()
+                        };
+                    }
+                }
+
+                // Update other fields
+                if (reason != null)
+                {
+                    appointment.ReasonForVisit = reason;
+                }
+
+                if (notes != null)
+                {
+                    appointment.Notes = notes;
+                }
+
+                appointment.ModifiedAt = DateTime.Now;
+
+                return new ScheduleResult
+                {
+                    Success = true,
+                    AppointmentId = appointmentId,
+                    Message = "Appointment updated successfully."
+                };
             }
         }
 
@@ -318,6 +390,40 @@ namespace Core.CliniCore.Scheduling.Management
                         return appointment;
                 }
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Checks for scheduling conflicts without making any changes.
+        /// Used by commands for validation before execution.
+        /// </summary>
+        /// <param name="proposedAppointment">The appointment to check for conflicts</param>
+        /// <param name="excludeAppointmentId">Optional appointment ID to exclude (for updates)</param>
+        /// <param name="includeSuggestions">If true and conflicts exist, also finds alternative time slots</param>
+        /// <returns>Conflict check result with any detected conflicts and optional suggestions</returns>
+        public ConflictCheckResult CheckForConflicts(
+            AppointmentTimeInterval proposedAppointment,
+            Guid? excludeAppointmentId = null,
+            bool includeSuggestions = false)
+        {
+            lock (_lock)
+            {
+                var physicianSchedule = GetPhysicianSchedule(proposedAppointment.PhysicianId);
+                var result = _conflictResolver.CheckForConflicts(
+                    proposedAppointment,
+                    physicianSchedule,
+                    _facilityUnavailableBlocks,
+                    excludeAppointmentId);
+
+                // Optionally find alternative slots when conflicts exist
+                if (includeSuggestions && result.HasConflicts)
+                {
+                    var resolution = _conflictResolver.FindAlternative(
+                        result, physicianSchedule, _facilityUnavailableBlocks);
+                    result.AlternativeSuggestions = resolution.AlternativeSlots;
+                }
+
+                return result;
             }
         }
 

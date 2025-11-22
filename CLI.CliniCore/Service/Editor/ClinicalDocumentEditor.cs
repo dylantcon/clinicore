@@ -19,6 +19,13 @@ namespace CLI.CliniCore.Service.Editor
         
         private EditorState? _editorState;
         private Task? _resizeListenerTask;
+
+        private DateTime? _statusTimestamp;
+        private double _secondsAfterStatusMsg =>
+            _statusTimestamp.HasValue
+            ? (DateTime.UtcNow - _statusTimestamp.Value).TotalSeconds
+            : -1;
+
         private CancellationTokenSource? _resizeListenerCancellation;
         private bool _editorActive = false;
         
@@ -77,6 +84,7 @@ namespace CLI.CliniCore.Service.Editor
         {
             bool shouldExit = false;
             bool forceRedraw = true;
+            Console.CursorVisible = false;
 
             while (_editorActive && !shouldExit && !_cancellationTokenSource.Token.IsCancellationRequested)
             {
@@ -95,6 +103,12 @@ namespace CLI.CliniCore.Service.Editor
                         
                         _renderer.RenderEditor(_editorState!);
                         forceRedraw = false;
+                    }
+
+                    if (_secondsAfterStatusMsg >= 1)
+                    {
+                        _statusTimestamp = null;
+                        _renderer.InvalidateStatusZone();
                     }
 
                     // Handle keyboard input with timeout to allow periodic redraws
@@ -137,6 +151,7 @@ namespace CLI.CliniCore.Service.Editor
                     Pause("Press any key to continue...");
                 }
             }
+            Console.CursorVisible = true;
         }
 
         private bool TryReadKeyWithTimeout(out ConsoleKeyInfo key, int timeoutMs)
@@ -260,6 +275,7 @@ namespace CLI.CliniCore.Service.Editor
 
         private void DisplayStatusMessage(string message, MessageType type)
         {
+            _statusTimestamp = DateTime.UtcNow;
             _renderer.ShowStatusMessage(message, type);
         }
         

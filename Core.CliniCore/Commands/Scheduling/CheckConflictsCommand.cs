@@ -144,7 +144,7 @@ namespace Core.CliniCore.Commands.Scheduling
                 }
 
                 // Use the schedule manager's conflict resolution system
-                var conflictResolver = new ScheduleConflictResolver();
+                var conflictResolver = new ScheduleConflictDetector();
                 var conflictResult = conflictResolver.CheckForConflicts(
                     proposedAppointment,
                     physicianSchedule);
@@ -183,21 +183,14 @@ namespace Core.CliniCore.Commands.Scheduling
                     }
                 }
 
-                // Add resolution suggestions
-                var resolutionResult = conflictResolver.ResolveConflicts(conflictResult, physicianSchedule);
-                if (resolutionResult.AlternativeSlots.Any())
+                // Add resolution suggestion (first available alternative)
+                var resolutionResult = conflictResolver.FindAlternative(conflictResult, physicianSchedule);
+                if (resolutionResult.RecommendedSlot != null)
                 {
                     conflictDetails.AppendLine();
-                    conflictDetails.AppendLine("SUGGESTED ALTERNATIVE TIMES:");
-                    
-                    var topSuggestions = resolutionResult.AlternativeSlots
-                        .OrderByDescending(s => s.Score)
-                        .Take(3);
-                    
-                    foreach (var suggestion in topSuggestions)
-                    {
-                        conflictDetails.AppendLine($"  • {suggestion.Start:yyyy-MM-dd HH:mm} to {suggestion.End:HH:mm} - {suggestion.Reason}");
-                    }
+                    conflictDetails.AppendLine("SUGGESTED ALTERNATIVE:");
+                    var suggestion = resolutionResult.RecommendedSlot;
+                    conflictDetails.AppendLine($"  -> {suggestion.Start:yyyy-MM-dd HH:mm} to {suggestion.End:HH:mm} - {suggestion.Reason}");
                 }
 
                 // Emphasize double-booking prevention if detected

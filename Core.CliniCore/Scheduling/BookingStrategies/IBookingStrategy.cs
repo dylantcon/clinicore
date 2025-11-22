@@ -43,14 +43,6 @@ namespace Core.CliniCore.Scheduling.BookingStrategies
             List<UnavailableTimeInterval>? facilityUnavailable = null);
 
         /// <summary>
-        /// Evaluates how good a particular time slot is based on the strategy
-        /// </summary>
-        /// <param name="slot">The slot to evaluate</param>
-        /// <param name="physicianSchedule">The physician's schedule</param>
-        /// <returns>Score from 0-100, higher is better</returns>
-        double EvaluateSlot(AppointmentSlot slot, PhysicianSchedule physicianSchedule);
-
-        /// <summary>
         /// Gets the name of this booking strategy
         /// </summary>
         string StrategyName { get; }
