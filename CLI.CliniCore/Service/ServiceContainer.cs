@@ -4,7 +4,8 @@ using Core.CliniCore.Bootstrap;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Service;
+using Core.CliniCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CLI.CliniCore.Service
@@ -17,7 +18,7 @@ namespace CLI.CliniCore.Service
     {
         private readonly ServiceProvider _serviceProvider;
         private readonly IAuthenticationService _authService;
-        private readonly ScheduleManager _scheduleManager;
+        private readonly SchedulerService _scheduleManager;
         private readonly CommandFactory _commandFactory;
         private readonly CommandInvoker _commandInvoker;
         private readonly ConsoleSessionManager _sessionManager;
@@ -29,7 +30,7 @@ namespace CLI.CliniCore.Service
         private ServiceContainer(
             ServiceProvider serviceProvider,
             IAuthenticationService authService,
-            ScheduleManager scheduleManager,
+            SchedulerService scheduleManager,
             CommandFactory commandFactory,
             CommandInvoker commandInvoker,
             ConsoleSessionManager sessionManager,
@@ -70,7 +71,9 @@ namespace CLI.CliniCore.Service
 
             // Get core services from DI
             var authService = serviceProvider.GetRequiredService<IAuthenticationService>();
-            var scheduleManager = serviceProvider.GetRequiredService<ScheduleManager>();
+            var scheduleManager = serviceProvider.GetRequiredService<SchedulerService>();
+            var profileService = serviceProvider.GetRequiredService<ProfileService>();
+            var clinicalDocService = serviceProvider.GetRequiredService<ClinicalDocumentService>();
             var commandFactory = serviceProvider.GetRequiredService<CommandFactory>();
             var commandInvoker = serviceProvider.GetRequiredService<CommandInvoker>();
             var sessionManager = serviceProvider.GetRequiredService<ConsoleSessionManager>();
@@ -83,8 +86,8 @@ namespace CLI.CliniCore.Service
                 null  // Will be resolved below
             );
 
-            // Create command parser with console engine
-            var commandParser = new ConsoleCommandParser(consoleEngine);
+            // Create command parser with console engine, profile service, scheduler service, and clinical doc service
+            var commandParser = new ConsoleCommandParser(consoleEngine, profileService, scheduleManager, clinicalDocService);
 
             // Create menu builder with all dependencies
             var menuBuilder = new ConsoleMenuBuilder(
@@ -92,7 +95,8 @@ namespace CLI.CliniCore.Service
                 commandFactory,
                 sessionManager,
                 commandParser,
-                consoleEngine
+                consoleEngine,
+                clinicalDocService
             );
 
             // Resolve circular dependencies

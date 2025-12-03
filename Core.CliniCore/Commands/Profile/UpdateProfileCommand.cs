@@ -1,7 +1,7 @@
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.ProfileTemplates;
+using Core.CliniCore.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,7 +36,12 @@ namespace Core.CliniCore.Commands.Profile
             public const string Email = "email";
         }
 
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
+        private readonly ProfileService _registry;
+
+        public UpdateProfileCommand(ProfileService profileService)
+        {
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
 
         public override string Description => "Updates an existing user profile (routes to appropriate profile-specific command)";
 
@@ -98,9 +103,9 @@ namespace Core.CliniCore.Commands.Profile
                 // Create and execute the appropriate concrete command based on profile type
                 AbstractCommand concreteCommand = profile.Role switch
                 {
-                    UserRole.Patient => new UpdatePatientProfileCommand(),
-                    UserRole.Physician => new UpdatePhysicianProfileCommand(),
-                    UserRole.Administrator => new UpdateAdministratorProfileCommand(),
+                    UserRole.Patient => new UpdatePatientProfileCommand(_registry),
+                    UserRole.Physician => new UpdatePhysicianProfileCommand(_registry),
+                    UserRole.Administrator => new UpdateAdministratorProfileCommand(_registry),
                     _ => throw new InvalidOperationException($"Unknown profile role: {profile.Role}")
                 };
 

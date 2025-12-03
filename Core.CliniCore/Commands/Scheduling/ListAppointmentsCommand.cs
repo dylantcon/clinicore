@@ -5,8 +5,8 @@ using Core.CliniCore.Commands;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Scheduling.Management;
 using Core.CliniCore.Scheduling;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -21,12 +21,13 @@ namespace Core.CliniCore.Commands.Scheduling
             public const string PatientId = "patient_id";
         }
 
-        private readonly ScheduleManager _scheduleManager;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly SchedulerService _scheduleManager;
+        private readonly ProfileService _profileRegistry;
 
-        public ListAppointmentsCommand(ScheduleManager scheduleManager)
+        public ListAppointmentsCommand(SchedulerService scheduleManager, ProfileService profileService)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
         public override string Description => "Lists appointments with various filters";

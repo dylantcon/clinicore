@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -20,12 +21,13 @@ namespace Core.CliniCore.Commands.Scheduling
             public const string AppointmentId = "appointment_id";
         }
 
-        private readonly ScheduleManager _scheduleManager;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly SchedulerService _scheduleManager;
+        private readonly ProfileService _profileRegistry;
 
-        public ViewAppointmentCommand(ScheduleManager scheduleManager)
+        public ViewAppointmentCommand(SchedulerService scheduleManager, ProfileService profileService)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
         public override string Description => "Views detailed information about a specific appointment";

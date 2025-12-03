@@ -4,6 +4,7 @@ using Core.CliniCore.Commands;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.ClinicalDoc;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -27,11 +28,14 @@ namespace Core.CliniCore.Commands.Clinical
             public const string LoincCode = "loinc_code";
         }
 
-        private readonly ClinicalDocumentRegistry _documentRegistry = ClinicalDocumentRegistry.Instance;
+        private readonly ClinicalDocumentService _documentRegistry;
         private ObservationEntry? _addedObservation;
         private Guid? _targetDocumentId;
 
-        public AddObservationCommand() {}
+        public AddObservationCommand(ClinicalDocumentService clinicalDocService)
+        {
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
+        }
 
         public override string Description => "Adds a clinical observation to a document";
 

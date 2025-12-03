@@ -6,6 +6,8 @@ using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.ClinicalDoc;
+using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -23,8 +25,14 @@ namespace Core.CliniCore.Commands.Clinical
             public const string IncompleteOnly = "incomplete_only";
         }
 
-        private readonly ClinicalDocumentRegistry _documentRegistry = ClinicalDocumentRegistry.Instance;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly ClinicalDocumentService _documentRegistry;
+        private readonly ProfileService _profileRegistry;
+
+        public ListClinicalDocumentsCommand(ProfileService profileService, ClinicalDocumentService clinicalDocService)
+        {
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
+        }
 
         public override string Description => "Lists clinical documents with various filters";
 

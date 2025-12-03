@@ -1,5 +1,5 @@
 ﻿using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Domain
 {
-    public class PatientProfile : AbstractUserProfile
+    public class PatientProfile : AbstractUserProfile, IIdentifiable
     {
         public override UserRole Role => UserRole.Patient;
 

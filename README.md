@@ -40,7 +40,6 @@ CliniCore was built around the physicians who use it, with an easy and reliable 
     - [AbstractClinicalEntry.cs](#abstractclinicalentrycs)
     - [AssessmentEntry.cs](#assessmententrycs)
     - [ClinicalDocument.cs](#clinicaldocumentcs)
-    - [ClinicalDocumentRegistry.cs](#clinicaldocumentregistrycs)
     - [DiagnosisEntry.cs](#diagnosisentrycs)
     - [ObservationEntry.cs](#observationentrycs)
     - [PlanEntry.cs](#planentrycs)
@@ -146,13 +145,13 @@ CliniCore was built around the physicians who use it, with an easy and reliable 
       - [MedicalSpecialization.cs](#medicalspecializationcs)
       - [Permission.cs](#permissioncs)
       - [UserRole.cs](#userrolecs)
+    - [IIdentifiable.cs](#iidentifiablecs)
     - [IUserProfile.cs](#iuserprofilecs)
     - [PatientProfile.cs](#patientprofilecs)
     - [PhysicianProfile.cs](#physicianprofilecs)
     - [ProfileBuilder.cs](#profilebuildercs)
     - [ProfileEntry.cs](#profileentrycs)
     - [ProfileEntryFactory.cs](#profileentryfactorycs)
-    - [ProfileRegistry.cs](#profileregistrycs)
     - [`ProfileTemplates/`](#profiletemplates)
       - [AbstractProfileTemplate.cs](#abstractprofiletemplatecs)
       - [AdministratorProfileTemplate.cs](#administratorprofiletemplatecs)
@@ -177,6 +176,19 @@ CliniCore was built around the physicians who use it, with an easy and reliable 
   - [`Facilities/`](#facilities)
     - [Facility.cs](#facilitycs)
     - [HealthSystem.cs](#healthsystemcs)
+  - [`Repositories/`](#repositories)
+    - [`InMemory/`](#inmemory)
+      - [InMemoryAdministratorRepository.cs](#inmemoryadministratorrepositorycs)
+      - [InMemoryAppointmentRepository.cs](#inmemoryappointmentrepositorycs)
+      - [InMemoryClinicalDocumentRepository.cs](#inmemoryclinicaldocumentrepositorycs)
+      - [InMemoryPatientRepository.cs](#inmemorypatientrepositorycs)
+      - [InMemoryPhysicianRepository.cs](#inmemoryphysicianrepositorycs)
+      - [InMemoryRepositoryBase.cs](#inmemoryrepositorybasecs)
+    - [IAdministratorRepository.cs](#iadministratorrepositorycs)
+    - [IAppointmentRepository.cs](#iappointmentrepositorycs)
+    - [IClinicalDocumentRepository.cs](#iclinicaldocumentrepositorycs)
+    - [IPatientRepository.cs](#ipatientrepositorycs)
+    - [IRepository.cs](#irepositorycs)
   - [`Scheduling/`](#scheduling)
     - [AbstractTimeInterval.cs](#abstracttimeintervalcs)
     - [AppointmentTimeInterval.cs](#appointmenttimeintervalcs)
@@ -186,9 +198,13 @@ CliniCore was built around the physicians who use it, with an easy and reliable 
     - [ITimeInterval.cs](#itimeintervalcs)
     - [`Management/`](#management)
       - [ScheduleConflictDetector.cs](#scheduleconflictdetectorcs)
-      - [ScheduleManager.cs](#schedulemanagercs)
+      - [SchedulingService.cs](#schedulingservicecs)
     - [PhysicianSchedule.cs](#physicianschedulecs)
     - [UnavailableTimeInterval.cs](#unavailabletimeintervalcs)
+  - [`Services/`](#services)
+    - [ClinicalDocumentService.cs](#clinicaldocumentservicecs)
+    - [ProfileService.cs](#profileservicecs)
+    - [SchedulerService.cs](#schedulerservicecs)
 - [`GUI.CliniCore/`](#guiclinicore)
   - [App.xaml](#appxaml)
   - [App.xaml.cs](#appxamlcs)
@@ -435,7 +451,7 @@ Dependency injection container using Microsoft.Extensions.DependencyInjection th
 |------|------|--------|-------------|
 | _serviceProvider | ServiceProvider | private | Microsoft DI service provider |
 | _authService | IAuthenticationService | private | Authentication service instance |
-| _scheduleManager | ScheduleManager | private | Schedule management service |
+| _scheduleManager | SchedulingService | private | Schedule management service |
 | _commandFactory | CommandFactory | private | Creates command instances |
 | _commandInvoker | CommandInvoker | private | Executes commands |
 | _sessionManager | ConsoleSessionManager | private | Manages CLI session state |
@@ -447,7 +463,7 @@ Dependency injection container using Microsoft.Extensions.DependencyInjection th
 
 | Signature | Returns | Description |
 |-----------|---------|-------------|
-| `private ServiceContainer(ServiceProvider serviceProvider, IAuthenticationService authService, ScheduleManager scheduleManager, CommandFactory commandFactory, CommandInvoker commandInvoker, ConsoleSessionManager sessionManager, ConsoleCommandParser commandParser, ConsoleMenuBuilder menuBuilder, TTYConsoleEngine consoleEngine)` | - | Private constructor for dependency injection setup |
+| `private ServiceContainer(ServiceProvider serviceProvider, IAuthenticationService authService, SchedulingService scheduleManager, CommandFactory commandFactory, CommandInvoker commandInvoker, ConsoleSessionManager sessionManager, ConsoleCommandParser commandParser, ConsoleMenuBuilder menuBuilder, TTYConsoleEngine consoleEngine)` | - | Private constructor for dependency injection setup |
 | `static ServiceContainer Create(bool includeDevelopmentData = false)` | ServiceContainer | Factory method creating configured container with optional dev data |
 | `TTYConsoleEngine GetConsoleEngine()` | TTYConsoleEngine | Returns the console engine instance |
 | `IAuthenticationService GetAuthenticationService()` | IAuthenticationService | Returns the authentication service instance |
@@ -532,7 +548,7 @@ Dynamically constructs role-based hierarchical menus for the CLI application bas
 | `private void ExecuteFinalizeClinicalDocument()` | void | Finalizes and completes clinical document |
 
 ### ConsoleCommandParser.cs
-Translates user interactions into CommandParameters objects by prompting for required command inputs through a series of type-specific input methods. This class implements comprehensive interactive parsing for all Core library commands, providing specialized input handlers for dates, times, GUIDs, enumerations (Gender, MedicalSpecialization, UserRole), and complex selections (patient/physician profiles, appointments, clinical documents) with visual table displays. It leverages Core library registries (ProfileRegistry, ClinicalDocumentRegistry, ScheduleManager) to present contextual selection lists and validates input formats while supporting Escape key cancellation through UserInputCancelledException.
+Translates user interactions into CommandParameters objects by prompting for required command inputs through a series of type-specific input methods. This class implements comprehensive interactive parsing for all Core library commands, providing specialized input handlers for dates, times, GUIDs, enumerations (Gender, MedicalSpecialization, UserRole), and complex selections (patient/physician profiles, appointments, clinical documents) with visual table displays. It leverages Core library registries (Profileservice, ClinicalDocumentService, SchedulingService) to present contextual selection lists and validates input formats while supporting Escape key cancellation through UserInputCancelledException.
 
 **Inheritance:** None (Primary constructor)
 
@@ -541,8 +557,8 @@ Translates user interactions into CommandParameters objects by prompting for req
 | Name                      | Type                     | Access           | Description                         |
 | ------------------------- | ------------------------ | ---------------- | ----------------------------------- |
 | _console                  | IConsoleEngine           | private readonly | Console engine for user interaction |
-| _profileRegistry          | ProfileRegistry          | private readonly | Registry for user profiles          |
-| _clinicalDocumentRegistry | ClinicalDocumentRegistry | private readonly | Registry for clinical documents     |
+| _profileservice          | Profileservice          | private readonly | service for user profiles          |
+| _clinicalDocumentservice | ClinicalDocumentService | private readonly | service for clinical documents     |
 
 **Methods:**
 
@@ -880,7 +896,7 @@ Manages multiple rendering zones to enable efficient partial screen updates with
 | Name              | Type                                                                  | Access           | Description                          |
 | ----------------- | --------------------------------------------------------------------- | ---------------- | ------------------------------------ |
 | _console          | ThreadSafeConsoleManager                                              | private readonly | Thread-safe console manager          |
-| _zones            | ConcurrentDictionary&lt;string, RenderZone&gt;                        | private readonly | Registry of render zones             |
+| _zones            | ConcurrentDictionary&lt;string, RenderZone&gt;                        | private readonly | service of render zones             |
 | _zoneRenderers    | ConcurrentDictionary&lt;string, Action&lt;RenderZone, object?&gt;&gt; | private readonly | Render callbacks for each zone       |
 | _dependencies     | ConcurrentDictionary&lt;string, HashSet&lt;string&gt;&gt;             | private readonly | Zone dependency graph                |
 | _isRendering      | bool                                                                  | private volatile | True during render operation         |
@@ -1053,60 +1069,6 @@ Implements a composite pattern for complete medical encounter documentation foll
 | `GetValidationErrors()` | List&lt;string&gt; | Returns list of all validation errors for document and entries |
 | `Complete()` | void | Marks document as completed after validation, preventing further modifications |
 | `GenerateSOAPNote()` | string | Generates formatted SOAP note string with all document sections |
-### ClinicalDocumentRegistry.cs
-A singleton registry for managing all clinical documents in the system with thread-safe operations.
-
-**Pattern:** Singleton
-
-**Properties:**
-
-| Name | Type | Access | Description |
-|------|------|--------|-------------|
-| Instance | ClinicalDocumentRegistry | get | Gets the singleton instance of the registry |
-
-**Methods:**
-
-| Signature | Returns | Description |
-|-----------|---------|-------------|
-| `AddDocument(ClinicalDocument document)` | bool | Adds document to registry with duplicate and appointment checks, returns false if already exists |
-| `RemoveDocument(Guid documentId)` | bool | Removes document from all indices, returns false if not found |
-| `GetDocumentById(Guid documentId)` | ClinicalDocument? | Retrieves document by ID, returns null if not found |
-| `GetDocumentByAppointment(Guid appointmentId)` | ClinicalDocument? | Retrieves document associated with an appointment, returns null if not found |
-| `GetPatientDocuments(Guid patientId)` | IEnumerable&lt;ClinicalDocument&gt; | Gets all documents for a patient ordered by creation date descending |
-| `GetPhysicianDocuments(Guid physicianId)` | IEnumerable&lt;ClinicalDocument&gt; | Gets all documents created by a physician ordered by creation date descending |
-| `GetDocumentsInDateRange(DateTime startDate, DateTime endDate, Guid? patientId = null, Guid? physicianId = null)` | IEnumerable&lt;ClinicalDocument&gt; | Gets documents within date range with optional patient/physician filters |
-| `SearchByDiagnosis(string diagnosisText)` | IEnumerable&lt;ClinicalDocument&gt; | Searches documents containing specified diagnosis text or ICD-10 code |
-| `SearchByMedication(string medicationName)` | IEnumerable&lt;ClinicalDocument&gt; | Searches documents containing specified medication name |
-| `GetIncompleteDocuments(Guid? physicianId = null)` | IEnumerable&lt;ClinicalDocument&gt; | Gets all incomplete documents with optional physician filter |
-| `GetMostRecentPatientDocument(Guid patientId)` | ClinicalDocument? | Gets the most recent document for a patient |
-| `DocumentExists(Guid documentId)` | bool | Checks if a document exists in the registry |
-| `AppointmentHasDocument(Guid appointmentId)` | bool | Checks if an appointment already has an associated document |
-| `GetStatistics()` | ClinicalDocumentStatistics | Gets statistics about documents in the registry |
-| `GetAllDocuments()` | IEnumerable&lt;ClinicalDocument&gt; | Gets all documents ordered by creation date descending |
-| `Clear()` | void | Clears all documents from the registry (for testing purposes) |
-
-**Helper Class: ClinicalDocumentStatistics**
-
-**Properties:**
-
-| Name | Type | Access | Description |
-|------|------|--------|-------------|
-| TotalDocuments | int | get/set | Total number of documents |
-| CompletedDocuments | int | get/set | Number of completed documents |
-| IncompleteDocuments | int | get/set | Number of incomplete documents |
-| UniquePatients | int | get/set | Number of unique patients with documents |
-| UniquePhysicians | int | get/set | Number of unique physicians with documents |
-| TotalDiagnoses | int | get/set | Total number of diagnoses across all documents |
-| TotalPrescriptions | int | get/set | Total number of prescriptions across all documents |
-| DocumentsToday | int | get/set | Number of documents created today |
-| DocumentsThisWeek | int | get/set | Number of documents created in the past 7 days |
-| CompletionRate | double | get | Completion rate percentage (calculated property) |
-
-**Methods:**
-
-| Signature | Returns | Description |
-|-----------|---------|-------------|
-| `ToString()` | string | Returns formatted statistics string with document counts and completion rate |
 ### DiagnosisEntry.cs
 Represents a clinical diagnosis with support for ICD-10 coding and diagnosis lifecycle tracking.
 
@@ -1612,7 +1574,7 @@ Creates a new clinical document for a patient encounter.
 **Status:** Implementation details not provided in source code read.
 
 ### DeleteClinicalDocumentCommand.cs
-Deletes a clinical document from the registry.
+Deletes a clinical document from the service.
 
 **Inheritance:** AbstractCommand
 
@@ -1710,7 +1672,7 @@ Retrieves and displays a complete clinical document with all entries.
 
 **Status:** Implementation details not provided in source code read.
 ### CommandFactory.cs
-Factory class responsible for creating command instances based on command names or types, managing command registration, and discovering available commands in the system. This class uses dependency injection to provide commands with required services (authentication, scheduling), maintains a registry of all available commands using their CommandKey properties, and supports command aliasing for user-friendly alternatives. It includes methods for role-based command filtering, command existence checking, and generating help information for each registered command.
+Factory class responsible for creating command instances based on command names or types, managing command registration, and discovering available commands in the system. This class uses dependency injection to provide commands with required services (authentication, scheduling), maintains a service of all available commands using their CommandKey properties, and supports command aliasing for user-friendly alternatives. It includes methods for role-based command filtering, command existence checking, and generating help information for each registered command.
 ### CommandInvoker.cs
 Orchestrates command execution using the Invoker pattern, managing command history, and handling undo/redo operations with thread-safe execution. This class maintains stacks of executed and undone commands to support undo/redo functionality, records detailed execution history including timestamps and performance metrics, and provides batch command execution with transaction-like rollback capabilities. It tracks command success rates and ensures only commands supporting undo can be reversed while maintaining execution audit trails for compliance purposes.
 ### CommandParameters.cs
@@ -2406,7 +2368,7 @@ Cancels an existing appointment and updates its status.
 | Signature | Returns | Description |
 |-----------|---------|-------------|
 | `ValidateParameters(CommandParameters parameters)` | CommandValidationResult | Validates that appointment_id is provided; warns if no cancellation reason is given |
-| `ExecuteCore(CommandParameters parameters, SessionContext? session)` | CommandResult | Finds the appointment by ID and cancels it through ScheduleManager, creating an audit trail |
+| `ExecuteCore(CommandParameters parameters, SessionContext? session)` | CommandResult | Finds the appointment by ID and cancels it through SchedulingService, creating an audit trail |
 
 ### CheckConflictsCommand.cs
 Checks for scheduling conflicts for a proposed appointment time without booking it.
@@ -2569,7 +2531,7 @@ Set the availability schedule for a physician.
 | Signature | Returns | Description |
 |-----------|---------|-------------|
 | `ValidateParameters(CommandParameters parameters)` | CommandValidationResult | Validates that all required parameters are provided and physician_id is a valid GUID |
-| `ExecuteCore(CommandParameters parameters, SessionContext? session)` | CommandResult | Returns failure - not yet implemented (ScheduleManager does not support physician availability) |
+| `ExecuteCore(CommandParameters parameters, SessionContext? session)` | CommandResult | Returns failure - not yet implemented (SchedulingService does not support physician availability) |
 
 ### UpdateAppointmentCommand.cs
 Updates appointment details (time, duration, reason, and notes).
@@ -2597,7 +2559,7 @@ Updates appointment details (time, duration, reason, and notes).
 | Signature | Returns | Description |
 |-----------|---------|-------------|
 | `ValidateParameters(CommandParameters parameters)` | CommandValidationResult | Validates appointment exists, duration is 15-180 minutes if provided, new start time is valid if provided, and checks for conflicts with the proposed changes |
-| `ExecuteCore(CommandParameters parameters, SessionContext? session)` | CommandResult | Delegates to ScheduleManager to update appointment with conflict validation, returns alternatives if conflicts detected |
+| `ExecuteCore(CommandParameters parameters, SessionContext? session)` | CommandResult | Delegates to SchedulingService to update appointment with conflict validation, returns alternatives if conflicts detected |
 
 ### ViewAppointmentCommand.cs
 Views detailed information about a specific appointment.
@@ -2885,6 +2847,8 @@ Enumeration defining the three primary user roles in the CliniCore system.
 | Patient | 0 | Patient user with access to own medical records and appointments |
 | Physician | 1 | Medical professional with access to patient management and clinical documentation |
 | Administrator | 2 | System administrator with full access to user management and system settings |
+### IIdentifiable.cs
+
 ### IUserProfile.cs
 Interface defining the contract for all user profiles in the system.
 
@@ -3018,8 +2982,8 @@ Factory class providing standardized creation methods for all profile entry type
 | `CreatePhysicianGraduationDate()`                                                                     | ProfileEntry\<DateTime\>                      | Creates the GraduationDate entry with date validation                     |
 | `CreatePhysicianSpecializationList()`                                                                 | ProfileEntry\<List\<MedicalSpecialization\>\> | Creates the Specializations entry requiring 1-5 valid specializations     |
 | `CreateEmail()`                                                                                       | ProfileEntry\<string\>                        | Creates the Email entry with email format validation                      |
-### ProfileRegistry.cs
-Singleton registry managing all user profiles in the system with thread-safe operations and multiple indexing strategies.
+### Profileservice.cs
+Singleton service managing all user profiles in the system with thread-safe operations and multiple indexing strategies.
 
 **Pattern:** Singleton
 
@@ -3027,15 +2991,15 @@ Singleton registry managing all user profiles in the system with thread-safe ope
 
 | Name     | Type            | Access | Description                                        |
 | -------- | --------------- | ------ | -------------------------------------------------- |
-| Instance | ProfileRegistry | get    | Gets the singleton instance of the ProfileRegistry |
-| Count    | int             | get    | Gets the total count of profiles in the registry   |
+| Instance | Profileservice | get    | Gets the singleton instance of the Profileservice |
+| Count    | int             | get    | Gets the total count of profiles in the service   |
 
 **Methods:**
 
 | Signature                                                                             | Returns                           | Description                                                                    |
 | ------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
-| `AddProfile(IUserProfile profile)`                                                    | bool                              | Adds a profile to the registry, returns false if ID or username already exists |
-| `RemoveProfile(Guid profileId)`                                                       | bool                              | Removes a profile from the registry by ID                                      |
+| `AddProfile(IUserProfile profile)`                                                    | bool                              | Adds a profile to the service, returns false if ID or username already exists |
+| `RemoveProfile(Guid profileId)`                                                       | bool                              | Removes a profile from the service by ID                                      |
 | `GetProfileById(Guid profileId)`                                                      | IUserProfile?                     | Gets a profile by ID, or null if not found                                     |
 | `GetProfileByUsername(string username)`                                               | IUserProfile?                     | Gets a profile by username (case-insensitive), or null if not found            |
 | `GetProfilesByType<T>()`                                                              | IEnumerable<T>                    | Gets all profiles of a specific type (e.g., PatientProfile)                    |
@@ -3044,15 +3008,15 @@ Singleton registry managing all user profiles in the system with thread-safe ope
 | `GetAllPhysicians()`                                                                  | IEnumerable<PhysicianProfile>     | Gets all physician profiles                                                    |
 | `GetAllAdministrators()`                                                              | IEnumerable<AdministratorProfile> | Gets all administrator profiles                                                |
 | `SearchByName(string searchTerm)`                                                     | IEnumerable<IUserProfile>         | Searches for profiles by name (case-insensitive)                               |
-| `UsernameExists(string username)`                                                     | bool                              | Checks if a username exists in the registry                                    |
-| `GetAllProfiles()`                                                                    | IEnumerable<IUserProfile>         | Gets all profiles in the registry                                              |
-| `GetStatistics()`                                                                     | ProfileRegistryStatistics         | Gets statistics about the registry (total, patients, physicians, admins)       |
-| `Clear()`                                                                             | void                              | Clears all profiles from the registry (for testing purposes)                   |
+| `UsernameExists(string username)`                                                     | bool                              | Checks if a username exists in the service                                    |
+| `GetAllProfiles()`                                                                    | IEnumerable<IUserProfile>         | Gets all profiles in the service                                              |
+| `GetStatistics()`                                                                     | ProfileserviceStatistics         | Gets statistics about the service (total, patients, physicians, admins)       |
+| `Clear()`                                                                             | void                              | Clears all profiles from the service (for testing purposes)                   |
 | `AssignPatientToPhysician(Guid patientId, Guid physicianId, bool setPrimary = false)` | bool                              | Establishes a physician-patient relationship, optionally setting as primary    |
 | `GetPhysicianPatients(Guid physicianId)`                                              | IEnumerable<PatientProfile>       | Gets all patients for a specific physician                                     |
 | `GetPatientPhysicians(Guid patientId)`                                                | IEnumerable<PhysicianProfile>     | Gets all physicians for a specific patient                                     |
 
-**Helper Class: ProfileRegistryStatistics**
+**Helper Class: ProfileserviceStatistics**
 
 **Properties:**
 
@@ -3209,7 +3173,7 @@ Static factory class providing convenient methods for creating common validators
 | `DateRange(DateTime? minDate = null, DateTime? maxDate = null, string? errorMessage = null)`                            | IValidator\<DateTime\>  | Creates a date range validator                                                |
 | `BirthDate()`                                                                                                           | IValidator\<DateTime\>  | Creates a birth date validator (within last 150 years)                        |
 | `GraduationDate()`                                                                                                      | IValidator\<DateTime\>  | Creates a graduation date validator (within last 75 years)                    |
-| `UsernameUniqueness(ProfileRegistry profileRegistry, string? errorMessage = null)`                                      | IValidator\<string\>    | Creates a username uniqueness validator                                       |
+| `UsernameUniqueness(Profileservice profileservice, string? errorMessage = null)`                                      | IValidator\<string\>    | Creates a username uniqueness validator                                       |
 | `PatientName()`                                                                                                         | IValidator<string>      | Creates a composite validator for patient names (required, 2-100 chars)       |
 | `PhysicianName()`                                                                                                       | IValidator\<string\>    | Creates a composite validator for physician names (required, 2-100 chars)     |
 | `PatientBirthDate()`                                                                                                    | IValidator\<DateTime\>  | Creates a composite validator for patient birth dates (required, valid range) |
@@ -3234,6 +3198,52 @@ A data transfer object placeholder for patient data serialization and transfer b
 Placeholder class for representing individual medical facilities within the CliniCore system. Currently marked as internal and awaiting implementation for multi-facility support including facility-specific settings, location data, and operational hours.
 ### HealthSystem.cs
 Placeholder class for representing health system organizations that may contain multiple facilities. Currently marked as internal and awaiting implementation for enterprise-level health system management and multi-facility coordination.
+## Repositories
+Namespace containing interfaces for data persistence, retrieval, manipulation, and deletion, also including concrete classes that handle the disparate data continuity strategies (DB, in memory, file-based). Facilitates flexible refactoring efforts thanks to these classes, as they collectively enable the core library to support parameterization of storage mediums.
+## InMemory
+Namespace containing six concrete classes, each of which is dedicated to implementing its corresponding interface in the parent namespace Repositories. This namespace's classes delegates all data handling solely to the RAM, hence any data accrued during the lifetime of the application will be lost upon termination. Use of this persistence strategy incurs dependency on CoreServiceBootstrapper for creation of development credentials.
+### InMemoryAdministratorRepository.cs
+### InMemoryAppointmentRepository.cs
+### InMemoryClinicalDocumentRepository.cs
+### InMemoryPhysicianRepository.cs
+### InMemoryRepositoryBase.cs
+### IAdministratorRepository.cs
+### IAppointmentRepository.cs
+### IClinicalDocumentRepository.cs
+### IPatientRepository.cs
+### IPhysicianRepository.cs
+An interface for interacting with a repository containing physician entities, it realizes IRepository via type PhysicianProfile, who implements IIdentifiable.
+
+**Realizes:** `IRepository<PhysicianProfile>`
+
+**Properties:** None
+
+**Methods:**
+
+| Signature                                          | Returns                           | Description
+| -------------------------------------------------- | --------------------------------- | ------------
+| `GetByUsername(string username)`                   | `PhysicianProfile?`               | Gets a physician by their username |
+| `FindBySpecialization(MedicalSpecialization spec)` | `IEnumerablePhysicianProfile>`    | Finds physicians by medical specialization |
+| `GetAvailableOn(DateTime date)`                    | `IEnumerable<PhysicianProfile>`   | Gets physicians available on a specific date |
+
+### IRepository.cs
+Generic profile entity container interface that, when implemented, requires a class to provide implementations for all invariant CRUD operations. Defined as `IRepository<T> where T : class, IIdentifiable`, it asserts that it may only be used by types that implement the IIdentifiable interface, which simply indicates that the type possesses a `Guid` property.
+
+**Realizes:** None
+
+**Properties: None
+
+**Methods:**                                              
+
+| Signature                             | Returns          | Description                             |
+| --------------------------------------| ---------------  | --------------------------------------- |
+| `GetById(Guid id)`                 | `T?`             | Fetches instance of entity type by GUID |
+| `GetAll()`             | `IEnumerable&lt;T&gt;` | Gathers all entities in an enumerable   |
+| `Add(T entity)`                  | `void`           | Adds an entity to the repository        |
+| `Update(T entity)`               | `void`           | Updates an entity in the repository     |
+| `Delete(Guid id)`                | `void`           | Deletes an entity in the repository     |
+| `Search(string query)` | `IEnumerable&lt;T&gt;` | Gathers entities satisfying query       |
+
 ## Scheduling
 ### AbstractTimeInterval.cs
 Base implementation for all time interval types that provides common functionality for temporal operations.
@@ -3504,8 +3514,114 @@ Resolves scheduling conflicts using the Chain of Responsibility pattern combined
 | Start    | DateTime | Start time of suggested slot |
 | End      | DateTime | End time of suggested slot   |
 | Reason   | string   | Reason for this suggestion   |
+## Service
+### ClinicalDocumentService.cs
+A singleton service for managing all clinical documents in the system with thread-safe operations.
 
-### ScheduleManager.cs
+**Pattern:** Singleton
+
+**Properties:**
+
+| Name | Type | Access | Description |
+|------|------|--------|-------------|
+| Instance | ClinicalDocumentService | get | Gets the singleton instance of the service |
+
+**Methods:**
+
+| Signature | Returns | Description |
+|-----------|---------|-------------|
+| `AddDocument(ClinicalDocument document)` | bool | Adds document to service with duplicate and appointment checks, returns false if already exists |
+| `RemoveDocument(Guid documentId)` | bool | Removes document from all indices, returns false if not found |
+| `GetDocumentById(Guid documentId)` | ClinicalDocument? | Retrieves document by ID, returns null if not found |
+| `GetDocumentByAppointment(Guid appointmentId)` | ClinicalDocument? | Retrieves document associated with an appointment, returns null if not found |
+| `GetPatientDocuments(Guid patientId)` | IEnumerable&lt;ClinicalDocument&gt; | Gets all documents for a patient ordered by creation date descending |
+| `GetPhysicianDocuments(Guid physicianId)` | IEnumerable&lt;ClinicalDocument&gt; | Gets all documents created by a physician ordered by creation date descending |
+| `GetDocumentsInDateRange(DateTime startDate, DateTime endDate, Guid? patientId = null, Guid? physicianId = null)` | IEnumerable&lt;ClinicalDocument&gt; | Gets documents within date range with optional patient/physician filters |
+| `SearchByDiagnosis(string diagnosisText)` | IEnumerable&lt;ClinicalDocument&gt; | Searches documents containing specified diagnosis text or ICD-10 code |
+| `SearchByMedication(string medicationName)` | IEnumerable&lt;ClinicalDocument&gt; | Searches documents containing specified medication name |
+| `GetIncompleteDocuments(Guid? physicianId = null)` | IEnumerable&lt;ClinicalDocument&gt; | Gets all incomplete documents with optional physician filter |
+| `GetMostRecentPatientDocument(Guid patientId)` | ClinicalDocument? | Gets the most recent document for a patient |
+| `DocumentExists(Guid documentId)` | bool | Checks if a document exists in the service |
+| `AppointmentHasDocument(Guid appointmentId)` | bool | Checks if an appointment already has an associated document |
+| `GetStatistics()` | ClinicalDocumentStatistics | Gets statistics about documents in the service |
+| `GetAllDocuments()` | IEnumerable&lt;ClinicalDocument&gt; | Gets all documents ordered by creation date descending |
+| `Clear()` | void | Clears all documents from the service (for testing purposes) |
+
+**Helper Class: ClinicalDocumentStatistics**
+
+**Properties:**
+
+| Name | Type | Access | Description |
+|------|------|--------|-------------|
+| TotalDocuments | int | get/set | Total number of documents |
+| CompletedDocuments | int | get/set | Number of completed documents |
+| IncompleteDocuments | int | get/set | Number of incomplete documents |
+| UniquePatients | int | get/set | Number of unique patients with documents |
+| UniquePhysicians | int | get/set | Number of unique physicians with documents |
+| TotalDiagnoses | int | get/set | Total number of diagnoses across all documents |
+| TotalPrescriptions | int | get/set | Total number of prescriptions across all documents |
+| DocumentsToday | int | get/set | Number of documents created today |
+| DocumentsThisWeek | int | get/set | Number of documents created in the past 7 days |
+| CompletionRate | double | get | Completion rate percentage (calculated property) |
+
+**Methods:**
+
+| Signature | Returns | Description |
+|-----------|---------|-------------|
+| `ToString()` | string | Returns formatted statistics string with document counts and completion rate |
+
+### ProfileService.cs
+Singleton registry managing all user profiles in the system with thread-safe operations and multiple indexing strategies.
+
+**Pattern:** Singleton
+
+**Properties:**
+
+| Name     | Type            | Access | Description                                        |
+| -------- | --------------- | ------ | -------------------------------------------------- |
+| Instance | ProfileRegistry | get    | Gets the singleton instance of the ProfileRegistry |
+| Count    | int             | get    | Gets the total count of profiles in the registry   |
+
+**Methods:**
+
+| Signature                                                                             | Returns                           | Description                                                                    |
+| ------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
+| `AddProfile(IUserProfile profile)`                                                    | bool                              | Adds a profile to the registry, returns false if ID or username already exists |
+| `RemoveProfile(Guid profileId)`                                                       | bool                              | Removes a profile from the registry by ID                                      |
+| `GetProfileById(Guid profileId)`                                                      | IUserProfile?                     | Gets a profile by ID, or null if not found                                     |
+| `GetProfileByUsername(string username)`                                               | IUserProfile?                     | Gets a profile by username (case-insensitive), or null if not found            |
+| `GetProfilesByType<T>()`                                                              | IEnumerable<T>                    | Gets all profiles of a specific type (e.g., PatientProfile)                    |
+| `GetProfilesByRole(UserRole role)`                                                    | IEnumerable<IUserProfile>         | Gets all profiles with a specific role                                         |
+| `GetAllPatients()`                                                                    | IEnumerable<PatientProfile>       | Gets all patient profiles                                                      |
+| `GetAllPhysicians()`                                                                  | IEnumerable<PhysicianProfile>     | Gets all physician profiles                                                    |
+| `GetAllAdministrators()`                                                              | IEnumerable<AdministratorProfile> | Gets all administrator profiles                                                |
+| `SearchByName(string searchTerm)`                                                     | IEnumerable<IUserProfile>         | Searches for profiles by name (case-insensitive)                               |
+| `UsernameExists(string username)`                                                     | bool                              | Checks if a username exists in the registry                                    |
+| `GetAllProfiles()`                                                                    | IEnumerable<IUserProfile>         | Gets all profiles in the registry                                              |
+| `GetStatistics()`                                                                     | ProfileRegistryStatistics         | Gets statistics about the registry (total, patients, physicians, admins)       |
+| `Clear()`                                                                             | void                              | Clears all profiles from the registry (for testing purposes)                   |
+| `AssignPatientToPhysician(Guid patientId, Guid physicianId, bool setPrimary = false)` | bool                              | Establishes a physician-patient relationship, optionally setting as primary    |
+| `GetPhysicianPatients(Guid physicianId)`                                              | IEnumerable<PatientProfile>       | Gets all patients for a specific physician                                     |
+| `GetPatientPhysicians(Guid patientId)`                                                | IEnumerable<PhysicianProfile>     | Gets all physicians for a specific patient                                     |
+
+**Helper Class: ProfileRegistryStatistics**
+
+**Properties:**
+
+| Name | Type | Access | Description |
+|------|------|--------|-------------|
+| TotalProfiles | int | get/set | Total number of profiles |
+| PatientCount | int | get/set | Number of patient profiles |
+| PhysicianCount | int | get/set | Number of physician profiles |
+| AdministratorCount | int | get/set | Number of administrator profiles |
+
+**Methods:**
+
+| Signature | Returns | Description |
+|-----------|---------|-------------|
+| `ToString()` | string | Returns formatted statistics string |
+
+### SchedulerService.cs
 A high-level singleton facade for managing all scheduling operations across the system.
 
 **Pattern:** Singleton
@@ -3594,7 +3710,7 @@ Registers all application navigation routes with the Shell routing system, mappi
 ### RelayCommand.cs
 ## Converters
 ### PhysicianAssignmentConverter.cs
-Implements an IValueConverter that transforms a physician's GUID to a human-readable assignment status string for display in XAML. This converter accesses the ProfileRegistry singleton to resolve physician IDs to names, displaying "Dr. [Name]" for valid assignments, "Assigned" for unresolved GUIDs, or "Unassigned" for null values, providing clear visual feedback in patient management interfaces.
+Implements an IValueConverter that transforms a physician's GUID to a human-readable assignment status string for display in XAML. This converter accesses the Profileservice singleton to resolve physician IDs to names, displaying "Dr. [Name]" for valid assignments, "Assigned" for unresolved GUIDs, or "Unassigned" for null values, providing clear visual feedback in patient management interfaces.
 
 ### MainPage.xaml
 Default MAUI application template page displaying a sample UI with .NET Bot image and counter button. This page is not actively used in the CliniCore application flow, as the app immediately navigates to LoginPage on startup, but remains as the original template artifact demonstrating basic MAUI page structure and event handling.
@@ -3700,13 +3816,13 @@ Provides comprehensive appointment list viewing with filtering capabilities by p
 | BackCommand              | ICommand | Returns to home page                                          |
 
 ### AppointmentDetailViewModel.cs
-Displays detailed appointment information with actions for rescheduling, cancellation, and deletion based on appointment status and permissions. This ViewModel loads appointment data directly from ScheduleManager rather than using commands for read operations, dynamically enables or disables action buttons based on appointment status (e.g., cannot reschedule completed appointments), displays confirmation dialogs before destructive operations using MAUI's DisplayAlert, and automatically reloads appointment data after status changes to reflect updated information.
+Displays detailed appointment information with actions for rescheduling, cancellation, and deletion based on appointment status and permissions. This ViewModel loads appointment data directly from SchedulingService rather than using commands for read operations, dynamically enables or disables action buttons based on appointment status (e.g., cannot reschedule completed appointments), displays confirmation dialogs before destructive operations using MAUI's DisplayAlert, and automatically reloads appointment data after status changes to reflect updated information.
 
 ### AppointmentFormViewModelBase.cs
-Serves as an abstract base class for appointment creation and editing forms, providing shared properties, picker data, and navigation commands while derived classes implement specific save command logic. This base class populates patient and physician pickers from ProfileRegistry, manages form properties including selected date/time/duration with proper validation, implements lazy initialization of the SaveCommand through the CreateSaveCommand factory method to ensure derived classes are fully constructed, and provides the HandleSaveResult method that navigates back to the list page on successful saves.
+Serves as an abstract base class for appointment creation and editing forms, providing shared properties, picker data, and navigation commands while derived classes implement specific save command logic. This base class populates patient and physician pickers from Profileservice, manages form properties including selected date/time/duration with proper validation, implements lazy initialization of the SaveCommand through the CreateSaveCommand factory method to ensure derived classes are fully constructed, and provides the HandleSaveResult method that navigates back to the list page on successful saves.
 
 ### AppointmentEditViewModel.cs
-Handles editing of existing appointments by extending AppointmentFormViewModelBase and using UpdateAppointmentCommand for persistence. This ViewModel accepts an appointmentId query parameter to load existing appointment data, populates the form fields with current appointment values from ScheduleManager, overrides CreateSaveCommand to use UpdateAppointmentCommand with appropriate parameters, and validates that the appointment exists before allowing edit operations.
+Handles editing of existing appointments by extending AppointmentFormViewModelBase and using UpdateAppointmentCommand for persistence. This ViewModel accepts an appointmentId query parameter to load existing appointment data, populates the form fields with current appointment values from SchedulingService, overrides CreateSaveCommand to use UpdateAppointmentCommand with appropriate parameters, and validates that the appointment exists before allowing edit operations.
 
 ### CreateAppointmentViewModel.cs
 Manages new appointment creation by extending AppointmentFormViewModelBase and using ScheduleAppointmentCommand for persistence. This ViewModel accepts optional patientId and physicianId query parameters to pre-select participants, overrides CreateSaveCommand to use ScheduleAppointmentCommand with required patient, physician, start time, duration, and reason parameters, includes optional notes in the command parameters if provided, and ensures all required fields are populated before enabling the save button.
@@ -3826,7 +3942,7 @@ Handles both patient creation and profile editing in a unified interface with mo
 | `ExecuteUpdate()` | void | Updates patient using UpdatePatientProfileCommand |
 
 ### PatientHomeViewModel.cs
-Provides the patient portal home page with navigation to view their own appointments, clinical documents, and care team physicians. This ViewModel retrieves the patient's profile from ProfileRegistry to display their full name in the welcome message, implements navigation commands with patient-specific filtering (e.g., appointments filtered by patient ID), allows patients to view the full physician directory rather than just their assigned physician, and provides logout functionality with session clearing.
+Provides the patient portal home page with navigation to view their own appointments, clinical documents, and care team physicians. This ViewModel retrieves the patient's profile from ProfileService to display their full name in the welcome message, implements navigation commands with patient-specific filtering (e.g., appointments filtered by patient ID), allows patients to view the full physician directory rather than just their assigned physician, and provides logout functionality with session clearing.
 
 ### PhysicianListViewModel.cs
 Manages physician list display with search filtering and role-based access control.

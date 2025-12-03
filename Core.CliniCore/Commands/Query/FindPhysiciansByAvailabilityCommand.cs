@@ -1,13 +1,13 @@
 ﻿using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain;
-using Core.CliniCore.Scheduling.Management;
 using Core.CliniCore.Domain.Enumerations.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Query
 {
@@ -25,8 +25,14 @@ namespace Core.CliniCore.Commands.Query
             public const string Date = "date";
         }
 
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
-        private readonly ScheduleManager _scheduleManager = ScheduleManager.Instance;
+        private readonly ProfileService _profileRegistry;
+        private readonly SchedulerService _scheduleManager;
+
+        public FindPhysiciansByAvailabilityCommand(ProfileService profileService, SchedulerService schedulerService)
+        {
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
+        }
 
         public override string Description => "Find available physicians for a specific time slot";
 

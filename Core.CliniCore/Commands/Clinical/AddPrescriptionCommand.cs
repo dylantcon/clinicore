@@ -4,6 +4,7 @@ using Core.CliniCore.Commands;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.ClinicalDoc;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -28,11 +29,14 @@ namespace Core.CliniCore.Commands.Clinical
             public const string NdcCode = "ndc_code";
         }
 
-        private readonly ClinicalDocumentRegistry _documentRegistry = ClinicalDocumentRegistry.Instance;
+        private readonly ClinicalDocumentService _documentRegistry;
         private PrescriptionEntry? _addedPrescription;
         private Guid? _targetDocumentId;
 
-        public AddPrescriptionCommand() {}
+        public AddPrescriptionCommand(ClinicalDocumentService clinicalDocService)
+        {
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
+        }
 
         public override string Description => "Adds a prescription to a clinical document (requires diagnosis)";
 

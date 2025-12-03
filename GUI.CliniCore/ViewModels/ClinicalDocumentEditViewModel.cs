@@ -4,7 +4,7 @@ using Core.CliniCore.Commands.Clinical;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Scheduling;
-using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Services;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
 using System.Collections.ObjectModel;
@@ -26,8 +26,8 @@ namespace GUI.CliniCore.ViewModels
         private readonly CommandFactory _commandFactory;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
-        private readonly ScheduleManager _scheduleManager = ScheduleManager.Instance;
+        private readonly ProfileService _profileRegistry;
+        private readonly SchedulerService _scheduleManager;
 
         private Guid? _documentId;
         private Guid? _patientId;
@@ -411,11 +411,15 @@ namespace GUI.CliniCore.ViewModels
         public ClinicalDocumentEditViewModel(
             CommandFactory commandFactory,
             INavigationService navigationService,
-            SessionManager sessionManager)
+            SessionManager sessionManager,
+            ProfileService profileService,
+            SchedulerService schedulerService)
         {
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
 
             Title = "Clinical Document";
 

@@ -10,8 +10,9 @@ using Core.CliniCore.Commands.Admin;
 using Core.CliniCore.Commands.Query;
 using Core.CliniCore.Commands.Reports;
 using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Scheduling.Management;
 using Core.CliniCore.ClinicalDoc;
+using Core.CliniCore.Service;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands
 {
@@ -22,14 +23,22 @@ namespace Core.CliniCore.Commands
     public class CommandFactory
     {
         private readonly IAuthenticationService _authService;
-        private readonly ScheduleManager _scheduleManager;
+        private readonly SchedulerService _scheduleManager;
+        private readonly ProfileService _profileService;
+        private readonly ClinicalDocumentService _clinicalDocService;
         private readonly Dictionary<string, Type> _commandTypes;
         private readonly Dictionary<string, Func<ICommand>> _commandCreators;
 
-        public CommandFactory(IAuthenticationService authService, ScheduleManager scheduleManager)
+        public CommandFactory(
+            IAuthenticationService authService,
+            SchedulerService scheduleManager,
+            ProfileService profileService,
+            ClinicalDocumentService clinicalDocService)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
+            _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _clinicalDocService = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
             _commandTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
             _commandCreators = new Dictionary<string, Func<ICommand>>(StringComparer.OrdinalIgnoreCase);
 
@@ -81,58 +90,58 @@ namespace Core.CliniCore.Commands
             //RegisterCommandWithKey(() => new ChangePasswordCommand(_authService)); // Skip if constructor issue
 
             // Profile Management Commands
-            RegisterCommandWithKey(() => new CreatePatientCommand(_authService));
-            RegisterCommandWithKey(() => new CreatePhysicianCommand(_authService));
-            RegisterCommandWithKey(() => new CreateAdministratorCommand(_authService));
-            RegisterCommandWithKey(() => new AssignPatientToPhysicianCommand());
-            RegisterCommandWithKey(() => new ListPatientsCommand());
-            RegisterCommandWithKey(() => new ListPhysiciansCommand());
-            RegisterCommandWithKey(() => new ListProfileCommand());
-            RegisterCommandWithKey(() => new ViewProfileCommand());
-            RegisterCommandWithKey(() => new ViewPatientProfileCommand());
-            RegisterCommandWithKey(() => new ViewPhysicianProfileCommand());
-            RegisterCommandWithKey(() => new ViewAdministratorProfileCommand());
-            RegisterCommandWithKey(() => new UpdateProfileCommand());
-            RegisterCommandWithKey(() => new UpdatePatientProfileCommand());
-            RegisterCommandWithKey(() => new UpdatePhysicianProfileCommand());
-            RegisterCommandWithKey(() => new UpdateAdministratorProfileCommand());
-            RegisterCommandWithKey(() => new DeleteProfileCommand());
+            RegisterCommandWithKey(() => new CreatePatientCommand(_authService, _profileService));
+            RegisterCommandWithKey(() => new CreatePhysicianCommand(_authService, _profileService));
+            RegisterCommandWithKey(() => new CreateAdministratorCommand(_authService, _profileService));
+            RegisterCommandWithKey(() => new AssignPatientToPhysicianCommand(_profileService));
+            RegisterCommandWithKey(() => new ListPatientsCommand(_profileService));
+            RegisterCommandWithKey(() => new ListPhysiciansCommand(_profileService));
+            RegisterCommandWithKey(() => new ListProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new ViewProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new ViewPatientProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new ViewPhysicianProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new ViewAdministratorProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new UpdateProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new UpdatePatientProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new UpdatePhysicianProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new UpdateAdministratorProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new DeleteProfileCommand(_profileService, _scheduleManager, _clinicalDocService));
 
             // Scheduling Commands
-            RegisterCommandWithKey(() => new ScheduleAppointmentCommand(_scheduleManager));
-            RegisterCommandWithKey(() => new ListAppointmentsCommand(_scheduleManager));
-            RegisterCommandWithKey(() => new ViewAppointmentCommand(_scheduleManager));
+            RegisterCommandWithKey(() => new ScheduleAppointmentCommand(_scheduleManager, _profileService));
+            RegisterCommandWithKey(() => new ListAppointmentsCommand(_scheduleManager, _profileService));
+            RegisterCommandWithKey(() => new ViewAppointmentCommand(_scheduleManager, _profileService));
             RegisterCommandWithKey(() => new CancelAppointmentCommand(_scheduleManager));
             RegisterCommandWithKey(() => new UpdateAppointmentCommand(_scheduleManager));
             RegisterCommandWithKey(() => new DeleteAppointmentCommand(_scheduleManager));
             RegisterCommandWithKey(() => new CheckConflictsCommand(_scheduleManager));
-            RegisterCommandWithKey(() => new GetAvailableTimeSlotsCommand(_scheduleManager)); // Now properly implemented
-            RegisterCommandWithKey(() => new SetPhysicianAvailabilityCommand()); // Now has proper implementation
+            RegisterCommandWithKey(() => new GetAvailableTimeSlotsCommand(_scheduleManager, _profileService));
+            RegisterCommandWithKey(() => new SetPhysicianAvailabilityCommand());
 
             // Clinical Documentation Commands
-            RegisterCommandWithKey(() => new CreateClinicalDocumentCommand());
-            RegisterCommandWithKey(() => new AddDiagnosisCommand());
-            RegisterCommandWithKey(() => new AddPrescriptionCommand());
-            RegisterCommandWithKey(() => new AddObservationCommand());
-            RegisterCommandWithKey(() => new AddAssessmentCommand());
-            RegisterCommandWithKey(() => new AddPlanCommand());
-            RegisterCommandWithKey(() => new ListClinicalDocumentsCommand());
-            RegisterCommandWithKey(() => new ViewClinicalDocumentCommand());
-            RegisterCommandWithKey(() => new UpdateClinicalDocumentCommand());
-            RegisterCommandWithKey(() => new DeleteClinicalDocumentCommand());
-            RegisterCommandWithKey(() => new UpdateObservationCommand());
-            RegisterCommandWithKey(() => new UpdateDiagnosisCommand());
-            RegisterCommandWithKey(() => new UpdatePrescriptionCommand());
-            RegisterCommandWithKey(() => new UpdateAssessmentCommand());
-            RegisterCommandWithKey(() => new UpdatePlanCommand());
+            RegisterCommandWithKey(() => new CreateClinicalDocumentCommand(_profileService, _clinicalDocService));
+            RegisterCommandWithKey(() => new AddDiagnosisCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new AddPrescriptionCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new AddObservationCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new AddAssessmentCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new AddPlanCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new ListClinicalDocumentsCommand(_profileService, _clinicalDocService));
+            RegisterCommandWithKey(() => new ViewClinicalDocumentCommand(_profileService, _clinicalDocService));
+            RegisterCommandWithKey(() => new UpdateClinicalDocumentCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new DeleteClinicalDocumentCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new UpdateObservationCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new UpdateDiagnosisCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new UpdatePrescriptionCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new UpdateAssessmentCommand(_clinicalDocService));
+            RegisterCommandWithKey(() => new UpdatePlanCommand(_clinicalDocService));
 
             // Query Commands
-            RegisterCommandWithKey(() => new SearchPatientsCommand());
-            RegisterCommandWithKey(() => new SearchClinicalNotesCommand());
-            RegisterCommandWithKey(() => new FindPhysiciansBySpecializationCommand());
-            RegisterCommandWithKey(() => new FindPhysiciansByAvailabilityCommand());
-            RegisterCommandWithKey(() => new GetScheduleCommand());
-            RegisterCommandWithKey(() => new ListAllUsersCommand());
+            RegisterCommandWithKey(() => new SearchPatientsCommand(_profileService));
+            RegisterCommandWithKey(() => new SearchClinicalNotesCommand(_profileService, _clinicalDocService));
+            RegisterCommandWithKey(() => new FindPhysiciansBySpecializationCommand(_profileService));
+            RegisterCommandWithKey(() => new FindPhysiciansByAvailabilityCommand(_profileService, _scheduleManager));
+            RegisterCommandWithKey(() => new GetScheduleCommand(_profileService, _scheduleManager));
+            RegisterCommandWithKey(() => new ListAllUsersCommand(_profileService));
 
             // Report Commands (unimplemented)
             //RegisterCommandWithKey(() => new GeneratePatientReportCommand());

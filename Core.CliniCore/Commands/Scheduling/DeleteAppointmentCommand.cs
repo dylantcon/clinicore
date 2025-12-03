@@ -3,7 +3,7 @@ using System;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -17,9 +17,9 @@ namespace Core.CliniCore.Commands.Scheduling
             public const string AppointmentId = "appointment_id";
         }
 
-        private readonly ScheduleManager _scheduleManager;
+        private readonly SchedulerService _scheduleManager;
 
-        public DeleteAppointmentCommand(ScheduleManager scheduleManager)
+        public DeleteAppointmentCommand(SchedulerService scheduleManager)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
         }

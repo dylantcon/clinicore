@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Domain;
 
 namespace Core.CliniCore.ClinicalDoc
 {
@@ -11,7 +12,7 @@ namespace Core.CliniCore.ClinicalDoc
     /// Composite pattern implementation for complete medical encounter documentation
     /// Follows SOAP (Subjective, Objective, Assessment, Plan) format
     /// </summary>
-    public class ClinicalDocument
+    public class ClinicalDocument : IIdentifiable
     {
         private readonly List<AbstractClinicalEntry> _entries;
         private readonly Dictionary<Guid, DiagnosisEntry> _diagnoses;

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Domain
 {
-    public abstract class AbstractUserProfile : IUserProfile
+    public abstract class AbstractUserProfile : IUserProfile, IIdentifiable
     {
         public Guid Id { get; }
         public string Username { get; set; } = string.Empty;

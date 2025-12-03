@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Query
 {
@@ -19,7 +20,12 @@ namespace Core.CliniCore.Commands.Query
             public const string SearchTerm = "searchTerm";
         }
 
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly ProfileService _profileRegistry;
+
+        public SearchPatientsCommand(ProfileService profileService)
+        {
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
 
         public override string Description => "Search patients by name";
 

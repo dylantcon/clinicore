@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.CliniCore.Commands;
+using Core.CliniCore.Service;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
-using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -23,12 +23,15 @@ namespace Core.CliniCore.Commands.Profile
             public const string Force = "force"; // Skip dependency checks if true
         }
 
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
-        private readonly ClinicalDocumentRegistry _documentRegistry = ClinicalDocumentRegistry.Instance;
-        private readonly ScheduleManager _scheduleManager = ScheduleManager.Instance;
+        private readonly ProfileService _profileRegistry;
+        private readonly ClinicalDocumentService _documentRegistry;
+        private readonly SchedulerService _scheduleManager;
 
-        public DeleteProfileCommand()
+        public DeleteProfileCommand(ProfileService profileService, SchedulerService schedulerService, ClinicalDocumentService clinicalDocService)
         {
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
         public override string Description => "Permanently deletes a user profile from the system";

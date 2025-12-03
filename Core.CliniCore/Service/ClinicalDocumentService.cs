@@ -1,49 +1,33 @@
-﻿// Core.CliniCore/ClinicalDoc/ClinicalDocumentRegistry.cs
+﻿// Core.CliniCore/ClinicalDoc/ClinicalDocumentService.cs
+using Core.CliniCore.ClinicalDoc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.CliniCore.ClinicalDoc
+namespace Core.CliniCore.Service
 {
     /// <summary>
-    /// Registry for managing all clinical documents in the system
-    /// Implements Singleton pattern with thread-safe operations
+    /// Registry for managing all clinical documents in the system.
+    /// Thread-safe operations for document storage and retrieval.
+    /// Note: Currently uses in-memory storage via internal dictionaries.
+    /// Future: Will integrate with IClinicalDocumentRepository for database persistence.
     /// </summary>
-    public class ClinicalDocumentRegistry
+    public class ClinicalDocumentService
     {
         private readonly Dictionary<Guid, ClinicalDocument> _documentsById;
         private readonly Dictionary<Guid, List<ClinicalDocument>> _documentsByPatient;
         private readonly Dictionary<Guid, List<ClinicalDocument>> _documentsByPhysician;
         private readonly Dictionary<Guid, ClinicalDocument> _documentsByAppointment;
-        private readonly static object _lock = new object();
-        private static ClinicalDocumentRegistry? _instance;
+        private readonly object _lock = new object();
 
-        private ClinicalDocumentRegistry()
+        public ClinicalDocumentService()
         {
             _documentsById = new Dictionary<Guid, ClinicalDocument>();
             _documentsByPatient = new Dictionary<Guid, List<ClinicalDocument>>();
             _documentsByPhysician = new Dictionary<Guid, List<ClinicalDocument>>();
             _documentsByAppointment = new Dictionary<Guid, ClinicalDocument>();
-        }
-
-        /// <summary>
-        /// Gets the singleton instance of the ClinicalDocumentRegistry
-        /// </summary>
-        public static ClinicalDocumentRegistry Instance
-        {
-            get
-            {
-                lock (_lock)
-                {
-                    if (_instance == null)
-                    {
-                        _instance = new ClinicalDocumentRegistry();
-                    }
-                }
-                return _instance;
-            }
         }
 
         /// <summary>
@@ -221,7 +205,7 @@ namespace Core.CliniCore.ClinicalDoc
                 return _documentsById.Values
                     .Where(doc => doc.GetDiagnoses()
                         .Any(d => d.Content.Contains(diagnosisText, StringComparison.OrdinalIgnoreCase) ||
-                                 (d.ICD10Code != null && d.ICD10Code.Contains(diagnosisText, StringComparison.OrdinalIgnoreCase))))
+                                 d.ICD10Code != null && d.ICD10Code.Contains(diagnosisText, StringComparison.OrdinalIgnoreCase)))
                     .OrderByDescending(d => d.CreatedAt)
                     .ToList();
             }

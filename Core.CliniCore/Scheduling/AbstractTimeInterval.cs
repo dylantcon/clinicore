@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Domain;
 
 namespace Core.CliniCore.Scheduling
 {
     /// <summary>
     /// Base implementation for all time interval types
     /// </summary>
-    public abstract class AbstractTimeInterval : ITimeInterval
+    public abstract class AbstractTimeInterval : ITimeInterval, IIdentifiable
     {
         // Business hours constraints for Assignment 1
         // TODO: rework later to characterize open and close at facility level

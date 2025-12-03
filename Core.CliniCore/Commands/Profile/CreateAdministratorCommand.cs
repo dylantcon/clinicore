@@ -4,6 +4,7 @@ using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Domain.ProfileTemplates;
+using Core.CliniCore.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,11 +24,12 @@ namespace Core.CliniCore.Commands.Profile
         }
 
         private readonly IAuthenticationService _authService;
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
+        private readonly ProfileService _registry;
 
-        public CreateAdministratorCommand(IAuthenticationService authenticationService)
+        public CreateAdministratorCommand(IAuthenticationService authenticationService, ProfileService profileService)
         {
             _authService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
         public const string Key = "createadministrator";

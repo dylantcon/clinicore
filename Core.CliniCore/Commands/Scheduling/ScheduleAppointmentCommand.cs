@@ -6,6 +6,7 @@ using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -23,13 +24,14 @@ namespace Core.CliniCore.Commands.Scheduling
             public const string Notes = "notes";
         }
 
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
-        private readonly ScheduleManager _scheduleManager;
+        private readonly ProfileService _registry;
+        private readonly SchedulerService _scheduleManager;
         private AppointmentTimeInterval? _createdAppointment;
 
-        public ScheduleAppointmentCommand(ScheduleManager scheduleManager)
+        public ScheduleAppointmentCommand(SchedulerService scheduleManager, ProfileService profileService)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
         public override string Description => "Schedules a new appointment between a patient and physician";

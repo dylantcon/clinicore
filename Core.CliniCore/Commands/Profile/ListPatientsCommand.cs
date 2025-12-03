@@ -4,6 +4,7 @@ using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Services;
 using System;
 using System.Text;
 
@@ -21,7 +22,12 @@ namespace Core.CliniCore.Commands.Profile
             public const string IncludeInactive = "include_inactive";
         }
 
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
+        private readonly ProfileService _registry;
+
+        public ListPatientsCommand(ProfileService profileService)
+        {
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
 
         public override string Description => "Lists all patients or patients for a specific physician";
 

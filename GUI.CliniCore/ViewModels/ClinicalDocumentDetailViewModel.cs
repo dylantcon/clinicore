@@ -3,6 +3,7 @@ using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Clinical;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Services;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
 using System.Collections.ObjectModel;
@@ -20,7 +21,7 @@ namespace GUI.CliniCore.ViewModels
         private readonly CommandFactory _commandFactory;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly ProfileService _profileRegistry;
 
         private Guid? _documentId;
         private ClinicalDocument? _document;
@@ -88,11 +89,13 @@ namespace GUI.CliniCore.ViewModels
         public ClinicalDocumentDetailViewModel(
             CommandFactory commandFactory,
             INavigationService navigationService,
-            SessionManager sessionManager)
+            SessionManager sessionManager,
+            ProfileService profileService)
         {
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
             Title = "Clinical Document";
 

@@ -1,12 +1,12 @@
 ﻿using Core.CliniCore.Commands;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -22,10 +22,11 @@ namespace Core.CliniCore.Commands.Clinical
             public const string Complete = "complete";
         }
 
-        private readonly ClinicalDocumentRegistry _documentRegistry = ClinicalDocumentRegistry.Instance;
+        private readonly ClinicalDocumentService _documentRegistry;
 
-        public UpdateClinicalDocumentCommand()
+        public UpdateClinicalDocumentCommand(ClinicalDocumentService clinicalDocService)
         {
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
         public override string Description => "Updates an existing clinical document";

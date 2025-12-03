@@ -5,6 +5,7 @@ using Core.CliniCore.Commands;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -18,7 +19,12 @@ namespace Core.CliniCore.Commands.Profile
             public const string IncludeInvalid = "include_invalid";
         }
 
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
+        private readonly ProfileService _registry;
+
+        public ListProfileCommand(ProfileService profileService)
+        {
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
 
         public override string Description => "Lists all profiles in the system";
 

@@ -1,13 +1,13 @@
 ﻿using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain;
-using Core.CliniCore.Scheduling.Management;
 using Core.CliniCore.Scheduling.BookingStrategies;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -23,13 +23,14 @@ namespace Core.CliniCore.Commands.Scheduling
             public const string MaxSlots = "max_slots";
         }
 
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
-        private readonly ScheduleManager _scheduleManager;
+        private readonly ProfileService _registry;
+        private readonly SchedulerService _scheduleManager;
         private readonly IBookingStrategy _bookingStrategy;
 
-        public GetAvailableTimeSlotsCommand(ScheduleManager scheduleManager, IBookingStrategy? bookingStrategy = null)
+        public GetAvailableTimeSlotsCommand(SchedulerService scheduleManager, ProfileService profileService, IBookingStrategy? bookingStrategy = null)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
             _bookingStrategy = bookingStrategy ?? new FirstAvailableBookingStrategy();
         }
 

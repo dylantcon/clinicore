@@ -4,6 +4,7 @@ using Core.CliniCore.Commands;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -19,8 +20,13 @@ namespace Core.CliniCore.Commands.Profile
             public const string SetPrimary = "set_primary";
         }
 
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
+        private readonly ProfileService _registry;
         private Guid? _patientId;
+
+        public AssignPatientToPhysicianCommand(ProfileService profileService)
+        {
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
         private Guid? _physicianId;
         private bool _wasPrimary;
 

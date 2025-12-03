@@ -29,7 +29,7 @@ namespace Core.CliniCore.Commands.Scheduling
 
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
-            // TODO: Implement when ScheduleManager supports physician availability
+            // TODO: Implement when SchedulerService supports physician availability
             return CommandResult.Fail("SetPhysicianAvailability is not yet implemented.");
         }
 

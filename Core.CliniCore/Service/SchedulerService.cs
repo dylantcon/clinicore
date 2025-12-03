@@ -1,43 +1,25 @@
 ﻿using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.BookingStrategies;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Core.CliniCore.Scheduling.Management;
 
-namespace Core.CliniCore.Scheduling.Management
+namespace Core.CliniCore.Services
 {
     /// <summary>
-    /// High-level facade for managing scheduling operations across the system
+    /// High-level facade for managing scheduling operations across the system.
+    /// This service maintains physician schedules with conflict detection and resolution.
+    /// Note: Currently uses in-memory storage via PhysicianSchedule objects.
+    /// Future: Will integrate with IAppointmentRepository for database persistence.
     /// </summary>
-    public class ScheduleManager
+    public class SchedulerService
     {
-        private static ScheduleManager? _instance;
-        private static readonly object _instanceLock = new object();
-        
         private readonly Dictionary<Guid, PhysicianSchedule> _physicianSchedules;
         private readonly List<UnavailableTimeInterval> _facilityUnavailableBlocks;
         private readonly ScheduleConflictDetector _conflictResolver;
         private readonly IBookingStrategy _defaultBookingStrategy;
         private readonly object _lock = new object();
 
-        public static ScheduleManager Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    lock (_instanceLock)
-                    {
-                        _instance ??= new ScheduleManager();
-                    }
-                }
-                return _instance;
-            }
-        }
-
-        private ScheduleManager()
+        public SchedulerService()
         {
             _physicianSchedules = new Dictionary<Guid, PhysicianSchedule>();
             _facilityUnavailableBlocks = new List<UnavailableTimeInterval>();
@@ -255,7 +237,7 @@ namespace Core.CliniCore.Scheduling.Management
                             conflictResult, physicianSchedule, _facilityUnavailableBlocks);
                         var changeType = timeChanged && durationChanged
                             ? "time and duration"
-                            : (timeChanged ? "time" : "duration");
+                            : timeChanged ? "time" : "duration";
 
                         return new ScheduleResult
                         {

@@ -6,6 +6,7 @@ using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -20,7 +21,12 @@ namespace Core.CliniCore.Commands.Profile
             public const string Search = "search";
         }
 
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
+        private readonly ProfileService _registry;
+
+        public ListPhysiciansCommand(ProfileService profileService)
+        {
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
 
         public override string Description => "Lists all physicians in the system";
 

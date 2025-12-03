@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -31,10 +32,11 @@ namespace Core.CliniCore.Commands.Clinical
             public const string Severity = "severity";
         }
 
-        private readonly ClinicalDocumentRegistry _documentRegistry = ClinicalDocumentRegistry.Instance;
+        private readonly ClinicalDocumentService _documentRegistry;
 
-        public UpdateObservationCommand()
+        public UpdateObservationCommand(ClinicalDocumentService clinicalDocService)
         {
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
         public override string Description => "Updates an observation entry within a clinical document";

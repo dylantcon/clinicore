@@ -4,7 +4,7 @@ using Core.CliniCore.Commands;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Scheduling;
-using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -22,9 +22,9 @@ namespace Core.CliniCore.Commands.Scheduling
             public const string NewStartTime = "new_start_time";
         }
 
-        private readonly ScheduleManager _scheduleManager;
+        private readonly SchedulerService _scheduleManager;
 
-        public UpdateAppointmentCommand(ScheduleManager scheduleManager)
+        public UpdateAppointmentCommand(SchedulerService scheduleManager)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
         }
@@ -151,7 +151,7 @@ namespace Core.CliniCore.Commands.Scheduling
                 var durationMinutes = parameters.GetParameter<int?>(Parameters.DurationMinutes);
                 var newStartTime = parameters.GetParameter<DateTime?>(Parameters.NewStartTime);
 
-                // Delegate to ScheduleManager for business logic and conflict validation
+                // Delegate to SchedulerService for business logic and conflict validation
                 var result = _scheduleManager.UpdateAppointment(
                     appointmentId,
                     reason,

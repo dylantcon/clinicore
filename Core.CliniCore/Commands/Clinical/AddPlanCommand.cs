@@ -4,6 +4,7 @@ using Core.CliniCore.Commands;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.ClinicalDoc;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -24,11 +25,14 @@ namespace Core.CliniCore.Commands.Clinical
             public const string RelatedDiagnoses = "related_diagnoses";
         }
 
-        private readonly ClinicalDocumentRegistry _documentRegistry = ClinicalDocumentRegistry.Instance;
+        private readonly ClinicalDocumentService _documentRegistry;
         private PlanEntry? _addedPlan;
         private Guid? _targetDocumentId;
 
-        public AddPlanCommand() {}
+        public AddPlanCommand(ClinicalDocumentService clinicalDocService)
+        {
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
+        }
 
         public override string Description => "Adds a treatment plan entry to a document";
 

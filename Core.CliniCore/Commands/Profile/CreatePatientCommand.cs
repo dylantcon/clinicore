@@ -7,10 +7,11 @@ using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Domain.Validation;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands.Profile
 {
-    public class CreatePatientCommand(IAuthenticationService authService) : AbstractCommand
+    public class CreatePatientCommand : AbstractCommand
     {
         public const string Key = "createpatient";
         public override string CommandKey => Key;
@@ -26,9 +27,14 @@ namespace Core.CliniCore.Commands.Profile
             public const string Race = "race";
         }
 
-        private readonly ProfileRegistry _registry = ProfileRegistry.Instance;
-        private readonly IAuthenticationService _authService = authService 
-            ?? throw new ArgumentNullException(nameof(authService));
+        private readonly ProfileService _registry;
+        private readonly IAuthenticationService _authService;
+
+        public CreatePatientCommand(IAuthenticationService authService, ProfileService profileService)
+        {
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
 
         public override string Description => "Creates a new patient profile in the system";
 

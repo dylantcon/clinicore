@@ -12,17 +12,18 @@ using Core.CliniCore.Commands.Reports;
 using Core.CliniCore.Commands.Admin;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
-using Core.CliniCore.Scheduling.Management;
 using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace CLI.CliniCore.Service
 {
-    public class ConsoleCommandParser(IConsoleEngine console)
+    public class ConsoleCommandParser(IConsoleEngine console, ProfileService profileService, SchedulerService schedulerService, ClinicalDocumentService clinicalDocService)
     {
         private readonly IConsoleEngine _console = console ?? throw new ArgumentNullException(nameof(console));
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
-        private readonly ClinicalDocumentRegistry _clinicalDocumentRegistry = ClinicalDocumentRegistry.Instance;
+        private readonly ProfileService _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        private readonly SchedulerService _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
+        private readonly ClinicalDocumentService _clinicalDocumentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
 
         public CommandParameters ParseInteractive(ICommand command)
         {
@@ -693,8 +694,7 @@ namespace CLI.CliniCore.Service
 
         private Guid GetAppointmentSelection(Guid patientId)
         {
-            var scheduleManager = ScheduleManager.Instance;
-            var appointments = scheduleManager.GetPatientAppointments(patientId)
+            var appointments = _scheduleManager.GetPatientAppointments(patientId)
                 .OrderBy(a => a.Start)
                 .ToList();
 

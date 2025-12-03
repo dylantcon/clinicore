@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using CLI.CliniCore.Service.Editor;
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Authentication;
 using Core.CliniCore.Commands.Clinical;
@@ -13,6 +12,7 @@ using Core.CliniCore.Commands.Scheduling;
 using Core.CliniCore.Commands.Admin;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Service;
 
 namespace CLI.CliniCore.Service
 {
@@ -23,6 +23,7 @@ namespace CLI.CliniCore.Service
         private readonly ConsoleSessionManager _sessionManager;
         private readonly ConsoleCommandParser _commandParser;
         private readonly IConsoleEngine _console;
+        private readonly ClinicalDocumentService _clinicalDocService;
         private readonly Dictionary<Type, string> _commandKeyCache = new Dictionary<Type, string>();
 
         public ConsoleMenuBuilder(
@@ -30,13 +31,15 @@ namespace CLI.CliniCore.Service
             CommandFactory commandFactory,
             ConsoleSessionManager sessionManager,
             ConsoleCommandParser commandParser,
-            IConsoleEngine console)
+            IConsoleEngine console,
+            ClinicalDocumentService clinicalDocService)
         {
             _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
             _commandParser = commandParser ?? throw new ArgumentNullException(nameof(commandParser));
             _console = console ?? throw new ArgumentNullException(nameof(console));
+            _clinicalDocService = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
         public ConsoleMenu BuildMainMenu()
@@ -1007,7 +1010,7 @@ namespace CLI.CliniCore.Service
                 }
 
                 // Get the document from registry
-                var registry = ClinicalDocumentRegistry.Instance;
+                var registry = _clinicalDocService;
                 var document = registry.GetDocumentById(documentId);
                 
                 if (document == null)
@@ -1033,7 +1036,7 @@ namespace CLI.CliniCore.Service
             // Reuse the existing clinical document selection logic from ConsoleCommandParser
             try
             {
-                var registry = ClinicalDocumentRegistry.Instance;
+                var registry = _clinicalDocService;
                 var allDocuments = registry.GetAllDocuments().ToList();
                 
                 if (allDocuments.Count == 0)
@@ -1088,7 +1091,7 @@ namespace CLI.CliniCore.Service
                 }
 
                 // Get the document
-                var registry = ClinicalDocumentRegistry.Instance;
+                var registry = _clinicalDocService;
                 var document = registry.GetDocumentById(documentId);
                 if (document == null)
                 {
@@ -1169,7 +1172,7 @@ namespace CLI.CliniCore.Service
                 }
 
                 // Check if document is already completed
-                var registry = ClinicalDocumentRegistry.Instance;
+                var registry = _clinicalDocService;
                 var document = registry.GetDocumentById(documentId);
                 if (document == null)
                 {

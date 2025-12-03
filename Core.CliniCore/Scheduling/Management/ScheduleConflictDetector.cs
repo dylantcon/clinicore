@@ -24,7 +24,7 @@ namespace Core.CliniCore.Scheduling.Management
                 new DoubleBookingDetector(),
                 new UnavailableTimeDetector(),
                 // Note: OutsideHoursDetector removed - business hours are enforced via
-                // facility unavailable blocks in ScheduleManager.InitializeFacilitySchedule()
+                // facility unavailable blocks in SchedulerService.InitializeFacilitySchedule()
                 new InvalidDurationDetector()
             };
         }

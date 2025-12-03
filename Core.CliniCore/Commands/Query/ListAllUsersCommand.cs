@@ -1,6 +1,7 @@
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +19,12 @@ namespace Core.CliniCore.Commands.Query
             // No parameters needed for this command
         }
 
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly ProfileService _profileRegistry;
+
+        public ListAllUsersCommand(ProfileService profileService)
+        {
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        }
 
         public override string Description => "Lists all users in the system (administrators, physicians, and patients)";
 

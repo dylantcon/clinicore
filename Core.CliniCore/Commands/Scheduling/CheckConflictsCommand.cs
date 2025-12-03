@@ -2,6 +2,7 @@
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,9 +23,9 @@ namespace Core.CliniCore.Commands.Scheduling
             public const string ExcludeAppointmentId = "exclude_appointment_id"; // For rescheduling scenarios
         }
 
-        private readonly ScheduleManager _scheduleManager;
+        private readonly SchedulerService _scheduleManager;
 
-        public CheckConflictsCommand(ScheduleManager scheduleManager)
+        public CheckConflictsCommand(SchedulerService scheduleManager)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
         }

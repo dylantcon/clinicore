@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Core.CliniCore.Domain.Validation.Validators;
 using System.Linq.Expressions;
+using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Domain.Validation
 {
@@ -80,7 +81,7 @@ namespace Core.CliniCore.Domain.Validation
         public static IValidator<DateTime> GraduationDate()
             => DateRange(DateTime.Now.AddYears(-MAX_GRAD_YEARS_ELAPSED), DateTime.Now, GRADDATE_SIZE_ERROR_STR);
 
-        public static IValidator<string> UsernameUniqueness(ProfileRegistry profileRegistry, string? errorMessage = null)
+        public static IValidator<string> UsernameUniqueness(ProfileService profileRegistry, string? errorMessage = null)
             => new Validators.UsernameUniquenessValidator(profileRegistry, errorMessage);
 
         #endregion

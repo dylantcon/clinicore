@@ -1,12 +1,15 @@
-﻿using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Repositories;
+using Core.CliniCore.Repositories.InMemory;
 using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.Management;
+using Core.CliniCore.Service;
+using Core.CliniCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
@@ -52,14 +55,20 @@ namespace Core.CliniCore.Bootstrap
             services.AddSingleton<IAuthenticationService, BasicAuthenticationService>();
             services.AddSingleton<RoleBasedAuthorizationService>();
 
-            // Domain Registries (Repositories)
-            // Note: These use Singleton pattern internally, so we register the existing instances
-            services.AddSingleton<ProfileRegistry>(sp => ProfileRegistry.Instance);
-            services.AddSingleton<ClinicalDocumentRegistry>(sp => ClinicalDocumentRegistry.Instance);
+            // Repository Layer (In-Memory implementations)
+            // Note: Using Singleton to maintain data across the application lifetime
+            services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
+            services.AddSingleton<IPhysicianRepository, InMemoryPhysicianRepository>();
+            services.AddSingleton<IAdministratorRepository, InMemoryAdministratorRepository>();
+            services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
+            services.AddSingleton<IClinicalDocumentRepository, InMemoryClinicalDocumentRepository>();
 
-            // Scheduling Management
-            // Note: ScheduleManager uses Singleton pattern internally, but we register it for DI
-            services.AddSingleton<ScheduleManager>(sp => ScheduleManager.Instance);
+            // Service Layer (uses repositories via DI)
+            services.AddSingleton<ProfileService>();
+            services.AddSingleton<SchedulerService>();
+            services.AddSingleton<ClinicalDocumentService>();
+
+            // Scheduling helpers
             services.AddSingleton<ScheduleConflictDetector>();
 
             // Command Infrastructure
@@ -69,7 +78,9 @@ namespace Core.CliniCore.Bootstrap
             services.AddSingleton<CommandFactory>(serviceProvider =>
                 new CommandFactory(
                     serviceProvider.GetRequiredService<IAuthenticationService>(),
-                    serviceProvider.GetRequiredService<ScheduleManager>()
+                    serviceProvider.GetRequiredService<SchedulerService>(),
+                    serviceProvider.GetRequiredService<ProfileService>(),
+                    serviceProvider.GetRequiredService<ClinicalDocumentService>()
                 ));
 
             return services;
@@ -90,17 +101,27 @@ namespace Core.CliniCore.Bootstrap
             services.AddSingleton<IAuthenticationService>(customAuthService);
             services.AddSingleton<RoleBasedAuthorizationService>();
 
-            // Register other services as normal
-            services.AddSingleton<ProfileRegistry>(sp => ProfileRegistry.Instance);
-            services.AddSingleton<ClinicalDocumentRegistry>(sp => ClinicalDocumentRegistry.Instance);
-            services.AddSingleton<ScheduleManager>(sp => ScheduleManager.Instance);
+            // Repository Layer (In-Memory implementations)
+            services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
+            services.AddSingleton<IPhysicianRepository, InMemoryPhysicianRepository>();
+            services.AddSingleton<IAdministratorRepository, InMemoryAdministratorRepository>();
+            services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
+            services.AddSingleton<IClinicalDocumentRepository, InMemoryClinicalDocumentRepository>();
+
+            // Service Layer
+            services.AddSingleton<ProfileService>();
+            services.AddSingleton<SchedulerService>();
+            services.AddSingleton<ClinicalDocumentService>();
+
             services.AddSingleton<ScheduleConflictDetector>();
             services.AddSingleton<CommandInvoker>();
 
             services.AddSingleton<CommandFactory>(serviceProvider =>
                 new CommandFactory(
                     serviceProvider.GetRequiredService<IAuthenticationService>(),
-                    serviceProvider.GetRequiredService<ScheduleManager>()
+                    serviceProvider.GetRequiredService<SchedulerService>(),
+                    serviceProvider.GetRequiredService<ProfileService>(),
+                    serviceProvider.GetRequiredService<ClinicalDocumentService>()
                 ));
 
             return services;
@@ -119,8 +140,8 @@ namespace Core.CliniCore.Bootstrap
                 throw new ArgumentNullException(nameof(serviceProvider));
 
             var authService = serviceProvider.GetRequiredService<IAuthenticationService>();
-            var profileRegistry = serviceProvider.GetRequiredService<ProfileRegistry>();
-            var scheduleManager = serviceProvider.GetRequiredService<ScheduleManager>();
+            var profileRegistry = serviceProvider.GetRequiredService<ProfileService>();
+            var scheduleManager = serviceProvider.GetRequiredService<SchedulerService>();
 
             try
             {
@@ -265,7 +286,7 @@ namespace Core.CliniCore.Bootstrap
         private static void ScheduleSampleAppointment(
             PatientProfile patient,
             PhysicianProfile physician,
-            ScheduleManager scheduleManager,
+            SchedulerService scheduleManager,
             ref DateTime baseTime,
             string reason)
         {

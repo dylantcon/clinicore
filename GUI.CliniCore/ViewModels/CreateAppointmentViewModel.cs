@@ -1,5 +1,6 @@
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Scheduling;
+using Core.CliniCore.Services;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
 
@@ -38,8 +39,10 @@ namespace GUI.CliniCore.ViewModels
         public CreateAppointmentViewModel(
             CommandFactory commandFactory,
             INavigationService navigationService,
-            SessionManager sessionManager)
-            : base(commandFactory, navigationService, sessionManager)
+            SessionManager sessionManager,
+            ProfileService profileService,
+            SchedulerService schedulerService)
+            : base(commandFactory, navigationService, sessionManager, profileService, schedulerService)
         {
             Title = "Schedule Appointment";
         }

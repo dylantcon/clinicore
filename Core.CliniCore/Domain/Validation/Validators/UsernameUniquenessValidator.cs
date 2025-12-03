@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using Core.CliniCore.Services;
+using System.Linq;
 
 namespace Core.CliniCore.Domain.Validation.Validators
 {
@@ -7,9 +8,9 @@ namespace Core.CliniCore.Domain.Validation.Validators
     /// </summary>
     public class UsernameUniquenessValidator : AbstractValidator<string>
     {
-        private readonly ProfileRegistry _profileRegistry;
+        private readonly ProfileService _profileRegistry;
 
-        public UsernameUniquenessValidator(ProfileRegistry profileRegistry, string? customErrorMessage = null)
+        public UsernameUniquenessValidator(ProfileService profileRegistry, string? customErrorMessage = null)
             : base(customErrorMessage ?? "Username is already taken")
         {
             _profileRegistry = profileRegistry ?? throw new System.ArgumentNullException(nameof(profileRegistry));

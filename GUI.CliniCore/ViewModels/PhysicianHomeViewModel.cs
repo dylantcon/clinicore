@@ -1,4 +1,5 @@
 using Core.CliniCore.Domain;
+using Core.CliniCore.Services;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
 using MauiCommand = System.Windows.Input.ICommand;
@@ -13,7 +14,7 @@ namespace GUI.CliniCore.ViewModels
     {
         private readonly SessionManager _sessionManager;
         private readonly INavigationService _navigationService;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly ProfileService _profileRegistry;
 
         private string _welcomeMessage = string.Empty;
         public string WelcomeMessage
@@ -31,10 +32,12 @@ namespace GUI.CliniCore.ViewModels
 
         public PhysicianHomeViewModel(
             SessionManager sessionManager,
-            INavigationService navigationService)
+            INavigationService navigationService,
+            ProfileService profileService)
         {
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
             Title = "Physician Dashboard";
 

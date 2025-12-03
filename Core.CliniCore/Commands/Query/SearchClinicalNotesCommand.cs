@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Query
 {
@@ -23,8 +25,14 @@ namespace Core.CliniCore.Commands.Query
             public const string PhysicianId = "physicianId";
         }
 
-        private readonly ClinicalDocumentRegistry _documentRegistry = ClinicalDocumentRegistry.Instance;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly ClinicalDocumentService _documentRegistry;
+        private readonly ProfileService _profileRegistry;
+
+        public SearchClinicalNotesCommand(ProfileService profileService, ClinicalDocumentService clinicalDocService)
+        {
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
+        }
 
         public override string Description => "Search clinical documents by diagnosis, medication, or general text";
 

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Profile;
 using Core.CliniCore.Domain;
+using Core.CliniCore.Services;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
 using MauiCommand = System.Windows.Input.ICommand;
@@ -18,6 +19,7 @@ namespace GUI.CliniCore.ViewModels
         private readonly CommandFactory _commandFactory;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
+        private readonly ProfileService _profileRegistry;
 
         private Guid _patientId;
         public Guid PatientId
@@ -138,11 +140,13 @@ namespace GUI.CliniCore.ViewModels
         public PatientDetailViewModel(
             CommandFactory commandFactory,
             INavigationService navigationService,
-            SessionManager sessionManager)
+            SessionManager sessionManager,
+            ProfileService profileService)
         {
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
             Title = "Patient Details";
 
@@ -219,8 +223,7 @@ namespace GUI.CliniCore.ViewModels
                 // Load primary physician name
                 if (patient.PrimaryPhysicianId.HasValue)
                 {
-                    ProfileRegistry registry = Core.CliniCore.Domain.ProfileRegistry.Instance;
-                    PrimaryPhysician = registry.GetProfileById(patient.PrimaryPhysicianId.Value) is PhysicianProfile physician ? $"Dr. {physician.Name}" : "Unknown";
+                    PrimaryPhysician = _profileRegistry.GetProfileById(patient.PrimaryPhysicianId.Value) is PhysicianProfile physician ? $"Dr. {physician.Name}" : "Unknown";
                 }
                 else
                 {

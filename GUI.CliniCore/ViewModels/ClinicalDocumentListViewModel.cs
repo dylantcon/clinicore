@@ -3,6 +3,7 @@ using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Clinical;
 using Core.CliniCore.Domain;
+using Core.CliniCore.Services;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
 using MauiCommand = System.Windows.Input.ICommand;
@@ -20,7 +21,7 @@ namespace GUI.CliniCore.ViewModels
         private readonly CommandFactory _commandFactory;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
-        private readonly ProfileRegistry _profileRegistry = ProfileRegistry.Instance;
+        private readonly ProfileService _profileRegistry;
 
         private Guid? _patientId;
         private Guid? _physicianId;
@@ -102,11 +103,13 @@ namespace GUI.CliniCore.ViewModels
         public ClinicalDocumentListViewModel(
             CommandFactory commandFactory,
             INavigationService navigationService,
-            SessionManager sessionManager)
+            SessionManager sessionManager,
+            ProfileService profileService)
         {
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
             Title = "Clinical Documents";
 
@@ -212,9 +215,9 @@ namespace GUI.CliniCore.ViewModels
     public class ClinicalDocumentDisplayModel
     {
         private readonly ClinicalDocument _document;
-        private readonly ProfileRegistry _profileRegistry;
+        private readonly ProfileService _profileRegistry;
 
-        public ClinicalDocumentDisplayModel(ClinicalDocument document, ProfileRegistry profileRegistry)
+        public ClinicalDocumentDisplayModel(ClinicalDocument document, ProfileService profileRegistry)
         {
             _document = document ?? throw new ArgumentNullException(nameof(document));
             _profileRegistry = profileRegistry ?? throw new ArgumentNullException(nameof(profileRegistry));
