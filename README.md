@@ -248,7 +248,7 @@ CliniCore was built around the physicians who use it, with an easy and reliable 
     - [PatientListViewModel.cs](#patientlistviewmodelcs)
     - [PhysicianDetailViewModel.cs](#physiciandetailviewmodelcs)
     - [PhysicianEditViewModel.cs](#physicianeditviewmodelcs)
-    - [PhysicianHomeViewModel.cs](#physicianhomeviewmodelcs)
+    1- [PhysicianHomeViewModel.cs](#physicianhomeviewmodelcs)
     - [PhysicianListViewModel.cs](#physicianlistviewmodelcs)
     - [SpecializationsConverter.cs](#specializationsconvertercs)
     - [StubViewModel.cs](#stubviewmodelcs)
@@ -1673,6 +1673,32 @@ Retrieves and displays a complete clinical document with all entries.
 **Status:** Implementation details not provided in source code read.
 ### CommandFactory.cs
 Factory class responsible for creating command instances based on command names or types, managing command registration, and discovering available commands in the system. This class uses dependency injection to provide commands with required services (authentication, scheduling), maintains a service of all available commands using their CommandKey properties, and supports command aliasing for user-friendly alternatives. It includes methods for role-based command filtering, command existence checking, and generating help information for each registered command.
+
+**Inheritance:** None
+
+**Properties:**
+
+| Name                 | Type                                             | Access           | Description |
+| -------------------- | ------------------------------------------------ | ---------------- | ----------- |
+| \_authService        | `IAuthenticationService`                         | private readonly | Authentication service provider |
+| \_schedulerService   | `SchedulerService`                               | private readonly | Scheduler service provider |
+| \_profileService     | `ProfileService`                                 | private readonly | Profile service provider |
+| \_clinicalDocService | `ClinicalDocumentService`                        | private readonly | Clinical Document service provider |
+| \_commandTypes       | `Dictionary&lt;string, Type&gt;`                 | private readonly | Dict of command keys and their types |
+| \_commandCreators    | `Dictionary&lt;string, Func&lt;ICommand&gt;&gt;` | private readonly | Dict of command keys and the command's producers |
+
+**Methods:**
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `CreateCommand(string)` | `ICommand?` | Creates a command instance by name/key |
+| `CreateCommandWithParameters(string, Dictionary)` | `(ICommand?, CommandParameters)` | Creates command with pre-populated parameters |
+| `GetAvailableCommands()` | `IEnumerable<string>` | Gets all registered command keys |
+| `GetCommandType(string)` | `Type?` | Gets the Type for a command key |
+| `GetCommandHelp(string)` | `string` | Gets help text for a command |
+| `CommandExists(string)` | `bool` | Checks if a command is registered |
+| `GetCommandsForRole(UserRole)` | `IEnumerable<string>` | Gets commands available to a role |
+
 ### CommandInvoker.cs
 Orchestrates command execution using the Invoker pattern, managing command history, and handling undo/redo operations with thread-safe execution. This class maintains stacks of executed and undone commands to support undo/redo functionality, records detailed execution history including timestamps and performance metrics, and provides batch command execution with transaction-like rollback capabilities. It tracks command success rates and ensures only commands supporting undo can be reversed while maintaining execution audit trails for compliance purposes.
 ### CommandParameters.cs
