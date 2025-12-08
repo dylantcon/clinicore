@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Core.CliniCore.Bootstrap;
 using Core.CliniCore.Commands;
 
 namespace CLI.CliniCore.Service
@@ -338,6 +339,18 @@ namespace CLI.CliniCore.Service
 ");
             ResetColor();
             DisplayMessage("Welcome to CliniCore - Your comprehensive medical practice solution", MessageType.Success);
+
+            if (DevelopmentData.IsDebugMode)
+            {
+                DisplaySeparator();
+                DisplayMessage("Development Credentials:", MessageType.Info);
+                SetColor(ConsoleColor.Cyan);
+                _console.WriteLine($"  Admin:     {SampleCredentials.AdminUsername} / {SampleCredentials.AdminPassword}");
+                _console.WriteLine($"  Physician: {SampleCredentials.PhysicianUsername} / {SampleCredentials.PhysicianPassword}");
+                _console.WriteLine($"  Patient:   {SampleCredentials.Patient1Username} / {SampleCredentials.Patient1Password}");
+                ResetColor();
+            }
+
             DisplaySeparator();
             Pause("\nPress any key to begin . . .");
         }

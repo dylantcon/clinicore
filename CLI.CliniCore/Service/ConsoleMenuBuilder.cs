@@ -11,8 +11,8 @@ using Core.CliniCore.Commands.Reports;
 using Core.CliniCore.Commands.Scheduling;
 using Core.CliniCore.Commands.Admin;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
 
 namespace CLI.CliniCore.Service
 {

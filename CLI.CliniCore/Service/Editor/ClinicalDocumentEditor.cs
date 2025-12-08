@@ -1,8 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Commands;
+using Core.CliniCore.Domain.ClinicalDocumentation;
 
 namespace CLI.CliniCore.Service.Editor
 {

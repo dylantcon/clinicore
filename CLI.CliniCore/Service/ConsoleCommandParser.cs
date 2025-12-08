@@ -10,11 +10,12 @@ using Core.CliniCore.Commands.Clinical;
 using Core.CliniCore.Commands.Query;
 using Core.CliniCore.Commands.Reports;
 using Core.CliniCore.Commands.Admin;
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
-using Core.CliniCore.Services;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Users;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace CLI.CliniCore.Service
 {
@@ -752,7 +753,7 @@ namespace CLI.CliniCore.Service
                 return new
                 {
                     Document = d,
-                    PatientName = patient?.Name ?? "Unknown Patient"
+                    PatientName = patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown Patient"
                 };
             }).ToList();
 
@@ -812,7 +813,7 @@ namespace CLI.CliniCore.Service
                     // Physician-specific fields: license, graduation, specializations
                     parameters[UpdateProfileCommand.Parameters.LicenseNumber] = GetOptionalStringInput("New License Number (leave blank to keep current)");
                     parameters[UpdateProfileCommand.Parameters.GraduationDate] = GetOptionalDateInput("New Graduation Date (leave blank to keep current)");
-                    // Note: Specializations would need special handling as it's a list
+                    // Note: Specializations need special handling as it's a list
                     break;
 
                 case UserRole.Administrator:
@@ -873,9 +874,9 @@ namespace CLI.CliniCore.Service
             {
                 var patients = profiles.Cast<PatientProfile>().ToList();
                 _console.DisplayTable(patients,
-                    ("Name", p => p.Name),
+                    ("Name", p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty),
                     ("Username", p => p.Username),
-                    ("Birth Date", p => p.BirthDate.ToString("yyyy-MM-dd")),
+                    ("Birth Date", p => p.GetValue<DateTime>(CommonEntryType.BirthDate.GetKey()).ToString("yyyy-MM-dd")),
                     ("ID", p => p.Id.ToString())
                 );
             }
@@ -883,10 +884,10 @@ namespace CLI.CliniCore.Service
             {
                 var physicians = profiles.Cast<PhysicianProfile>().ToList();
                 _console.DisplayTable(physicians,
-                    ("Name", p => p.Name),
+                    ("Name", p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty),
                     ("Username", p => p.Username),
-                    ("Specializations", p => string.Join(", ", p.Specializations)),
-                    ("License", p => p.LicenseNumber),
+                    ("Specializations", p => string.Join(", ", p.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>())),
+                    ("License", p => p.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty),
                     ("ID", p => p.Id.ToString())
                 );
             }

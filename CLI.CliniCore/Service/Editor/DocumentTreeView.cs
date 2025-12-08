@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Core.CliniCore.ClinicalDoc;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace CLI.CliniCore.Service.Editor
 {

@@ -1,11 +1,10 @@
-using System;
-using CLI.CliniCore.Service;
 using Core.CliniCore.Bootstrap;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Repositories.InMemory;
+using Core.CliniCore.Repositories.Remote;
 using Core.CliniCore.Service;
-using Core.CliniCore.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CLI.CliniCore.Service
@@ -51,10 +50,44 @@ namespace CLI.CliniCore.Service
 
         public static ServiceContainer Create(bool includeDevelopmentData = false)
         {
+            // Load configuration from appsettings.json
+            var config = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                .Build();
+
+            // Read API settings from configuration
+            var apiBaseUrl = config["CliniCore:Api:BaseUrl"] ?? "http://localhost:5000";
+            var localProvider = config.GetValue<bool>("CliniCore:Api:LocalProvider", true);
+            var healthCheckTimeout = config.GetValue<int>("CliniCore:Api:HealthCheckTimeoutSeconds", 30);
+
             // Configure services using the bootstrapper
             var services = new ServiceCollection();
 
-            // Add core CliniCore services from the bootstrapper
+            // Register repositories based on build configuration
+#if USE_REMOTE
+            // Ensure API is available (starts locally if configured and not running)
+            var apiAvailable = CoreServiceBootstrapper.EnsureApiAvailableAsync(apiBaseUrl, localProvider, healthCheckTimeout)
+                .GetAwaiter().GetResult();
+
+            if (apiAvailable)
+            {
+                services.AddRemoteRepositories(apiBaseUrl);
+            }
+            else
+            {
+                Console.WriteLine("Warning: API unavailable, falling back to in-memory storage");
+                services.AddInMemoryRepositories();
+            }
+#elif USE_INMEMORY
+            // Use in-memory persistence (standalone, no API required)
+            services.AddInMemoryRepositories();
+#else
+            // Default fallback to in-memory for safety
+            services.AddInMemoryRepositories();
+#endif
+
+            // Add core CliniCore services from the bootstrapper (uses repositories registered above)
             services.AddCliniCoreServices();
 
             // Add CLI-specific services
@@ -63,10 +96,10 @@ namespace CLI.CliniCore.Service
             // Build the service provider
             var serviceProvider = services.BuildServiceProvider();
 
-            // Initialize development data if requested (after building provider)
+            // Seed development data if requested (after building provider)
             if (includeDevelopmentData)
             {
-                CoreServiceBootstrapper.InitializeDevelopmentData(serviceProvider, createSampleData: true);
+                DevelopmentDataSeeder.SeedDevelopmentData(serviceProvider, createSampleData: true);
             }
 
             // Get core services from DI

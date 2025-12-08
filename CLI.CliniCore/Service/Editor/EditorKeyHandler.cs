@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using Core.CliniCore.ClinicalDoc;
+using Core.CliniCore.Domain.ClinicalDocumentation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
+using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 
 namespace CLI.CliniCore.Service.Editor
 {
@@ -379,12 +382,12 @@ namespace CLI.CliniCore.Service.Editor
                     case 'F': // Frequency
                         _editMode = "prescription_frequency_edit";
                         prompt = "Edit frequency: ";
-                        initialText = rx.Frequency ?? "";
+                        initialText = rx.Frequency?.ToString() ?? "";
                         break;
                     case 'R': // Route
                         _editMode = "prescription_route_edit";
                         prompt = "Edit route: ";
-                        initialText = rx.Route ?? "Oral";
+                        initialText = rx.Route.ToString();
                         break;
                     case 'U': // Duration
                         _editMode = "prescription_duration_edit";
@@ -422,10 +425,14 @@ namespace CLI.CliniCore.Service.Editor
                         prescription.Dosage = string.IsNullOrWhiteSpace(newText) ? null : newText;
                         break;
                     case "prescription_frequency_edit":
-                        prescription.Frequency = string.IsNullOrWhiteSpace(newText) ? null : newText;
+                        if (!string.IsNullOrWhiteSpace(newText) && Enum.TryParse<DosageFrequency>(newText, true, out var freq))
+                            prescription.Frequency = freq;
+                        else
+                            prescription.Frequency = null;
                         break;
                     case "prescription_route_edit":
-                        prescription.Route = string.IsNullOrWhiteSpace(newText) ? "Oral" : newText;
+                        if (!string.IsNullOrWhiteSpace(newText) && Enum.TryParse<MedicationRoute>(newText, true, out var route))
+                            prescription.Route = route;
                         break;
                     case "prescription_duration_edit":
                         prescription.Duration = string.IsNullOrWhiteSpace(newText) ? null : newText;
@@ -630,7 +637,9 @@ namespace CLI.CliniCore.Service.Editor
             _addEntryData["dosage"] = input ?? "";
             _addEntryStep = "prescription_frequency";
 
-            var prompt = "Frequency (e.g., 'once daily', 'twice daily', '3 times daily') *: ";
+            // Build prompt showing valid frequency options
+            var freqOptions = string.Join(", ", DosageFrequencyExtensions.All.Take(6).Select(f => f.GetAbbreviation()));
+            var prompt = $"Frequency ({freqOptions}...) *: ";
             _inputHandler.StartEditing(prompt, "", 200);
             return new EditorKeyResult(EditorAction.Continue);
         }
@@ -645,11 +654,27 @@ namespace CLI.CliniCore.Service.Editor
                 return CancelAddEntry("Frequency is required for prescriptions");
             }
 
-            _addEntryData["frequency"] = input.Trim();
+            // Try to parse as enum - accept abbreviation, display name, or raw enum name
+            var trimmed = input.Trim();
+            DosageFrequency? parsed = DosageFrequencyExtensions.All
+                .FirstOrDefault(f => f.ToString().Equals(trimmed, StringComparison.OrdinalIgnoreCase) ||
+                                    f.GetDisplayName().Equals(trimmed, StringComparison.OrdinalIgnoreCase) ||
+                                    f.GetAbbreviation().Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+
+            if (parsed == null)
+            {
+                // Show valid options and ask again
+                var validOptions = string.Join(", ", DosageFrequencyExtensions.All.Select(f => f.GetAbbreviation()));
+                return new EditorKeyResult(EditorAction.Continue, $"Invalid frequency. Valid: {validOptions}");
+            }
+
+            _addEntryData["frequency"] = parsed.Value.ToString();
             _addEntryStep = "prescription_route";
 
-            var prompt = "Route (e.g., 'Oral', 'IV', 'Topical') [default: Oral]: ";
-            _inputHandler.StartEditing(prompt, "Oral", 100);
+            // Build prompt showing valid route options
+            var routeOptions = string.Join(", ", MedicationRouteExtensions.All.Take(6).Select(r => r.GetAbbreviation()));
+            var prompt = $"Route ({routeOptions}...) [default: PO]: ";
+            _inputHandler.StartEditing(prompt, "PO", 100);
             return new EditorKeyResult(EditorAction.Continue);
         }
 
@@ -658,7 +683,31 @@ namespace CLI.CliniCore.Service.Editor
         /// </summary>
         private EditorKeyResult HandlePrescriptionRouteInput(string input, EditorState state)
         {
-            _addEntryData["route"] = string.IsNullOrWhiteSpace(input) ? "Oral" : input.Trim();
+            var trimmed = input?.Trim() ?? "";
+
+            // Default to Oral if empty
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                _addEntryData["route"] = MedicationRoute.Oral.ToString();
+            }
+            else
+            {
+                // Try to parse as enum - accept abbreviation, display name, or raw enum name
+                MedicationRoute? parsed = MedicationRouteExtensions.All
+                    .FirstOrDefault(r => r.ToString().Equals(trimmed, StringComparison.OrdinalIgnoreCase) ||
+                                        r.GetDisplayName().Equals(trimmed, StringComparison.OrdinalIgnoreCase) ||
+                                        r.GetAbbreviation().Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+
+                if (parsed == null)
+                {
+                    // Show valid options and ask again
+                    var validOptions = string.Join(", ", MedicationRouteExtensions.All.Select(r => r.GetAbbreviation()));
+                    return new EditorKeyResult(EditorAction.Continue, $"Invalid route. Valid: {validOptions}");
+                }
+
+                _addEntryData["route"] = parsed.Value.ToString();
+            }
+
             _addEntryStep = "prescription_duration";
 
             var prompt = "Duration (e.g., '7 days', '2 weeks') [optional]: ";
@@ -819,17 +868,19 @@ namespace CLI.CliniCore.Service.Editor
             // Create prescription with proper diagnosis link
             var rx = new PrescriptionEntry(authorId, diagnosisId, medicationName.Trim());
 
-            // Set required fields
-            rx.Frequency = frequency.Trim();
+            // Set required fields - parse frequency enum
+            if (Enum.TryParse<DosageFrequency>(frequency.Trim(), true, out var parsedFreq))
+                rx.Frequency = parsedFreq;
 
             // Set optional fields with defaults
             if (_addEntryData.TryGetValue("dosage", out var dosage) && !string.IsNullOrWhiteSpace(dosage))
                 rx.Dosage = dosage.Trim();
 
             if (_addEntryData.TryGetValue("route", out var route) && !string.IsNullOrWhiteSpace(route))
-                rx.Route = route.Trim();
-            else
-                rx.Route = "Oral"; // Default
+            {
+                if (Enum.TryParse<MedicationRoute>(route.Trim(), true, out var parsedRoute))
+                    rx.Route = parsedRoute;
+            }
 
             if (_addEntryData.TryGetValue("duration", out var duration) && !string.IsNullOrWhiteSpace(duration))
                 rx.Duration = duration.Trim();

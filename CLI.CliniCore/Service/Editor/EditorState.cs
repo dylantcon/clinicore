@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Core.CliniCore.ClinicalDoc;
+using Core.CliniCore.Domain.ClinicalDocumentation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace CLI.CliniCore.Service.Editor
 {

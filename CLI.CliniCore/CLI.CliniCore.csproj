@@ -7,8 +7,36 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Persistence Configuration -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>$(DefineConstants);USE_REMOTE</DefineConstants>
+    <ApiBaseUrl>http://localhost:5000</ApiBaseUrl>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DefineConstants>$(DefineConstants);USE_REMOTE</DefineConstants>
+    <ApiBaseUrl>http://localhost:5000</ApiBaseUrl>
+  </PropertyGroup>
+
+  <!-- Standalone configuration for testing without API -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Standalone'">
+    <DefineConstants>$(DefineConstants);USE_INMEMORY</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Core.CliniCore\Core.CliniCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

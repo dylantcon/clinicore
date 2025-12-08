@@ -1,3 +1,5 @@
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using System;
 using System.Linq;
 using System.Text;
@@ -325,7 +327,7 @@ namespace CLI.CliniCore.Service.Editor
             _console.ResetColor();
         }
 
-        private string FormatEntryContent(Core.CliniCore.ClinicalDoc.AbstractClinicalEntry entry, int maxWidth)
+        private string FormatEntryContent(AbstractClinicalEntry entry, int maxWidth)
         {
             var sb = new StringBuilder();
             
@@ -342,18 +344,22 @@ namespace CLI.CliniCore.Service.Editor
             // Additional type-specific info if available
             switch (entry)
             {
-                case Core.CliniCore.ClinicalDoc.PrescriptionEntry rx:
+                case PrescriptionEntry rx:
                     sb.AppendLine();
                     sb.AppendLine("PRESCRIPTION DETAILS:");
                     sb.AppendLine($"Medication: {rx.MedicationName}");
                     if (!string.IsNullOrEmpty(rx.Dosage))
                         sb.AppendLine($"Dosage: {rx.Dosage}");
-                    if (!string.IsNullOrEmpty(rx.Frequency))
-                        sb.AppendLine($"Frequency: {rx.Frequency}");
-                    if (!string.IsNullOrEmpty(rx.Route))
-                        sb.AppendLine($"Route: {rx.Route}");
+                    if (rx.Frequency.HasValue)
+                        sb.AppendLine($"Frequency: {rx.Frequency.Value.GetDisplayName()} ({rx.Frequency.Value.GetAbbreviation()})");
+                    sb.AppendLine($"Route: {rx.Route.GetDisplayName()} ({rx.Route.GetAbbreviation()})");
                     if (!string.IsNullOrEmpty(rx.Duration))
                         sb.AppendLine($"Duration: {rx.Duration}");
+                    if (rx.Refills > 0)
+                        sb.AppendLine($"Refills: {rx.Refills}");
+                    if (rx.DEASchedule.HasValue)
+                        sb.AppendLine($"DEA Schedule: C-{rx.DEASchedule}");
+                    sb.AppendLine($"Generic Allowed: {(rx.GenericAllowed ? "Yes" : "No")}");
                     if (!string.IsNullOrEmpty(rx.Instructions))
                         sb.AppendLine($"Instructions: {WrapText(rx.Instructions, maxWidth - 2)}");
                     break;

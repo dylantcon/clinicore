@@ -1,5 +1,5 @@
 ﻿using System;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 
 namespace CLI.CliniCore.Service
 {
