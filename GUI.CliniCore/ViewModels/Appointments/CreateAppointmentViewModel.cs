@@ -1,10 +1,10 @@
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Scheduling;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Appointments
 {
     /// <summary>
     /// ViewModel for creating new appointments.
@@ -14,6 +14,8 @@ namespace GUI.CliniCore.ViewModels
     [QueryProperty(nameof(PhysicianIdString), "physicianId")]
     public class CreateAppointmentViewModel : AppointmentFormViewModelBase
     {
+        private readonly CommandInvoker _commandInvoker;
+
         public string PatientIdString
         {
             set
@@ -38,12 +40,14 @@ namespace GUI.CliniCore.ViewModels
 
         public CreateAppointmentViewModel(
             CommandFactory commandFactory,
+            CommandInvoker commandInvoker,
             INavigationService navigationService,
             SessionManager sessionManager,
             ProfileService profileService,
             SchedulerService schedulerService)
             : base(commandFactory, navigationService, sessionManager, profileService, schedulerService)
         {
+            _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             Title = "Schedule Appointment";
         }
 
@@ -51,11 +55,11 @@ namespace GUI.CliniCore.ViewModels
         {
             var coreCommand = _commandFactory.CreateCommand(ScheduleAppointmentCommand.Key);
             return new MauiCommandAdapter(
+                _commandInvoker,
                 coreCommand!,
                 parameterBuilder: BuildParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleSaveResult,
-                viewModel: this
+                resultHandler: HandleSaveResult
             );
         }
 

@@ -1,10 +1,15 @@
-using Core.CliniCore.Domain;
-using Core.CliniCore.Services;
+using System.Collections.ObjectModel;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Scheduling;
+using Core.CliniCore.Service;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Home
 {
     /// <summary>
     /// ViewModel for Patient home page
@@ -15,6 +20,7 @@ namespace GUI.CliniCore.ViewModels
         private readonly SessionManager _sessionManager;
         private readonly INavigationService _navigationService;
         private readonly ProfileService _profileRegistry;
+        private readonly SchedulerService _schedulerService;
 
         private string _welcomeMessage = string.Empty;
         public string WelcomeMessage
@@ -23,20 +29,35 @@ namespace GUI.CliniCore.ViewModels
             set => SetProperty(ref _welcomeMessage, value);
         }
 
+        /// <summary>
+        /// Appointments for the calendar view (patient's own appointments).
+        /// </summary>
+        public ObservableCollection<AppointmentTimeInterval> Appointments { get; } = new();
+
+        private DateTime _selectedCalendarDate = DateTime.Today;
+        public DateTime SelectedCalendarDate
+        {
+            get => _selectedCalendarDate;
+            set => SetProperty(ref _selectedCalendarDate, value);
+        }
+
         // Navigation Commands - matching CLI menu structure for patients
         public MauiCommand ViewMyAppointmentsCommand { get; }
         public MauiCommand ViewMyClinicalDocumentsCommand { get; }
         public MauiCommand ViewMyPhysiciansCommand { get; }
+        public MauiCommand AppointmentTappedCommand { get; }
         public MauiCommand LogoutCommand { get; }
 
         public PatientHomeViewModel(
             SessionManager sessionManager,
             INavigationService navigationService,
-            ProfileService profileService)
+            ProfileService profileService,
+            SchedulerService schedulerService)
         {
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _schedulerService = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
 
             Title = "Patient Portal";
 
@@ -44,7 +65,11 @@ namespace GUI.CliniCore.ViewModels
             var patientProfile = _sessionManager.CurrentSession?.UserId != null
                 ? _profileRegistry.GetProfileById(_sessionManager.CurrentSession.UserId) as PatientProfile
                 : null;
-            var displayName = patientProfile?.Name ?? _sessionManager.CurrentUsername;
+            var displayName = patientProfile?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty;
+            if (string.IsNullOrEmpty(displayName))
+            {
+                displayName = _sessionManager.CurrentUsername;
+            }
             WelcomeMessage = $"Welcome, {displayName}!";
 
             // Initialize commands
@@ -72,7 +97,31 @@ namespace GUI.CliniCore.ViewModels
                 await _navigationService.NavigateToAsync("PhysicianListPage");
             });
 
+            AppointmentTappedCommand = new AsyncRelayCommand<AppointmentTimeInterval>(async appointment =>
+            {
+                if (appointment != null)
+                {
+                    await _navigationService.NavigateToAsync($"AppointmentDetailPage?appointmentId={appointment.Id}");
+                }
+            });
+
             LogoutCommand = new AsyncRelayCommand(LogoutAsync);
+
+            // Load appointments for calendar
+            LoadAppointments();
+        }
+
+        private void LoadAppointments()
+        {
+            var patientId = _sessionManager.CurrentSession?.UserId;
+            if (!patientId.HasValue) return;
+
+            Appointments.Clear();
+            var appointments = _schedulerService.GetPatientAppointments(patientId.Value);
+            foreach (var appointment in appointments)
+            {
+                Appointments.Add(appointment);
+            }
         }
 
         private void ShowPlaceholder(string featureName)

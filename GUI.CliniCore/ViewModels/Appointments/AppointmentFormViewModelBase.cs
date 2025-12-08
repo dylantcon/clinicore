@@ -1,11 +1,14 @@
 using System.Collections.ObjectModel;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Service;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Appointments
 {
     /// <summary>
     /// Base class for appointment form ViewModels.
@@ -165,13 +168,14 @@ namespace GUI.CliniCore.ViewModels
         {
             AvailablePatients.Clear();
             var patients = _profileRegistry.GetAllPatients();
-            foreach (var patient in patients.OrderBy(p => p.Name))
+            foreach (var patient in patients.OrderBy(p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty))
             {
+                var patientName = patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown";
                 AvailablePatients.Add(new PatientPickerModel
                 {
                     Id = patient.Id,
-                    Name = patient.Name ?? "Unknown",
-                    Display = patient.Name ?? "Unknown"
+                    Name = patientName,
+                    Display = patientName
                 });
             }
         }
@@ -180,13 +184,14 @@ namespace GUI.CliniCore.ViewModels
         {
             AvailablePhysicians.Clear();
             var physicians = _profileRegistry.GetAllPhysicians();
-            foreach (var physician in physicians.OrderBy(p => p.Name))
+            foreach (var physician in physicians.OrderBy(p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty))
             {
+                var physicianName = physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown";
                 AvailablePhysicians.Add(new PhysicianPickerModel
                 {
                     Id = physician.Id,
-                    Name = physician.Name ?? "Unknown",
-                    Display = $"Dr. {physician.Name ?? "Unknown"}"
+                    Name = physicianName,
+                    Display = $"Dr. {physicianName}"
                 });
             }
         }

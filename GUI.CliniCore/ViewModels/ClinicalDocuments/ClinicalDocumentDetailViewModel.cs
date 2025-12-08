@@ -1,15 +1,19 @@
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Clinical;
-using Core.CliniCore.Domain;
+using Core.CliniCore.Domain.ClinicalDocumentation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
+using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
 using System.Collections.ObjectModel;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.ClinicalDocuments
 {
     /// <summary>
     /// ViewModel for Clinical Document Detail page
@@ -18,6 +22,7 @@ namespace GUI.CliniCore.ViewModels
     [QueryProperty(nameof(DocumentIdString), "documentId")]
     public partial class ClinicalDocumentDetailViewModel : BaseViewModel
     {
+        private readonly CommandInvoker _commandInvoker;
         private readonly CommandFactory _commandFactory;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
@@ -87,11 +92,13 @@ namespace GUI.CliniCore.ViewModels
         public MauiCommand BackCommand { get; }
 
         public ClinicalDocumentDetailViewModel(
+            CommandInvoker commandInvoker,
             CommandFactory commandFactory,
             INavigationService navigationService,
             SessionManager sessionManager,
             ProfileService profileService)
         {
+            _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
@@ -102,11 +109,11 @@ namespace GUI.CliniCore.ViewModels
             // Load command
             var viewCoreCommand = _commandFactory.CreateCommand(ViewClinicalDocumentCommand.Key);
             LoadDocumentCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 viewCoreCommand!,
                 parameterBuilder: BuildLoadParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleLoadResult,
-                viewModel: this
+                resultHandler: HandleLoadResult
             );
 
             // Edit command
@@ -163,8 +170,8 @@ namespace GUI.CliniCore.ViewModels
                 var patient = _profileRegistry.GetProfileById(document.PatientId) as PatientProfile;
                 var physician = _profileRegistry.GetProfileById(document.PhysicianId) as PhysicianProfile;
 
-                DocumentInfo = $"Patient: {patient?.Name ?? "Unknown"}\n" +
-                              $"Physician: Dr. {physician?.Name ?? "Unknown"}\n" +
+                DocumentInfo = $"Patient: {patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
+                              $"Physician: Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
                               $"Date: {document.CreatedAt:yyyy-MM-dd HH:mm}\n" +
                               $"Status: {(document.IsCompleted ? "Completed" : "Draft")}";
 
@@ -205,8 +212,13 @@ namespace GUI.CliniCore.ViewModels
                 var displayModel = new ObservationDisplayModel
                 {
                     Id = obs.Id,
-                    Type = obs.Type.ToString(),
-                    Description = obs.Content
+                    Type = obs.Type,
+                    Content = obs.Content,
+                    BodySystem = obs.BodySystem,
+                    IsAbnormal = obs.IsAbnormal,
+                    Severity = obs.Severity,
+                    NumericValue = obs.NumericValue,
+                    Unit = obs.Unit
                 };
 
                 if (subjectiveTypes.Contains(obs.Type))
@@ -225,9 +237,12 @@ namespace GUI.CliniCore.ViewModels
                 Assessments.Add(new AssessmentDisplayModel
                 {
                     Id = assessment.Id,
-                    Notes = assessment.Content,
-                    ClinicalImpression = assessment.Content,
-                    ConfidenceLevel = "Normal"  // AssessmentEntry doesn't have ConfidenceLevel
+                    Content = assessment.Content,
+                    Condition = assessment.Condition,
+                    Prognosis = assessment.Prognosis,
+                    Confidence = assessment.Confidence,
+                    Severity = assessment.Severity,
+                    RequiresImmediateAction = assessment.RequiresImmediateAction
                 });
             }
 
@@ -237,10 +252,13 @@ namespace GUI.CliniCore.ViewModels
                 Diagnoses.Add(new DiagnosisDisplayModel
                 {
                     Id = diagnosis.Id,
-                    Code = diagnosis.ICD10Code ?? "",
-                    Description = diagnosis.Content,
-                    ICD10Code = diagnosis.ICD10Code ?? "",
-                    Status = diagnosis.Status.ToString()
+                    Content = diagnosis.Content,
+                    ICD10Code = diagnosis.ICD10Code,
+                    Type = diagnosis.Type,
+                    Status = diagnosis.Status,
+                    Severity = diagnosis.Severity,
+                    IsPrimary = diagnosis.IsPrimary,
+                    OnsetDate = diagnosis.OnsetDate
                 });
             }
 
@@ -250,8 +268,13 @@ namespace GUI.CliniCore.ViewModels
                 Plans.Add(new PlanDisplayModel
                 {
                     Id = plan.Id,
-                    Description = plan.Content,
-                    Category = "Treatment"  // PlanEntry doesn't have Category property
+                    Content = plan.Content,
+                    Type = plan.Type,
+                    Priority = plan.Priority,
+                    Severity = plan.Severity,
+                    TargetDate = plan.TargetDate,
+                    FollowUpInstructions = plan.FollowUpInstructions,
+                    IsCompleted = plan.IsCompleted
                 });
             }
 
@@ -262,11 +285,15 @@ namespace GUI.CliniCore.ViewModels
                 {
                     Id = rx.Id,
                     MedicationName = rx.MedicationName,
-                    Dosage = rx.Dosage ?? "",
-                    Frequency = rx.Frequency ?? "",
-                    Route = rx.Route ?? "",
-                    Duration = rx.Duration ?? "",
-                    Instructions = rx.Instructions ?? "",
+                    Dosage = rx.Dosage,
+                    Frequency = rx.Frequency,
+                    Route = rx.Route,
+                    Duration = rx.Duration,
+                    Refills = rx.Refills,
+                    GenericAllowed = rx.GenericAllowed,
+                    DEASchedule = rx.DEASchedule,
+                    Instructions = rx.Instructions,
+                    Severity = rx.Severity,
                     DiagnosisId = rx.DiagnosisId
                 });
             }
@@ -330,11 +357,11 @@ namespace GUI.CliniCore.ViewModels
             }
 
             var deleteCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 deleteCoreCommand!,
                 parameterBuilder: () => parameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleDeleteResult,
-                viewModel: this
+                resultHandler: HandleDeleteResult
             );
 
             deleteCommand.Execute(null);
@@ -342,9 +369,10 @@ namespace GUI.CliniCore.ViewModels
 
         private void HandleDeleteResult(CommandResult result)
         {
+            ClearValidation();
+
             if (result.Success)
             {
-                // Navigate back to list
                 MainThread.BeginInvokeOnMainThread(async () =>
                 {
                     if (_document != null)
@@ -356,6 +384,10 @@ namespace GUI.CliniCore.ViewModels
                         await _navigationService.NavigateToAsync("ClinicalDocumentListPage");
                     }
                 });
+            }
+            else
+            {
+                SetValidationError(result.GetDisplayMessage());
             }
         }
     }

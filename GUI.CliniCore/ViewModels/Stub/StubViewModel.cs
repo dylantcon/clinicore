@@ -1,9 +1,10 @@
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Resources.Fonts;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Stub
 {
     /// <summary>
     /// ViewModel for feature stub pages

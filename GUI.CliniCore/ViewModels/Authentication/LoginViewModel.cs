@@ -1,11 +1,12 @@
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Authentication;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Authentication
 {
     /// <summary>
     /// ViewModel for the Login page
@@ -14,6 +15,7 @@ namespace GUI.CliniCore.ViewModels
     public partial class LoginViewModel : BaseViewModel
     {
         private readonly CommandFactory _commandFactory;
+        private readonly CommandInvoker _commandInvoker;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
 
@@ -51,12 +53,14 @@ namespace GUI.CliniCore.ViewModels
 
         public LoginViewModel(
             CommandFactory commandFactory,
+            CommandInvoker commandInvoker,
             INavigationService navigationService,
             SessionManager sessionManager)
         {
             System.Diagnostics.Debug.WriteLine("LoginViewModel constructor called");
 
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
+            _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
 
@@ -71,11 +75,11 @@ namespace GUI.CliniCore.ViewModels
                 throw new InvalidOperationException("LoginCommand not found in CommandFactory");
 
             LoginCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 loginCoreCommand,
                 parameterBuilder: BuildLoginParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleLoginResult,
-                viewModel: this
+                resultHandler: HandleLoginResult
             );
 
             System.Diagnostics.Debug.WriteLine("LoginCommand adapter created successfully");
@@ -97,20 +101,20 @@ namespace GUI.CliniCore.ViewModels
         }
 
         /// <summary>
-        /// Handles the result of the login command execution
+        /// Handles the result of the login command execution.
+        /// ViewModel is responsible for updating UI state based on CommandResult.
         /// </summary>
         private void HandleLoginResult(CommandResult result)
         {
+            ClearValidation();
+
             if (result.Success)
             {
-                // Extract session from result
                 if (result.Data is SessionContext session)
                 {
                     _sessionManager.CurrentSession = session;
-                    ClearValidation();
                     ClearLoginForm();
 
-                    // Navigate to home page on the main UI thread
                     MainThread.BeginInvokeOnMainThread(async () =>
                     {
                         await _navigationService.NavigateToHomeAsync();
@@ -118,13 +122,15 @@ namespace GUI.CliniCore.ViewModels
                 }
                 else
                 {
-                    ValidationErrors.Add("Login succeeded but session was not created properly.");
+                    SetValidationError("Login succeeded but session was not created properly.");
                 }
             }
             else
             {
-                // Errors are already populated in ValidationErrors by the adapter
-                // Just ensure password is cleared for security
+                // ViewModel handles error display - use CommandResult's built-in message
+                SetValidationError(result.GetDisplayMessage());
+
+                // Clear password for security
                 Password = string.Empty;
             }
         }

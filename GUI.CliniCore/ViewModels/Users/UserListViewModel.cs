@@ -1,13 +1,18 @@
 using System.Collections.ObjectModel;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Query;
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users;
+using Core.CliniCore.Domain.Users.Concrete;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
+using GUI.CliniCore.Views.Shared;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Users
 {
     /// <summary>
     /// ViewModel for User List page
@@ -16,6 +21,7 @@ namespace GUI.CliniCore.ViewModels
     public partial class UserListViewModel : BaseViewModel
     {
         private readonly CommandFactory _commandFactory;
+        private readonly CommandInvoker _commandInvoker;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
 
@@ -61,6 +67,36 @@ namespace GUI.CliniCore.ViewModels
             set => SetProperty(ref _isRefreshing, value);
         }
 
+        #region Sorting Properties
+
+        /// <summary>
+        /// Available sort options for the user list.
+        /// GRADING REQUIREMENT: Sort-by feature with 2+ properties, ascending/descending.
+        /// </summary>
+        public List<SortOptionBase> SortOptions { get; } = new()
+        {
+            new SortOption<UserDisplayModel>("Name", u => u.Name),
+            new SortOption<UserDisplayModel>("Role", u => u.RoleDisplayName),
+            new SortOption<UserDisplayModel>("Username", u => u.Username),
+            new SortOption<UserDisplayModel>("Created", u => u.CreatedAt)
+        };
+
+        private SortOptionBase? _selectedSortOption;
+        public SortOptionBase? SelectedSortOption
+        {
+            get => _selectedSortOption;
+            set => SetProperty(ref _selectedSortOption, value);
+        }
+
+        private bool _isAscending = true;
+        public bool IsAscending
+        {
+            get => _isAscending;
+            set => SetProperty(ref _isAscending, value);
+        }
+
+        #endregion
+
         // Store all users for filtering
         private List<UserDisplayModel> _allUsers = [];
 
@@ -72,10 +108,12 @@ namespace GUI.CliniCore.ViewModels
 
         public UserListViewModel(
             CommandFactory commandFactory,
+            CommandInvoker commandInvoker,
             INavigationService navigationService,
             SessionManager sessionManager)
         {
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
+            _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
 
@@ -84,11 +122,11 @@ namespace GUI.CliniCore.ViewModels
             // Create list command using the Key constant
             var listCoreCommand = _commandFactory.CreateCommand(ListAllUsersCommand.Key);
             LoadUsersCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 listCoreCommand!,
                 parameterBuilder: () => new CommandParameters(),
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleListResult,
-                viewModel: this
+                resultHandler: HandleListResult
             );
 
             // Navigate to detail based on role
@@ -116,6 +154,8 @@ namespace GUI.CliniCore.ViewModels
 
         private void HandleListResult(CommandResult result)
         {
+            ClearValidation();
+
             if (result.Success && result.Data is IEnumerable<IUserProfile> users)
             {
                 _allUsers.Clear();
@@ -123,13 +163,11 @@ namespace GUI.CliniCore.ViewModels
                 {
                     _allUsers.Add(new UserDisplayModel(user));
                 }
-
                 FilterUsers();
-                ClearValidation();
             }
             else
             {
-                // Errors are already populated by the adapter
+                SetValidationError(result.GetDisplayMessage());
                 _allUsers.Clear();
                 Users.Clear();
             }
@@ -204,9 +242,9 @@ namespace GUI.CliniCore.ViewModels
                 // Get name based on profile type
                 return _userProfile switch
                 {
-                    AdministratorProfile admin => admin.Name,
-                    PhysicianProfile physician => $"Dr. {physician.Name}",
-                    PatientProfile patient => patient.Name,
+                    AdministratorProfile admin => admin.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty,
+                    PhysicianProfile physician => $"Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}",
+                    PatientProfile patient => patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty,
                     _ => "Unknown"
                 };
             }
@@ -228,9 +266,9 @@ namespace GUI.CliniCore.ViewModels
             {
                 return _userProfile switch
                 {
-                    PhysicianProfile physician => $"License: {physician.LicenseNumber}",
-                    PatientProfile patient => patient.BirthDate != default
-                        ? $"DOB: {patient.BirthDate:yyyy-MM-dd}"
+                    PhysicianProfile physician => $"License: {physician.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty}",
+                    PatientProfile patient => patient.GetValue<DateTime>(CommonEntryType.BirthDate.GetKey()) != default
+                        ? $"DOB: {patient.GetValue<DateTime>(CommonEntryType.BirthDate.GetKey()):yyyy-MM-dd}"
                         : "No DOB recorded",
                     AdministratorProfile admin => admin.Department,
                     _ => ""

@@ -1,14 +1,17 @@
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Scheduling;
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
 using Core.CliniCore.Scheduling;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Appointments
 {
     /// <summary>
     /// ViewModel for Appointment Detail page
@@ -17,6 +20,7 @@ namespace GUI.CliniCore.ViewModels
     [QueryProperty(nameof(AppointmentIdString), "appointmentId")]
     public partial class AppointmentDetailViewModel : BaseViewModel
     {
+        private readonly CommandInvoker _commandInvoker;
         private readonly CommandFactory _commandFactory;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
@@ -101,6 +105,20 @@ namespace GUI.CliniCore.ViewModels
             set => SetProperty(ref _statusColor, value);
         }
 
+        private string _roomNumber = string.Empty;
+        public string RoomNumber
+        {
+            get => _roomNumber;
+            set => SetProperty(ref _roomNumber, value);
+        }
+
+        private bool _hasRoom;
+        public bool HasRoom
+        {
+            get => _hasRoom;
+            set => SetProperty(ref _hasRoom, value);
+        }
+
         // Action availability - can only reschedule/cancel if not already cancelled or completed
         public bool CanReschedule => _appointment != null &&
                                      _appointment.Status != AppointmentStatus.Cancelled &&
@@ -118,12 +136,14 @@ namespace GUI.CliniCore.ViewModels
         public MauiCommand BackCommand { get; }
 
         public AppointmentDetailViewModel(
+            CommandInvoker commandInvoker,
             CommandFactory commandFactory,
             INavigationService navigationService,
             SessionManager sessionManager,
             ProfileService profileService,
             SchedulerService schedulerService)
         {
+            _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
@@ -179,17 +199,21 @@ namespace GUI.CliniCore.ViewModels
                 }
 
                 // Get patient and physician info
-                var patient = _profileRegistry.GetProfileById(_appointment.PatientId) as PatientProfile;
-                var physician = _profileRegistry.GetProfileById(_appointment.PhysicianId) as PhysicianProfile;
+                PatientProfile? patient = _profileRegistry.GetProfileById(_appointment.PatientId) as PatientProfile;
 
                 // Populate properties
-                PatientName = patient?.Name ?? "Unknown Patient";
-                PhysicianName = physician != null ? $"Dr. {physician.Name}" : "Unknown Physician";
+                PatientName = patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown Patient";
+                PhysicianName = _profileRegistry.GetProfileById(_appointment.PhysicianId) is PhysicianProfile physician 
+                    ? $"Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}" 
+                    : "Unknown Physician";
+
                 StartTime = _appointment.Start.ToString("yyyy-MM-dd HH:mm");
                 Duration = $"{(int)(_appointment.End - _appointment.Start).TotalMinutes} minutes";
                 Reason = _appointment.ReasonForVisit ?? "General Consultation";
                 Notes = _appointment.Notes ?? "No notes";
                 Status = _appointment.Status.ToString();
+                HasRoom = _appointment.RoomNumber.HasValue;
+                RoomNumber = _appointment.RoomNumber.HasValue ? $"Room {_appointment.RoomNumber}" : "Not assigned";
                 StatusColor = _appointment.Status switch
                 {
                     AppointmentStatus.Scheduled => Color.FromArgb("#4CAF50"),   // Green
@@ -218,8 +242,7 @@ namespace GUI.CliniCore.ViewModels
             }
             catch (Exception ex)
             {
-                ValidationErrors.Clear();
-                ValidationErrors.Add($"Error loading appointment: {ex.Message}");
+                SetValidationError("Error loading appointment", ex);
             }
         }
 
@@ -252,36 +275,37 @@ namespace GUI.CliniCore.ViewModels
                     .SetParameter(CancelAppointmentCommand.Parameters.Reason, "Cancelled by user");
 
                 var cancelCommand = new MauiCommandAdapter(
+                    _commandInvoker,
                     cancelCoreCommand!,
                     parameterBuilder: () => parameters,
                     sessionProvider: () => _sessionManager.CurrentSession,
-                    resultHandler: HandleCancelResult,
-                    viewModel: this
+                    resultHandler: HandleCancelResult
                 );
 
                 cancelCommand.Execute(null);
             }
             catch (Exception ex)
             {
-                ValidationErrors.Clear();
-                ValidationErrors.Add($"Error cancelling appointment: {ex.Message}");
+                SetValidationError("Error cancelling appointment", ex);
             }
         }
 
         private void HandleCancelResult(CommandResult result)
         {
+            ClearValidation();
+
             if (result.Success)
             {
-                // Reload appointment to show updated status
                 LoadAppointment();
+                SetValidationWarning("Appointment cancelled successfully!");
 
-                ValidationErrors.Clear();
-                ValidationErrors.Add("Appointment cancelled successfully!");
-
-                // Update button visibility since status changed
                 OnPropertyChanged(nameof(CanReschedule));
                 OnPropertyChanged(nameof(CanCancel));
                 OnPropertyChanged(nameof(CanDelete));
+            }
+            else
+            {
+                SetValidationError(result.GetDisplayMessage());
             }
         }
 
@@ -305,31 +329,35 @@ namespace GUI.CliniCore.ViewModels
                     .SetParameter(DeleteAppointmentCommand.Parameters.AppointmentId, _appointmentId.Value);
 
                 var deleteCommand = new MauiCommandAdapter(
+                    _commandInvoker,
                     deleteCoreCommand!,
                     parameterBuilder: () => parameters,
                     sessionProvider: () => _sessionManager.CurrentSession,
-                    resultHandler: HandleDeleteResult,
-                    viewModel: this
+                    resultHandler: HandleDeleteResult
                 );
 
                 deleteCommand.Execute(null);
             }
             catch (Exception ex)
             {
-                ValidationErrors.Clear();
-                ValidationErrors.Add($"Error deleting appointment: {ex.Message}");
+                SetValidationError("Error deleting appointment", ex);
             }
         }
 
         private void HandleDeleteResult(CommandResult result)
         {
+            ClearValidation();
+
             if (result.Success)
             {
-                // Navigate back to list after successful deletion
                 MainThread.BeginInvokeOnMainThread(async () =>
                 {
                     await _navigationService.NavigateToAsync("AppointmentListPage");
                 });
+            }
+            else
+            {
+                SetValidationError(result.GetDisplayMessage());
             }
         }
     }

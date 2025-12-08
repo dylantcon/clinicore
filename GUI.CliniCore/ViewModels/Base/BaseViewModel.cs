@@ -3,9 +3,10 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Repositories;
 using GUI.CliniCore.Services;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Base
 {
     /// <summary>
     /// Base class for all ViewModels providing INotifyPropertyChanged implementation,
@@ -173,6 +174,57 @@ namespace GUI.CliniCore.ViewModels
             ValidationWarnings.Clear();
             OnPropertyChanged(nameof(HasValidationErrors));
             OnPropertyChanged(nameof(HasValidationWarnings));
+        }
+
+        /// <summary>
+        /// Sets a single validation error, clearing any previous errors
+        /// </summary>
+        protected void SetValidationError(string message)
+        {
+            ValidationErrors.Clear();
+            ValidationErrors.Add(message);
+        }
+
+        /// <summary>
+        /// Adds a validation error without clearing previous errors
+        /// </summary>
+        protected void AddValidationError(string message)
+        {
+            ValidationErrors.Add(message);
+        }
+
+        /// <summary>
+        /// Sets a single validation warning, clearing any previous warnings
+        /// </summary>
+        protected void SetValidationWarning(string message)
+        {
+            ValidationWarnings.Clear();
+            ValidationWarnings.Add(message);
+        }
+
+        /// <summary>
+        /// Extracts a user-friendly error message from an exception.
+        /// Handles RepositoryOperationException specially to show context.
+        /// </summary>
+        protected static string GetExceptionMessage(Exception ex)
+        {
+            // Check for RepositoryOperationException (direct or nested)
+            if (ex is RepositoryOperationException repoEx)
+                return repoEx.ToString();
+
+            if (ex.InnerException is RepositoryOperationException innerRepoEx)
+                return innerRepoEx.ToString();
+
+            // Default to message
+            return ex.Message;
+        }
+
+        /// <summary>
+        /// Sets a validation error from an exception, extracting full context from RepositoryOperationException
+        /// </summary>
+        protected void SetValidationError(string prefix, Exception ex)
+        {
+            SetValidationError($"{prefix}: {GetExceptionMessage(ex)}");
         }
     }
 }

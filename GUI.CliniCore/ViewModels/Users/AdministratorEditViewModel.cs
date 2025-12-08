@@ -1,34 +1,37 @@
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Profile;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Users
 {
     /// <summary>
-    /// ViewModel for Patient Edit/Create page
-    /// Handles both creation of new patients and updating existing ones
+    /// ViewModel for Administrator Edit/Create page
+    /// Handles both creation of new administrators and updating existing ones
     /// </summary>
-    [QueryProperty(nameof(PatientIdString), "patientId")]
-    public partial class PatientEditViewModel : BaseViewModel
+    [QueryProperty(nameof(UserIdString), "userId")]
+    public partial class AdministratorEditViewModel : BaseViewModel
     {
         private readonly CommandFactory _commandFactory;
+        private readonly CommandInvoker _commandInvoker;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
 
-        private Guid? _patientId;
-        public Guid? PatientId
+        private Guid? _userId;
+        public Guid? UserId
         {
-            get => _patientId;
+            get => _userId;
             private set
             {
-                if (SetProperty(ref _patientId, value) && value.HasValue && value.Value != Guid.Empty)
+                if (SetProperty(ref _userId, value) && value.HasValue && value.Value != Guid.Empty)
                 {
                     IsEditMode = true;
-                    LoadPatientCommand.Execute(null);
+                    LoadAdministratorCommand.Execute(null);
                 }
                 else
                 {
@@ -37,17 +40,17 @@ namespace GUI.CliniCore.ViewModels
             }
         }
 
-        public string PatientIdString
+        public string UserIdString
         {
             set
             {
                 if (Guid.TryParse(value, out var guid))
                 {
-                    PatientId = guid;
+                    UserId = guid;
                 }
                 else
                 {
-                    PatientId = null;
+                    UserId = null;
                 }
             }
         }
@@ -60,10 +63,14 @@ namespace GUI.CliniCore.ViewModels
             {
                 if (SetProperty(ref _isEditMode, value))
                 {
-                    Title = value ? "Edit Patient" : "Create Patient";
+                    Title = value ? "Edit Administrator" : "Create Administrator";
+                    OnPropertyChanged(nameof(IsPasswordVisible));
                 }
             }
         }
+
+        // Password is only shown in create mode
+        public bool IsPasswordVisible => !IsEditMode;
 
         private string _username = string.Empty;
         public string Username
@@ -130,57 +137,44 @@ namespace GUI.CliniCore.ViewModels
             }
         }
 
-        private Gender _selectedGender = Gender.PreferNotToSay;
-        public Gender SelectedGender
+        private string _email = string.Empty;
+        public string Email
         {
-            get => _selectedGender;
+            get => _email;
             set
             {
-                if (SetProperty(ref _selectedGender, value))
+                if (SetProperty(ref _email, value))
                 {
                     (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
 
-        private string _race = string.Empty;
-        public string Race
-        {
-            get => _race;
-            set
-            {
-                if (SetProperty(ref _race, value))
-                {
-                    (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
-        }
-
-        public List<Gender> GenderOptions { get; } = [.. Enum.GetValues(typeof(Gender)).Cast<Gender>()];
-
-        public MauiCommand LoadPatientCommand { get; }
+        public MauiCommand LoadAdministratorCommand { get; }
         public MauiCommand SaveCommand { get; }
         public MauiCommand CancelCommand { get; }
 
-        public PatientEditViewModel(
+        public AdministratorEditViewModel(
             CommandFactory commandFactory,
+            CommandInvoker commandInvoker,
             INavigationService navigationService,
             SessionManager sessionManager)
         {
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
+            _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
 
-            Title = "Create Patient";
+            Title = "Create Administrator";
 
             // Load command for edit mode
-            var viewCoreCommand = _commandFactory.CreateCommand(ViewPatientProfileCommand.Key);
-            LoadPatientCommand = new MauiCommandAdapter(
+            var viewCoreCommand = _commandFactory.CreateCommand(ViewAdministratorProfileCommand.Key);
+            LoadAdministratorCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 viewCoreCommand!,
                 parameterBuilder: BuildLoadParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleLoadResult,
-                viewModel: this
+                resultHandler: HandleLoadResult
             );
 
             // Save command (dynamically creates Create or Update command)
@@ -196,20 +190,30 @@ namespace GUI.CliniCore.ViewModels
         private CommandParameters BuildLoadParameters()
         {
             return new CommandParameters()
-                .SetParameter(ViewPatientProfileCommand.Parameters.ProfileId, PatientId);
+                .SetParameter(ViewAdministratorProfileCommand.Parameters.ProfileId, UserId);
         }
 
         private void HandleLoadResult(CommandResult result)
         {
-            if (result.Success && result.Data is PatientProfile patient)
+            ClearValidation();
+
+            if (result.Success && result.Data is AdministratorProfile admin)
             {
-                Username = patient.Username;
-                Name = patient.Name;
-                Address = patient.Address;
-                BirthDate = patient.BirthDate;
-                SelectedGender = patient.Gender;
-                Race = patient.Race;
-                ClearValidation();
+                Username = admin.Username;
+                Name = admin.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty;
+                Address = admin.GetValue<string>(CommonEntryType.Address.GetKey()) ?? string.Empty;
+
+                var birthDate = admin.GetValue<DateTime?>(CommonEntryType.BirthDate.GetKey());
+                if (birthDate.HasValue && birthDate.Value != default)
+                {
+                    BirthDate = birthDate.Value;
+                }
+
+                Email = admin.GetValue<string>(AdministratorEntryType.Email.GetKey()) ?? string.Empty;
+            }
+            else if (!result.Success)
+            {
+                SetValidationError(result.GetDisplayMessage());
             }
         }
 
@@ -218,18 +222,14 @@ namespace GUI.CliniCore.ViewModels
             if (IsEditMode)
             {
                 // For edit mode, just need valid data
-                return !string.IsNullOrWhiteSpace(Name) &&
-                       !string.IsNullOrWhiteSpace(Address) &&
-                       !string.IsNullOrWhiteSpace(Race);
+                return !string.IsNullOrWhiteSpace(Name);
             }
             else
             {
-                // For create mode, need username and password too
+                // For create mode, need username, password, and name
                 return !string.IsNullOrWhiteSpace(Username) &&
                        !string.IsNullOrWhiteSpace(Password) &&
-                       !string.IsNullOrWhiteSpace(Name) &&
-                       !string.IsNullOrWhiteSpace(Address) &&
-                       !string.IsNullOrWhiteSpace(Race);
+                       !string.IsNullOrWhiteSpace(Name);
             }
         }
 
@@ -247,13 +247,13 @@ namespace GUI.CliniCore.ViewModels
 
         private void ExecuteCreate()
         {
-            var createCoreCommand = _commandFactory.CreateCommand(CreatePatientCommand.Key);
+            var createCoreCommand = _commandFactory.CreateCommand(CreateAdministratorCommand.Key);
             var createCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 createCoreCommand!,
                 parameterBuilder: BuildCreateParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleSaveResult,
-                viewModel: this
+                resultHandler: HandleSaveResult
             );
 
             createCommand.Execute(null);
@@ -261,13 +261,13 @@ namespace GUI.CliniCore.ViewModels
 
         private void ExecuteUpdate()
         {
-            var updateCoreCommand = _commandFactory.CreateCommand(UpdatePatientProfileCommand.Key);
+            var updateCoreCommand = _commandFactory.CreateCommand(UpdateAdministratorProfileCommand.Key);
             var updateCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 updateCoreCommand!,
                 parameterBuilder: BuildUpdateParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleSaveResult,
-                viewModel: this
+                resultHandler: HandleSaveResult
             );
 
             updateCommand.Execute(null);
@@ -275,61 +275,80 @@ namespace GUI.CliniCore.ViewModels
 
         private CommandParameters BuildCreateParameters()
         {
-            return new CommandParameters()
-                .SetParameter(CreatePatientCommand.Parameters.Username, Username)
-                .SetParameter(CreatePatientCommand.Parameters.Password, Password)
-                .SetParameter(CreatePatientCommand.Parameters.Name, Name)
-                .SetParameter(CreatePatientCommand.Parameters.Address, Address)
-                .SetParameter(CreatePatientCommand.Parameters.Birthdate, BirthDate)
-                .SetParameter(CreatePatientCommand.Parameters.Gender, SelectedGender)
-                .SetParameter(CreatePatientCommand.Parameters.Race, Race);
+            var parameters = new CommandParameters()
+                .SetParameter(CreateAdministratorCommand.Parameters.Username, Username)
+                .SetParameter(CreateAdministratorCommand.Parameters.Password, Password)
+                .SetParameter(CreateAdministratorCommand.Parameters.Name, Name);
+
+            // Add optional fields if provided
+            if (!string.IsNullOrWhiteSpace(Address))
+            {
+                parameters.SetParameter(CreateAdministratorCommand.Parameters.Address, Address);
+            }
+
+            if (BirthDate != default && BirthDate < DateTime.Now)
+            {
+                parameters.SetParameter(CreateAdministratorCommand.Parameters.BirthDate, BirthDate);
+            }
+
+            if (!string.IsNullOrWhiteSpace(Email))
+            {
+                parameters.SetParameter(CreateAdministratorCommand.Parameters.Email, Email);
+            }
+
+            return parameters;
         }
 
         private CommandParameters BuildUpdateParameters()
         {
-            return new CommandParameters()
-                .SetParameter(UpdatePatientProfileCommand.Parameters.ProfileId, PatientId)
-                .SetParameter(UpdatePatientProfileCommand.Parameters.Name, Name)
-                .SetParameter(UpdatePatientProfileCommand.Parameters.Address, Address)
-                .SetParameter(UpdatePatientProfileCommand.Parameters.BirthDate, BirthDate)
-                .SetParameter(UpdatePatientProfileCommand.Parameters.Gender, SelectedGender.ToString())
-                .SetParameter(UpdatePatientProfileCommand.Parameters.Race, Race);
+            var parameters = new CommandParameters()
+                .SetParameter(UpdateAdministratorProfileCommand.Parameters.ProfileId, UserId);
+
+            // Add fields to update
+            if (!string.IsNullOrWhiteSpace(Name))
+            {
+                parameters.SetParameter(UpdateAdministratorProfileCommand.Parameters.Name, Name);
+            }
+
+            if (!string.IsNullOrWhiteSpace(Address))
+            {
+                parameters.SetParameter(UpdateAdministratorProfileCommand.Parameters.Address, Address);
+            }
+
+            if (BirthDate != default && BirthDate < DateTime.Now)
+            {
+                parameters.SetParameter(UpdateAdministratorProfileCommand.Parameters.BirthDate, BirthDate);
+            }
+
+            if (!string.IsNullOrWhiteSpace(Email))
+            {
+                parameters.SetParameter(UpdateAdministratorProfileCommand.Parameters.Email, Email);
+            }
+
+            return parameters;
         }
 
         private void HandleSaveResult(CommandResult result)
         {
+            ClearValidation();
+
             if (result.Success)
             {
-                // Navigate to appropriate page after successful save (must be on UI thread)
                 MainThread.BeginInvokeOnMainThread(async () =>
                 {
-                    if (IsEditMode && PatientId.HasValue)
-                    {
-                        // After editing, navigate back to detail page
-                        await _navigationService.NavigateToAsync($"PatientDetailPage?patientId={PatientId.Value}");
-                    }
-                    else
-                    {
-                        // After creating, navigate to list page
-                        await _navigationService.NavigateToAsync("PatientListPage");
-                    }
+                    await _navigationService.NavigateToAsync("UserListPage");
                 });
             }
-            // Errors are already populated by the adapter
+            else
+            {
+                SetValidationError(result.GetDisplayMessage());
+            }
         }
 
         private async Task CancelEditAsync()
         {
-            if (IsEditMode && PatientId.HasValue)
-            {
-                // If editing, go back to detail page
-                await _navigationService.NavigateToAsync($"PatientDetailPage?patientId={PatientId.Value}");
-            }
-            else
-            {
-                // If creating, go back to list
-                await _navigationService.NavigateToAsync("PatientListPage");
-            }
+            // Go back to user list
+            await _navigationService.NavigateToAsync("UserListPage");
         }
     }
 }

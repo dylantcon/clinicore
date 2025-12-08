@@ -1,19 +1,20 @@
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Scheduling;
 using Core.CliniCore.Scheduling;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Appointments
 {
     /// <summary>
     /// ViewModel for editing existing appointments.
     /// Uses UpdateAppointmentCommand for saving.
     /// </summary>
     [QueryProperty(nameof(AppointmentIdString), "appointmentId")]
-    public class AppointmentEditViewModel : AppointmentFormViewModelBase
+    public partial class AppointmentEditViewModel : AppointmentFormViewModelBase
     {
+        private readonly CommandInvoker _commandInvoker;
         private Guid _appointmentId;
         private AppointmentTimeInterval? _appointment;
 
@@ -30,6 +31,7 @@ namespace GUI.CliniCore.ViewModels
         }
 
         public AppointmentEditViewModel(
+            CommandInvoker commandInvoker,
             CommandFactory commandFactory,
             INavigationService navigationService,
             SessionManager sessionManager,
@@ -37,6 +39,7 @@ namespace GUI.CliniCore.ViewModels
             SchedulerService schedulerService)
             : base(commandFactory, navigationService, sessionManager, profileService, schedulerService)
         {
+            _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             Title = "Edit Appointment";
         }
 
@@ -44,11 +47,11 @@ namespace GUI.CliniCore.ViewModels
         {
             var coreCommand = _commandFactory.CreateCommand(UpdateAppointmentCommand.Key);
             return new MauiCommandAdapter(
+                _commandInvoker,
                 coreCommand!,
                 parameterBuilder: BuildParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleSaveResult,
-                viewModel: this
+                resultHandler: HandleSaveResult
             );
         }
 
@@ -92,7 +95,7 @@ namespace GUI.CliniCore.ViewModels
             }
             catch (Exception ex)
             {
-                ValidationErrors.Add($"Error loading appointment: {ex.Message}");
+                AddValidationError($"Error loading appointment: {GetExceptionMessage(ex)}");
             }
         }
     }

@@ -1,13 +1,17 @@
 using System.Collections.ObjectModel;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Commands.Profile;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 using GUI.CliniCore.Commands;
 using GUI.CliniCore.Services;
+using GUI.CliniCore.ViewModels.Base;
 using MauiCommand = System.Windows.Input.ICommand;
 
-namespace GUI.CliniCore.ViewModels
+namespace GUI.CliniCore.ViewModels.Patients
 {
     /// <summary>
     /// ViewModel for Patient Detail page
@@ -16,10 +20,13 @@ namespace GUI.CliniCore.ViewModels
     [QueryProperty(nameof(PatientIdString), "patientId")]
     public partial class PatientDetailViewModel : BaseViewModel
     {
+        private readonly CommandInvoker _commandInvoker;
         private readonly CommandFactory _commandFactory;
         private readonly INavigationService _navigationService;
         private readonly SessionManager _sessionManager;
         private readonly ProfileService _profileRegistry;
+        private readonly SchedulerService _schedulerService;
+        private readonly ClinicalDocumentService _clinicalDocumentService;
 
         private Guid _patientId;
         public Guid PatientId
@@ -129,6 +136,18 @@ namespace GUI.CliniCore.ViewModels
             set => SetProperty(ref _documentCount, value);
         }
 
+        /// <summary>
+        /// Indicates whether the current user has permission to edit patient profiles
+        /// </summary>
+        public bool CanEditPatient =>
+            _sessionManager.CurrentSession?.HasPermission(Permission.UpdatePatientProfile) == true;
+
+        /// <summary>
+        /// Indicates whether the current user has permission to delete patient profiles
+        /// </summary>
+        public bool CanDeletePatient =>
+            _sessionManager.CurrentSession?.HasPermission(Permission.DeletePatientProfile) == true;
+
         public MauiCommand LoadPatientCommand { get; }
         public MauiCommand LoadPhysiciansCommand { get; }
         public MauiCommand AssignPhysicianCommand { get; }
@@ -138,46 +157,52 @@ namespace GUI.CliniCore.ViewModels
         public MauiCommand BackCommand { get; }
 
         public PatientDetailViewModel(
+            CommandInvoker commandInvoker,
             CommandFactory commandFactory,
             INavigationService navigationService,
             SessionManager sessionManager,
-            ProfileService profileService)
+            ProfileService profileService,
+            SchedulerService schedulerService,
+            ClinicalDocumentService clinicalDocumentService)
         {
+            _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
             _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _schedulerService = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
+            _clinicalDocumentService = clinicalDocumentService ?? throw new ArgumentNullException(nameof(clinicalDocumentService));
 
             Title = "Patient Details";
 
             // Create view command
             var viewCoreCommand = _commandFactory.CreateCommand(ViewPatientProfileCommand.Key);
             LoadPatientCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 viewCoreCommand!,
                 parameterBuilder: BuildViewParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleViewResult,
-                viewModel: this
+                resultHandler: HandleViewResult
             );
 
             // Load physicians command
             var listPhysiciansCoreCommand = _commandFactory.CreateCommand(ListPhysiciansCommand.Key);
             LoadPhysiciansCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 listPhysiciansCoreCommand!,
                 parameterBuilder: () => new CommandParameters(),
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleLoadPhysiciansResult,
-                viewModel: this
+                resultHandler: HandleLoadPhysiciansResult
             );
 
             // Assign physician command
             var assignCoreCommand = _commandFactory.CreateCommand(AssignPatientToPhysicianCommand.Key);
             AssignPhysicianCommand = new MauiCommandAdapter(
+                _commandInvoker,
                 assignCoreCommand!,
                 parameterBuilder: BuildAssignParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleAssignResult,
-                viewModel: this
+                resultHandler: HandleAssignResult
             );
 
             // Edit command
@@ -211,26 +236,28 @@ namespace GUI.CliniCore.ViewModels
             if (result.Success && result.Data is PatientProfile patient)
             {
                 Patient = patient;
-                PatientName = patient.Name;
+                PatientName = patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty;
                 Username = patient.Username;
-                Address = patient.Address;
-                BirthDate = patient.BirthDate.ToString("yyyy-MM-dd");
-                Gender = patient.Gender.ToString();
-                Race = patient.Race;
-                AppointmentCount = patient.AppointmentIds.Count;
-                DocumentCount = patient.ClinicalDocumentIds.Count;
+                Address = patient.GetValue<string>(CommonEntryType.Address.GetKey()) ?? string.Empty;
+                BirthDate = patient.GetValue<DateTime>(CommonEntryType.BirthDate.GetKey()).ToString("yyyy-MM-dd");
+                Gender = patient.GetValue<Gender>(PatientEntryType.Gender.GetKey()).ToString();
+                Race = patient.GetValue<string>(PatientEntryType.Race.GetKey()) ?? string.Empty;
+
+                // Get counts from services (more reliable than profile ID lists)
+                AppointmentCount = _schedulerService.GetPatientAppointments(patient.Id).Count();
+                DocumentCount = _clinicalDocumentService.GetPatientDocuments(patient.Id).Count();
 
                 // Load primary physician name
                 if (patient.PrimaryPhysicianId.HasValue)
                 {
-                    PrimaryPhysician = _profileRegistry.GetProfileById(patient.PrimaryPhysicianId.Value) is PhysicianProfile physician ? $"Dr. {physician.Name}" : "Unknown";
+                    PrimaryPhysician = _profileRegistry.GetProfileById(patient.PrimaryPhysicianId.Value) is PhysicianProfile physician ? $"Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}" : "Unknown";
                 }
                 else
                 {
                     PrimaryPhysician = "None assigned";
                 }
 
-                Title = $"Patient: {patient.Name}";
+                Title = $"Patient: {patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}";
                 ClearValidation();
             }
         }
@@ -238,7 +265,8 @@ namespace GUI.CliniCore.ViewModels
         private CommandParameters BuildDeleteParameters()
         {
             return new CommandParameters()
-                .SetParameter(DeleteProfileCommand.Parameters.ProfileId, PatientId);
+                .SetParameter(DeleteProfileCommand.Parameters.ProfileId, PatientId)
+                .SetParameter(DeleteProfileCommand.Parameters.Force, true); // User already confirmed via dialog
         }
 
         private void HandleDeleteResult(CommandResult result)
@@ -300,11 +328,11 @@ namespace GUI.CliniCore.ViewModels
             // Execute the actual delete command
             var deleteCoreCommand = _commandFactory.CreateCommand(DeleteProfileCommand.Key);
             var deleteAdapter = new MauiCommandAdapter(
+                _commandInvoker,
                 deleteCoreCommand!,
                 parameterBuilder: BuildDeleteParameters,
                 sessionProvider: () => _sessionManager.CurrentSession,
-                resultHandler: HandleDeleteResult,
-                viewModel: this
+                resultHandler: HandleDeleteResult
             );
 
             deleteAdapter.Execute(null);
