@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels.Appointments"
+             xmlns:shared="clr-namespace:GUI.CliniCore.Views.Shared"
+             xmlns:icons="clr-namespace:GUI.CliniCore.Resources.Fonts"
+             x:Class="GUI.CliniCore.Views.Appointments.AppointmentListPage"
+             x:DataType="viewModels:AppointmentListViewModel"
+             Title="{Binding Title}">
+
+    <!-- Configure Shell back button to trigger Back command -->
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding BackCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <!-- Outer grid to constrain max width on wide screens -->
+    <Grid HorizontalOptions="Center" MaximumWidthRequest="1200">
+        <Grid RowDefinitions="Auto,*,Auto" Padding="10">
+
+            <!-- Actions Bar -->
+            <VerticalStackLayout Grid.Row="0" Spacing="10" Margin="0,0,0,10">
+
+                <!-- Back Button -->
+                <Border BackgroundColor="#607D8B" StrokeThickness="0" Padding="12,10" StrokeShape="RoundRectangle 8" HeightRequest="40">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding BackCommand}"/>
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Label Text="{x:Static icons:MaterialIcons.ArrowBack}" FontFamily="MaterialIconsRegular" FontSize="18" TextColor="White" VerticalOptions="Center"/>
+                        <Label Text="Back to Dashboard" TextColor="White" FontSize="14" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- Date Picker -->
+                <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Filter by Date" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                        <DatePicker Date="{Binding SelectedDate}"
+                                   FontSize="14"
+                                   TextColor="#333"/>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Action Button -->
+                <Button Text="Schedule New Appointment"
+                        Command="{Binding CreateAppointmentCommand}"
+                        BackgroundColor="#4CAF50"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="45"/>
+
+            </VerticalStackLayout>
+
+            <!-- Appointment List with SortableListView -->
+            <shared:SortableListView Grid.Row="1"
+                                      ItemsSource="{Binding Appointments}"
+                                      SortOptions="{Binding SortOptions}"
+                                      SelectedSortOption="{Binding SelectedSortOption}"
+                                      IsAscending="{Binding IsAscending}"
+                                      SelectedItem="{Binding SelectedAppointment}"
+                                      RefreshCommand="{Binding RefreshCommand}"
+                                      IsRefreshing="{Binding IsRefreshing}"
+                                      EmptyMessage="No appointments found for selected date">
+                <shared:SortableListView.ItemTemplate>
+                        <DataTemplate x:DataType="viewModels:AppointmentListDisplayModel">
+                            <Border Stroke="LightGray"
+                                   StrokeThickness="1"
+                                   Background="White"
+                                   StrokeShape="RoundRectangle 8"
+                                   Padding="15"
+                                   Margin="0,5">
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+
+                                    <!-- Appointment Info -->
+                                    <VerticalStackLayout Grid.Column="0" Spacing="5">
+
+                                        <!-- Time & Status -->
+                                        <HorizontalStackLayout Spacing="10">
+                                            <Label Text="{Binding TimeRangeDisplay}"
+                                                   FontSize="16"
+                                                   FontAttributes="Bold"
+                                                   TextColor="#333"/>
+                                            <Border BackgroundColor="{Binding StatusColor}"
+                                                   StrokeThickness="0"
+                                                   StrokeShape="RoundRectangle 10"
+                                                   Padding="8,4">
+                                                <Label Text="{Binding StatusDisplay}"
+                                                       TextColor="White"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"/>
+                                            </Border>
+                                        </HorizontalStackLayout>
+
+                                        <!-- Patient -->
+                                        <Label FontSize="12" TextColor="Gray">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="Patient: " FontAttributes="Bold" TextColor="Gray"/>
+                                                    <Span Text="{Binding PatientName}" TextColor="Gray"/>
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+
+                                        <!-- Physician -->
+                                        <Label FontSize="12" TextColor="Gray">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="Physician: " FontAttributes="Bold" TextColor="Gray"/>
+                                                    <Span Text="{Binding PhysicianName}" TextColor="Gray"/>
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+
+                                        <!-- Reason -->
+                                        <Label Text="{Binding Reason}"
+                                               FontSize="13"
+                                               TextColor="#333"
+                                               FontAttributes="Italic"
+                                               Margin="0,5,0,0"/>
+
+                                        <!-- Duration & Room -->
+                                        <HorizontalStackLayout Spacing="15">
+                                            <Label Text="{Binding DurationDisplay}"
+                                                   FontSize="11"
+                                                   TextColor="#666"/>
+                                            <Label Text="{Binding RoomDisplay}"
+                                                   FontSize="11"
+                                                   TextColor="#2196F3"
+                                                   FontAttributes="Bold"
+                                                   IsVisible="{Binding HasRoom}"/>
+                                        </HorizontalStackLayout>
+
+                                        <!-- Appointment ID -->
+                                        <Label FontSize="10" TextColor="LightGray">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="ID: " TextColor="LightGray"/>
+                                                    <Span Text="{Binding Id, StringFormat='{0:N}'}" TextColor="LightGray"/>
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+
+                                    </VerticalStackLayout>
+
+                                </Grid>
+
+                            </Border>
+                        </DataTemplate>
+                </shared:SortableListView.ItemTemplate>
+            </shared:SortableListView>
+
+            <!-- Validation Errors -->
+            <CollectionView Grid.Row="2"
+                           ItemsSource="{Binding ValidationErrors}"
+                           IsVisible="{Binding HasValidationErrors}"
+                           Margin="10">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="#F44336"
+                                StrokeThickness="1"
+                                Background="#FFEBEE"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="10"
+                                Margin="0,2">
+                            <Label Text="{Binding .}"
+                                   TextColor="#D32F2F"
+                                   FontSize="12"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </Grid>
+    </Grid>
+
+</ContentPage>

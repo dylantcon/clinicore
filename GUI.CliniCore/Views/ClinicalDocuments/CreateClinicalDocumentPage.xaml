@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels.ClinicalDocuments"
+             xmlns:icons="clr-namespace:GUI.CliniCore.Resources.Fonts"
+             xmlns:shared="clr-namespace:GUI.CliniCore.Views.Shared"
+             x:Class="GUI.CliniCore.Views.ClinicalDocuments.CreateClinicalDocumentPage"
+             x:DataType="viewModels:CreateClinicalDocumentViewModel"
+             Title="{Binding Title}">
+
+    <ContentPage.Resources>
+        <Style TargetType="Picker">
+            <Setter Property="TextColor" Value="#333"/>
+        </Style>
+        <Style TargetType="Entry">
+            <Setter Property="TextColor" Value="#333"/>
+            <Setter Property="PlaceholderColor" Value="#999"/>
+            <Setter Property="BackgroundColor" Value="#FAFAFA"/>
+        </Style>
+        <Style TargetType="Editor">
+            <Setter Property="TextColor" Value="#333"/>
+            <Setter Property="PlaceholderColor" Value="#999"/>
+            <Setter Property="BackgroundColor" Value="#FAFAFA"/>
+        </Style>
+
+    </ContentPage.Resources>
+
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding BackCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <ScrollView Padding="15">
+        <VerticalStackLayout Spacing="15" MaximumWidthRequest="800" HorizontalOptions="Center">
+            
+            <!-- Back Button -->
+            <Border BackgroundColor="#607D8B" StrokeThickness="0" Padding="12,10" StrokeShape="RoundRectangle 8" HeightRequest="40">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding BackCommand}"/>
+                </Border.GestureRecognizers>
+                <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="{x:Static icons:MaterialIcons.ArrowBack}" FontFamily="MaterialIconsRegular" FontSize="18" TextColor="White" VerticalOptions="Center"/>
+                    <Label Text="Back" TextColor="White" FontSize="14" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Header -->
+            <VerticalStackLayout Spacing="5" HorizontalOptions="Center" Margin="0,10">
+                <Label Text="{x:Static icons:MaterialIcons.Article}"
+                       FontFamily="MaterialIconsRegular"
+                       FontSize="48"
+                       TextColor="#4CAF50"
+                       HorizontalOptions="Center"/>
+                <Label Text="Create Clinical Document"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       TextColor="#333"
+                       HorizontalOptions="Center"/>
+                <Label Text="Select patient, physician, and appointment to create a new clinical document."
+                       FontSize="13"
+                       TextColor="#666"
+                       HorizontalOptions="Center"
+                       HorizontalTextAlignment="Center"/>
+            </VerticalStackLayout>
+
+            <!-- Selection Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Document Details" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+
+                    <!-- Patient Selection -->
+                    <VerticalStackLayout Spacing="5">
+                        <shared:StyledPicker LabelText="Patient"
+                                             IsRequired="True"
+                                             ItemsSource="{Binding AvailablePatients}"
+                                             SelectedItem="{Binding SelectedPatient}"
+                                             ItemDisplayPath="DisplayName"/>
+                        <Label Text="{Binding PatientInfo}" FontSize="11" TextColor="#888"/>
+                    </VerticalStackLayout>
+
+                    <!-- Physician Selection -->
+                    <VerticalStackLayout Spacing="5">
+                        <shared:StyledPicker LabelText="Physician"
+                                             IsRequired="True"
+                                             ItemsSource="{Binding AvailablePhysicians}"
+                                             SelectedItem="{Binding SelectedPhysician}"
+                                             ItemDisplayPath="DisplayName"/>
+                        <Label Text="{Binding PhysicianInfo}" FontSize="11" TextColor="#888"/>
+                    </VerticalStackLayout>
+
+                    <!-- Appointment Selection -->
+                    <VerticalStackLayout Spacing="5">
+                        <shared:StyledPicker LabelText="Appointment"
+                                             IsRequired="True"
+                                             ItemsSource="{Binding AvailableAppointments}"
+                                             SelectedItem="{Binding SelectedAppointment}"/>
+                        <Label Text="Only appointments without existing documents are shown" FontSize="11" TextColor="#888"/>
+                    </VerticalStackLayout>
+
+                    <BoxView HeightRequest="1" Color="LightGray" Margin="0,5"/>
+
+                    <!-- Chief Complaint -->
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Chief Complaint *" FontSize="12" TextColor="#666"/>
+                        <Editor Text="{Binding ChiefComplaint}"
+                                Placeholder="Enter the patient's chief complaint or reason for visit"
+                                HeightRequest="100"
+                                BackgroundColor="#FAFAFA"/>
+                        <Label Text="Brief description of why the patient is being seen" FontSize="11" TextColor="#888"/>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Validation Errors -->
+            <CollectionView ItemsSource="{Binding ValidationErrors}"
+                           IsVisible="{Binding HasValidationErrors}"
+                           Margin="0,5">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="#F44336"
+                                StrokeThickness="1"
+                                Background="#FFEBEE"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="10"
+                                Margin="0,2">
+                            <Label Text="{Binding .}"
+                                   TextColor="#D32F2F"
+                                   FontSize="12"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Create Button -->
+            <Button Text="Create Document"
+                    Command="{Binding CreateCommand}"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="50"
+                    FontAttributes="Bold"
+                    Margin="0,10"/>
+
+            <!-- Info Note -->
+            <Border Stroke="#2196F3" StrokeThickness="1" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="15">
+                <HorizontalStackLayout Spacing="10">
+                    <Label Text="{x:Static icons:MaterialIcons.Info}"
+                           FontFamily="MaterialIconsRegular"
+                           FontSize="20"
+                           TextColor="#2196F3"
+                           VerticalOptions="Start"/>
+                    <Label Text="After creating the document, you'll be taken to view it. You can then add observations, assessments, diagnoses, plans, and prescriptions."
+                           FontSize="12"
+                           TextColor="#1565C0"
+                           LineBreakMode="WordWrap"
+                           VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

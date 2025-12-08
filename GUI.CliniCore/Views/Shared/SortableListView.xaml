@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:GUI.CliniCore.Views.Shared"
+             xmlns:icons="clr-namespace:GUI.CliniCore.Resources.Fonts"
+             x:Class="GUI.CliniCore.Views.Shared.SortableListView"
+             x:Name="SortableListViewRoot">
+    <!-- Use Grid instead of VerticalStackLayout to properly constrain height for scrolling -->
+    <Grid RowDefinitions="Auto,*" RowSpacing="12">
+        <!-- Sort Controls Bar with drop shadow -->
+        <Border Grid.Row="0"
+                Background="#FAFAFA"
+                Padding="12"
+                StrokeThickness="0">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="10"/>
+            </Border.StrokeShape>
+            <Border.Shadow>
+                <Shadow Brush="#40000000"
+                        Offset="0,2"
+                        Radius="6"
+                        Opacity="0.12"/>
+            </Border.Shadow>
+
+            <HorizontalStackLayout Spacing="12" HorizontalOptions="Start" VerticalOptions="Center">
+                <!-- Sort by label -->
+                <Label Text="Sort by"
+                       VerticalOptions="Center"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="#666"/>
+
+                <!-- Styled picker container with darker background -->
+                <Border BackgroundColor="#E8E8E8"
+                        StrokeThickness="0"
+                        Padding="10,6"
+                        MinimumWidthRequest="160">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="6"/>
+                    </Border.StrokeShape>
+                    <!-- Native picker chevron -->
+                    <Picker x:Name="SortPicker"
+                            ItemsSource="{Binding SortOptions, Source={x:Reference SortableListViewRoot}}"
+                            SelectedItem="{Binding SelectedSortOption, Source={x:Reference SortableListViewRoot}, Mode=TwoWay}"
+                            FontSize="14"
+                            TextColor="#333"
+                            BackgroundColor="Transparent"
+                            Title=""
+                            SelectedIndexChanged="OnSortOptionChanged"/>
+                </Border>
+
+                <!-- Direction toggle button with improved styling -->
+                <Border BackgroundColor="#607D8B"
+                        StrokeThickness="0"
+                        WidthRequest="40"
+                        HeightRequest="40">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8"/>
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Brush="#40000000"
+                                Offset="0,1"
+                                Radius="3"
+                                Opacity="0.2"/>
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnDirectionToggle"/>
+                    </Border.GestureRecognizers>
+                    <Label x:Name="DirectionLabel"
+                           Text="{x:Static icons:MaterialIcons.ArrowUpward}"
+                           FontFamily="MaterialIconsRegular"
+                           FontSize="20"
+                           TextColor="White"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"/>
+                </Border>
+            </HorizontalStackLayout>
+        </Border>
+
+        <!-- List with RefreshView -->
+        <RefreshView Grid.Row="1"
+                     x:Name="RefreshContainer"
+                     Command="{Binding RefreshCommand, Source={x:Reference SortableListViewRoot}}"
+                     IsRefreshing="{Binding IsRefreshing, Source={x:Reference SortableListViewRoot}, Mode=TwoWay}">
+            <CollectionView x:Name="InnerCollection"
+                            SelectionMode="Single"
+                            SelectionChanged="OnSelectionChanged">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout VerticalOptions="Center"
+                                         HorizontalOptions="Center"
+                                         Spacing="10"
+                                         Padding="20">
+                        <Label x:Name="EmptyIconLabel"
+                               Text="{x:Static icons:MaterialIcons.Description}"
+                               FontFamily="MaterialIconsRegular"
+                               FontSize="48"
+                               TextColor="#BDBDBD"
+                               HorizontalOptions="Center"/>
+                        <Label x:Name="EmptyMessageLabel"
+                               Text="No items found"
+                               FontSize="16"
+                               TextColor="Gray"
+                               HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentView>

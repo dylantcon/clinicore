@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels.ClinicalDocuments"
+             xmlns:converters="clr-namespace:GUI.CliniCore.Converters"
+             x:Class="GUI.CliniCore.Views.ClinicalDocuments.ClinicalDocumentDetailPage"
+             x:DataType="viewModels:ClinicalDocumentDetailViewModel"
+             Title="{Binding Title}">
+
+    <!-- Configure Shell back button to trigger Back command -->
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding BackCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:IsStringNotNullOrEmptyConverter x:Key="IsStringNotNullOrEmptyConverter"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ScrollView Padding="15">
+        <VerticalStackLayout Spacing="15">
+
+            <!-- Document Info Header -->
+            <Border Stroke="#2196F3" StrokeThickness="2" Background="#E3F2FD" StrokeShape="RoundRectangle 8" Padding="15">
+                <Label Text="{Binding DocumentInfo}"
+                       FontSize="13"
+                       TextColor="#1976D2"
+                       FontAttributes="Bold"/>
+            </Border>
+
+            <!-- Chief Complaint Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Chief Complaint" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+                    <Label Text="{Binding ChiefComplaint}"
+                           FontSize="14"
+                           TextColor="#666"
+                           LineHeight="1.3"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Subjective Observations Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Subjective - Observations" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+                    <CollectionView ItemsSource="{Binding SubjectiveObservations}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:ObservationDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Text="{Binding TypeDisplay}"
+                                               FontSize="11"
+                                               TextColor="#2196F3"
+                                               FontAttributes="Bold"/>
+                                        <Label Text="{Binding Content}"
+                                               FontSize="12"
+                                               TextColor="#333"/>
+                                        <Label Text="{Binding AbnormalDisplay}"
+                                               FontSize="11"
+                                               TextColor="#F44336"
+                                               FontAttributes="Bold"
+                                               IsVisible="{Binding IsAbnormal}"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Objective Observations Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Objective - Observations" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+                    <CollectionView ItemsSource="{Binding ObjectiveObservations}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:ObservationDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <VerticalStackLayout Spacing="3">
+                                        <!-- Type and Body System -->
+                                        <HorizontalStackLayout Spacing="5">
+                                            <Label Text="{Binding TypeDisplay}"
+                                                   FontSize="11"
+                                                   TextColor="#2196F3"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding BodySystemDisplay}"
+                                                   FontSize="11"
+                                                   TextColor="#666"
+                                                   IsVisible="{Binding BodySystem, Converter={StaticResource IsNotNullConverter}}"/>
+                                        </HorizontalStackLayout>
+                                        <!-- Content -->
+                                        <Label Text="{Binding Content}"
+                                               FontSize="12"
+                                               TextColor="#333"/>
+                                        <!-- Numeric measurements with unit and reference range -->
+                                        <HorizontalStackLayout Spacing="3"
+                                                               IsVisible="{Binding NumericValue, Converter={StaticResource IsNotNullConverter}}">
+                                            <Label Text="{Binding NumericValue}"
+                                                   FontSize="11"
+                                                   TextColor="#333"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding Unit}"
+                                                   FontSize="11"
+                                                   TextColor="#666"/>
+                                            <Label Text="{Binding ReferenceRange, StringFormat='(Ref: {0})'}"
+                                                   FontSize="10"
+                                                   TextColor="#888"
+                                                   IsVisible="{Binding ReferenceRange, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+                                        </HorizontalStackLayout>
+                                        <!-- Abnormal indicator -->
+                                        <Label Text="{Binding AbnormalDisplay}"
+                                               FontSize="11"
+                                               TextColor="#F44336"
+                                               FontAttributes="Bold"
+                                               IsVisible="{Binding IsAbnormal}"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Assessment Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Assessment" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+                    <CollectionView ItemsSource="{Binding Assessments}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:AssessmentDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Text="{Binding Content}"
+                                               FontSize="12"
+                                               TextColor="#333"/>
+                                        <HorizontalStackLayout Spacing="10">
+                                            <Label Text="{Binding ConditionDisplay, StringFormat='Condition: {0}'}"
+                                                   FontSize="11"
+                                                   TextColor="#666"/>
+                                            <Label Text="{Binding ConfidenceDisplay, StringFormat='Confidence: {0}'}"
+                                                   FontSize="11"
+                                                   TextColor="#666"/>
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding UrgentDisplay}"
+                                               FontSize="11"
+                                               TextColor="#F44336"
+                                               FontAttributes="Bold"
+                                               IsVisible="{Binding RequiresImmediateAction}"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Diagnosis Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Diagnoses" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+                    <CollectionView ItemsSource="{Binding Diagnoses}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:DiagnosisDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <VerticalStackLayout Spacing="3">
+                                        <HorizontalStackLayout Spacing="5">
+                                            <Label Text="{Binding PrimaryDisplay}"
+                                                   FontSize="11"
+                                                   TextColor="#4CAF50"
+                                                   FontAttributes="Bold"
+                                                   IsVisible="{Binding IsPrimary}"/>
+                                            <Label Text="{Binding Content}"
+                                                   FontSize="12"
+                                                   TextColor="#333"
+                                                   FontAttributes="Bold"/>
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding CodeDisplay, StringFormat='ICD-10: {0}'}"
+                                               FontSize="11"
+                                               TextColor="#666"
+                                               IsVisible="{Binding CodeDisplay, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+                                        <HorizontalStackLayout Spacing="10">
+                                            <Label Text="{Binding TypeDisplay, StringFormat='Type: {0}'}"
+                                                   FontSize="11"
+                                                   TextColor="#2196F3"/>
+                                            <Label Text="{Binding StatusDisplay, StringFormat='Status: {0}'}"
+                                                   FontSize="11"
+                                                   TextColor="#2196F3"/>
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Plan Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Treatment Plan" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+                    <CollectionView ItemsSource="{Binding Plans}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:PlanDisplayModel">
+                                <Border Stroke="#E0E0E0"
+                                        StrokeThickness="1"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <VerticalStackLayout Spacing="3">
+                                        <HorizontalStackLayout Spacing="5">
+                                            <Label Text="{Binding TypeDisplay}"
+                                                   FontSize="11"
+                                                   TextColor="#2196F3"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding CompletedDisplay}"
+                                                   FontSize="11"
+                                                   TextColor="#4CAF50"
+                                                   FontAttributes="Bold"
+                                                   IsVisible="{Binding IsCompleted}"/>
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding Content}"
+                                               FontSize="12"
+                                               TextColor="#333"/>
+                                        <Label Text="{Binding PriorityDisplay, StringFormat='Priority: {0}'}"
+                                               FontSize="11"
+                                               TextColor="#666"/>
+                                        <Label Text="{Binding TargetDateDisplay, StringFormat='Target: {0}'}"
+                                               FontSize="11"
+                                               TextColor="#666"
+                                               IsVisible="{Binding TargetDateDisplay, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Prescription Section -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Prescriptions" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+                    <CollectionView ItemsSource="{Binding Prescriptions}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:PrescriptionDisplayModel">
+                                <Border Stroke="#4CAF50"
+                                        StrokeThickness="2"
+                                        Background="#F5F5F5"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="10"
+                                        Margin="0,2">
+                                    <VerticalStackLayout Spacing="3">
+                                        <HorizontalStackLayout Spacing="5">
+                                            <Label Text="{Binding MedicationName}"
+                                                   FontSize="13"
+                                                   TextColor="#333"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding ControlledDisplay}"
+                                                   FontSize="11"
+                                                   TextColor="#F44336"
+                                                   FontAttributes="Bold"
+                                                   IsVisible="{Binding ControlledDisplay, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+                                        </HorizontalStackLayout>
+                                        <Label Text="{Binding Dosage, StringFormat='Dosage: {0}'}"
+                                               FontSize="11"
+                                               TextColor="#666"
+                                               IsVisible="{Binding Dosage, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+                                        <Label Text="{Binding FrequencyDisplay, StringFormat='Frequency: {0}'}"
+                                               FontSize="11"
+                                               TextColor="#666"
+                                               IsVisible="{Binding FrequencyDisplay, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+                                        <Label Text="{Binding RouteDisplay, StringFormat='Route: {0}'}"
+                                               FontSize="11"
+                                               TextColor="#666"/>
+                                        <Label Text="{Binding Duration, StringFormat='Duration: {0}'}"
+                                               FontSize="11"
+                                               TextColor="#666"
+                                               IsVisible="{Binding Duration, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+                                        <Label Text="{Binding GenericDisplay}"
+                                               FontSize="11"
+                                               TextColor="#2196F3"/>
+                                        <Label Text="{Binding Instructions}"
+                                               FontSize="11"
+                                               TextColor="#4CAF50"
+                                               FontAttributes="Italic"
+                                               IsVisible="{Binding Instructions, Converter={StaticResource IsStringNotNullOrEmptyConverter}}"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Action Buttons -->
+            <VerticalStackLayout Spacing="10" Margin="0,10,0,0">
+
+                <Button Text="Edit Document"
+                        Command="{Binding EditCommand}"
+                        BackgroundColor="#2196F3"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"
+                        IsVisible="{Binding CanEdit}"/>
+
+                <Button Text="Complete Document"
+                        Command="{Binding CompleteCommand}"
+                        BackgroundColor="#4CAF50"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"
+                        IsVisible="{Binding CanComplete}"/>
+
+                <Button Text="Delete Document"
+                        Command="{Binding DeleteCommand}"
+                        BackgroundColor="#F44336"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"/>
+
+                <Button Text="Back to List"
+                        Command="{Binding BackCommand}"
+                        BackgroundColor="#607D8B"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"/>
+
+            </VerticalStackLayout>
+
+            <!-- Validation Errors/Messages -->
+            <CollectionView ItemsSource="{Binding ValidationErrors}"
+                           IsVisible="{Binding HasValidationErrors}"
+                           Margin="0,10,0,0">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="#4CAF50"
+                                StrokeThickness="1"
+                                Background="#E8F5E9"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="10"
+                                Margin="0,2">
+                            <Label Text="{Binding .}"
+                                   TextColor="#2E7D32"
+                                   FontSize="12"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

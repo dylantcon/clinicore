@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels.Patients"
+             xmlns:converters="clr-namespace:GUI.CliniCore.Converters"
+             xmlns:domain="clr-namespace:Core.CliniCore.Domain.Users.Concrete;assembly=Core.CliniCore"
+             xmlns:icons="clr-namespace:GUI.CliniCore.Resources.Fonts"
+             xmlns:shared="clr-namespace:GUI.CliniCore.Views.Shared"
+             x:Class="GUI.CliniCore.Views.Patients.PatientDetailPage"
+             x:DataType="viewModels:PatientDetailViewModel"
+             Title="{Binding Title}">
+
+    <!-- Configure Shell back button to trigger Back command -->
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding BackCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:IsNotNullConverter x:Key="IsNotNullConverter"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ScrollView Padding="15">
+        <VerticalStackLayout Spacing="15">
+
+            <!-- Patient Name Header -->
+            <Border Stroke="#4CAF50" StrokeThickness="2" Background="#E8F5E9" StrokeShape="RoundRectangle 12" Padding="20">
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="{Binding PatientName}"
+                           FontSize="26"
+                           FontAttributes="Bold"
+                           TextColor="#4CAF50"/>
+                    <Label Text="{Binding Username, StringFormat='@{0}'}"
+                           FontSize="14"
+                           TextColor="Gray"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Demographics Section -->
+            <Label Text="Demographics" FontSize="18" FontAttributes="Bold" Margin="0,10,0,5"/>
+
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="120,*" RowSpacing="10">
+
+                    <!-- Birth Date -->
+                    <Label Grid.Row="0" Grid.Column="0" Text="Birth Date:" FontAttributes="Bold" TextColor="#666"/>
+                    <Label Grid.Row="0" Grid.Column="1" Text="{Binding BirthDate}" TextColor="#333"/>
+
+                    <!-- Gender -->
+                    <Label Grid.Row="1" Grid.Column="0" Text="Gender:" FontAttributes="Bold" TextColor="#666"/>
+                    <Label Grid.Row="1" Grid.Column="1" Text="{Binding Gender}" TextColor="#333"/>
+
+                    <!-- Race -->
+                    <Label Grid.Row="2" Grid.Column="0" Text="Race:" FontAttributes="Bold" TextColor="#666"/>
+                    <Label Grid.Row="2" Grid.Column="1" Text="{Binding Race}" TextColor="#333"/>
+
+                    <!-- Address -->
+                    <Label Grid.Row="3" Grid.Column="0" Text="Address:" FontAttributes="Bold" TextColor="#666"/>
+                    <Label Grid.Row="3" Grid.Column="1" Text="{Binding Address}" TextColor="#333" LineBreakMode="WordWrap"/>
+
+                </Grid>
+            </Border>
+
+            <!-- Care Team Section -->
+            <Label Text="Care Team" FontSize="18" FontAttributes="Bold" Margin="0,10,0,5"/>
+
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="15">
+                    <!-- Current Primary Physician -->
+                    <Grid RowDefinitions="Auto" ColumnDefinitions="140,*" RowSpacing="10">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Primary Physician:" FontAttributes="Bold" TextColor="#666"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding PrimaryPhysician}" TextColor="#2196F3"/>
+                    </Grid>
+
+                    <!-- Assign New Physician -->
+                    <BoxView HeightRequest="1" Color="LightGray"/>
+                    <shared:StyledPicker LabelText="Assign Primary Physician"
+                                         ItemsSource="{Binding AvailablePhysicians}"
+                                         SelectedItem="{Binding SelectedPhysician}"
+                                         ItemDisplayPath="Name"/>
+                    <Button Text="Assign as Primary Physician"
+                            Command="{Binding AssignPhysicianCommand}"
+                            BackgroundColor="#4CAF50"
+                            TextColor="White"
+                            CornerRadius="8"
+                            HeightRequest="45"
+                            IsEnabled="{Binding SelectedPhysician, Converter={StaticResource IsNotNullConverter}}"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Clinical Summary -->
+            <Label Text="Clinical Summary" FontSize="18" FontAttributes="Bold" Margin="0,10,0,5"/>
+
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="12">
+
+                    <!-- Appointments -->
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="{x:Static icons:MaterialIcons.CalendarToday}"
+                               FontFamily="MaterialIconsRegular"
+                               FontSize="20"
+                               TextColor="#2196F3"
+                               VerticalOptions="Center"/>
+                        <Label FontSize="14" TextColor="#333" VerticalOptions="Center">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="{Binding AppointmentCount}" FontAttributes="Bold"/>
+                                    <Span Text=" Appointments"/>
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                    </HorizontalStackLayout>
+
+                    <!-- Documents -->
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="{x:Static icons:MaterialIcons.Description}"
+                               FontFamily="MaterialIconsRegular"
+                               FontSize="20"
+                               TextColor="#FF9800"
+                               VerticalOptions="Center"/>
+                        <Label FontSize="14" TextColor="#333" VerticalOptions="Center">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="{Binding DocumentCount}" FontAttributes="Bold"/>
+                                    <Span Text=" Clinical Documents"/>
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                    </HorizontalStackLayout>
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Action Buttons -->
+            <VerticalStackLayout Spacing="10" Margin="0,20,0,0">
+
+                <Button Text="View Clinical Documents"
+                        Command="{Binding ViewClinicalDocumentsCommand}"
+                        BackgroundColor="#2196F3"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"/>
+
+                <Button Text="Edit Patient"
+                        Command="{Binding EditPatientCommand}"
+                        BackgroundColor="#FF9800"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"
+                        IsVisible="{Binding CanEditPatient}"/>
+
+                <Button Text="Delete Patient"
+                        Command="{Binding DeletePatientCommand}"
+                        BackgroundColor="#F44336"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"
+                        IsVisible="{Binding CanDeletePatient}"/>
+
+                <Button Text="Back to List"
+                        Command="{Binding BackCommand}"
+                        BackgroundColor="#607D8B"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"/>
+
+            </VerticalStackLayout>
+
+            <!-- Validation Errors -->
+            <CollectionView ItemsSource="{Binding ValidationErrors}"
+                           IsVisible="{Binding HasValidationErrors}"
+                           Margin="0,10,0,0">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="#F44336"
+                                StrokeThickness="1"
+                                Background="#FFEBEE"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="10"
+                                Margin="0,2">
+                            <Label Text="{Binding .}"
+                                   TextColor="#D32F2F"
+                                   FontSize="12"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

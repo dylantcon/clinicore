@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="GUI.CliniCore.Views.Shared.CalendarView"
+             x:Name="CalendarViewRoot">
+    <Border Background="White" Stroke="LightGray" StrokeThickness="1" Padding="10">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="8"/>
+        </Border.StrokeShape>
+        <VerticalStackLayout Spacing="10">
+            <!-- Header with navigation -->
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0"
+                        Text="◀"
+                        Clicked="OnPreviousPeriod"
+                        BackgroundColor="#607D8B"
+                        TextColor="White"
+                        WidthRequest="44"
+                        HeightRequest="44"
+                        CornerRadius="8"
+                        FontSize="16"/>
+                <Label Grid.Column="1"
+                       x:Name="PeriodLabel"
+                       Text="December 2024"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#333"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"/>
+                <Button Grid.Column="2"
+                        Text="▶"
+                        Clicked="OnNextPeriod"
+                        BackgroundColor="#607D8B"
+                        TextColor="White"
+                        WidthRequest="44"
+                        HeightRequest="44"
+                        CornerRadius="8"
+                        FontSize="16"/>
+            </Grid>
+
+            <!-- View mode toggle -->
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                <Button x:Name="WeekButton"
+                        Text="Week"
+                        Clicked="OnWeekModeSelected"
+                        BackgroundColor="#2196F3"
+                        TextColor="White"
+                        HeightRequest="36"
+                        CornerRadius="8"
+                        FontSize="14"/>
+                <Button x:Name="MonthButton"
+                        Text="Month"
+                        Clicked="OnMonthModeSelected"
+                        BackgroundColor="#E0E0E0"
+                        TextColor="#333"
+                        HeightRequest="36"
+                        CornerRadius="8"
+                        FontSize="14"/>
+            </HorizontalStackLayout>
+
+            <!-- Day headers -->
+            <Grid x:Name="DayHeadersGrid"
+                  ColumnDefinitions="*,*,*,*,*,*,*"
+                  HeightRequest="30">
+                <Label Grid.Column="0" Text="Sun" FontSize="12" FontAttributes="Bold" TextColor="#666" HorizontalOptions="Center"/>
+                <Label Grid.Column="1" Text="Mon" FontSize="12" FontAttributes="Bold" TextColor="#666" HorizontalOptions="Center"/>
+                <Label Grid.Column="2" Text="Tue" FontSize="12" FontAttributes="Bold" TextColor="#666" HorizontalOptions="Center"/>
+                <Label Grid.Column="3" Text="Wed" FontSize="12" FontAttributes="Bold" TextColor="#666" HorizontalOptions="Center"/>
+                <Label Grid.Column="4" Text="Thu" FontSize="12" FontAttributes="Bold" TextColor="#666" HorizontalOptions="Center"/>
+                <Label Grid.Column="5" Text="Fri" FontSize="12" FontAttributes="Bold" TextColor="#666" HorizontalOptions="Center"/>
+                <Label Grid.Column="6" Text="Sat" FontSize="12" FontAttributes="Bold" TextColor="#666" HorizontalOptions="Center"/>
+            </Grid>
+
+            <!-- Calendar grid container -->
+            <ScrollView HeightRequest="300">
+                <Grid x:Name="CalendarGrid"
+                      ColumnDefinitions="*,*,*,*,*,*,*"
+                      RowSpacing="2"
+                      ColumnSpacing="2">
+                    <!-- Dynamically populated in code-behind -->
+                </Grid>
+            </ScrollView>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels.Appointments"
+             xmlns:system="clr-namespace:System;assembly=System.Runtime"
+             xmlns:shared="clr-namespace:GUI.CliniCore.Views.Shared"
+             x:Class="GUI.CliniCore.Views.Appointments.CreateAppointmentPage"
+             x:DataType="viewModels:CreateAppointmentViewModel"
+             Title="{Binding Title}">
+
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior Command="{Binding BackCommand}"/>
+    </Shell.BackButtonBehavior>
+
+    <ScrollView Padding="15">
+        <VerticalStackLayout Spacing="15">
+
+            <!-- Patient Selection -->
+            <shared:StyledPicker LabelText="Patient"
+                                 IsRequired="True"
+                                 ItemsSource="{Binding AvailablePatients}"
+                                 ItemDisplayPath="Display"
+                                 SelectedItem="{Binding SelectedPatient}"/>
+
+            <!-- Physician Selection -->
+            <shared:StyledPicker LabelText="Physician"
+                                 IsRequired="True"
+                                 ItemsSource="{Binding AvailablePhysicians}"
+                                 ItemDisplayPath="Display"
+                                 SelectedItem="{Binding SelectedPhysician}"/>
+
+            <!-- Date Selection -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Date *" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+                    <DatePicker Date="{Binding SelectedDate}"
+                               MinimumDate="{x:Static system:DateTime.Today}"
+                               FontSize="14"
+                               TextColor="#333"/>
+                    <Label Text="Note: Appointments are only available Monday-Friday"
+                           FontSize="11"
+                           TextColor="#FF9800"
+                           FontAttributes="Italic"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Time Selection -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Time *" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+                    <TimePicker Time="{Binding SelectedTime}"
+                               FontSize="14"
+                               TextColor="#333"/>
+                    <Label Text="Note: Appointments must be between 8:00 AM and 5:00 PM"
+                           FontSize="11"
+                           TextColor="#FF9800"
+                           FontAttributes="Italic"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Duration Selection -->
+            <shared:StyledPicker LabelText="Duration (minutes)"
+                                 IsRequired="True"
+                                 ItemsSource="{Binding AvailableDurations}"
+                                 SelectedItem="{Binding DurationMinutes}"/>
+
+            <!-- Reason -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Reason for Visit *" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+                    <Editor Text="{Binding Reason, Mode=TwoWay}"
+                           Placeholder="e.g., Annual checkup, Follow-up, Consultation"
+                           HeightRequest="60"
+                           FontSize="13"
+                           TextColor="#333"
+                           PlaceholderColor="#999"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Notes (Optional) -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Notes (Optional)" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+                    <Editor Text="{Binding Notes}"
+                           Placeholder="Additional notes about this appointment"
+                           HeightRequest="80"
+                           FontSize="13"
+                           TextColor="#333"
+                           PlaceholderColor="#999"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Action Buttons -->
+            <VerticalStackLayout Spacing="10" Margin="0,10,0,0">
+
+                <Button Text="Schedule Appointment"
+                        Command="{Binding SaveCommand}"
+                        BackgroundColor="#4CAF50"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"
+                        FontAttributes="Bold"/>
+
+                <Button Text="Cancel"
+                        Command="{Binding CancelCommand}"
+                        BackgroundColor="#607D8B"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="50"/>
+
+            </VerticalStackLayout>
+
+            <!-- Validation Errors -->
+            <CollectionView ItemsSource="{Binding ValidationErrors}"
+                           IsVisible="{Binding HasValidationErrors}"
+                           Margin="0,10,0,0">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="#F44336"
+                                StrokeThickness="1"
+                                Background="#FFEBEE"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="10"
+                                Margin="0,2">
+                            <Label Text="{Binding .}"
+                                   TextColor="#D32F2F"
+                                   FontSize="12"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

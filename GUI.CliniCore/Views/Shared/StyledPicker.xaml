@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="GUI.CliniCore.Views.Shared.StyledPicker"
+             x:Name="StyledPickerRoot">
+    <VerticalStackLayout Spacing="6">
+        <!-- Label with optional required indicator - tappable to focus picker -->
+        <Label x:Name="FieldLabel"
+               Text="{Binding LabelText, Source={x:Reference StyledPickerRoot}}"
+               FontSize="13"
+               FontAttributes="Bold"
+               TextColor="#555">
+            <Label.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnLabelTapped"/>
+            </Label.GestureRecognizers>
+        </Label>
+
+        <!-- Picker container with drop shadow effect -->
+        <Border BackgroundColor="#F8F8F8"
+                StrokeThickness="0"
+                Padding="0"
+                Margin="0,0,0,4">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="8"/>
+            </Border.StrokeShape>
+            <Border.Shadow>
+                <Shadow Brush="#40000000"
+                        Offset="0,2"
+                        Radius="4"
+                        Opacity="0.15"/>
+            </Border.Shadow>
+
+            <!-- Inner darker region with Grid for picker/placeholder overlay -->
+            <Border BackgroundColor="#EEEEEE"
+                    StrokeThickness="0"
+                    Padding="12,10">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8"/>
+                </Border.StrokeShape>
+
+                <Grid>
+                    <!-- Placeholder BEHIND picker (first in XAML = lower z-order) -->
+                    <Label x:Name="PlaceholderLabel"
+                           Text="{Binding Placeholder, Source={x:Reference StyledPickerRoot}}"
+                           FontSize="15"
+                           FontAttributes="Italic"
+                           TextColor="#999"
+                           BackgroundColor="Transparent"
+                           IsVisible="False"
+                           VerticalOptions="Center"
+                           InputTransparent="True"/>
+
+                    <!-- Picker ON TOP (last in XAML = higher z-order, receives clicks) -->
+                    <Picker x:Name="InnerPicker"
+                            ItemsSource="{Binding ItemsSource, Source={x:Reference StyledPickerRoot}}"
+                            SelectedItem="{Binding SelectedItem, Source={x:Reference StyledPickerRoot}, Mode=TwoWay}"
+                            SelectedIndex="{Binding SelectedIndex, Source={x:Reference StyledPickerRoot}, Mode=TwoWay}"
+                            Title=""
+                            TextColor="#333"
+                            BackgroundColor="Transparent"
+                            FontSize="15"
+                            HorizontalOptions="Fill"
+                            SelectedIndexChanged="OnSelectionChanged"/>
+                </Grid>
+            </Border>
+        </Border>
+    </VerticalStackLayout>
+</ContentView>

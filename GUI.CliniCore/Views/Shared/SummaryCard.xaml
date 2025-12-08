@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:GUI.CliniCore.Views.Shared"
+             x:Class="GUI.CliniCore.Views.Shared.SummaryCard"
+             x:DataType="local:SummaryCard">
+    <Border x:Name="CardBorder"
+            Stroke="LightGray"
+            StrokeThickness="1"
+            Background="White"
+            Padding="15">
+        <Border.StrokeShape>
+            <RoundRectangle x:Name="BorderShape" CornerRadius="8"/>
+        </Border.StrokeShape>
+        <VerticalStackLayout Spacing="12">
+            <!-- Optional Title -->
+            <Label x:Name="TitleLabel"
+                   FontSize="16"
+                   FontAttributes="Bold"
+                   TextColor="#333"
+                   IsVisible="False"/>
+
+            <!-- Items will be dynamically added here -->
+            <VerticalStackLayout x:Name="ItemsContainer" Spacing="10"/>
+
+            <!-- Optional Action Content Area -->
+            <ContentView x:Name="ActionContentArea" IsVisible="False"/>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>
