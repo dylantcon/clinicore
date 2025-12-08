@@ -1,4 +1,6 @@
-﻿namespace Core.CliniCore.Domain.Enumerations.EntryTypes
+﻿using Core.CliniCore.Bootstrap;
+
+namespace Core.CliniCore.Domain.Enumerations.EntryTypes
 {
     public enum CommonEntryType
     {
