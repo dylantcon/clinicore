@@ -1,103 +1,49 @@
-﻿// Core.CliniCore/ClinicalDoc/ClinicalDocumentService.cs
-using Core.CliniCore.ClinicalDoc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+// Core.CliniCore/Service/ClinicalDocumentService.cs
+using Core.CliniCore.Domain.ClinicalDocumentation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
+using Core.CliniCore.Repositories;
 
 namespace Core.CliniCore.Service
 {
     /// <summary>
-    /// Registry for managing all clinical documents in the system.
-    /// Thread-safe operations for document storage and retrieval.
-    /// Note: Currently uses in-memory storage via internal dictionaries.
-    /// Future: Will integrate with IClinicalDocumentRepository for database persistence.
+    /// Service for managing clinical documents in the system.
+    /// Provides document storage, retrieval, and search operations.
+    /// Delegates persistence to IClinicalDocumentRepository.
     /// </summary>
-    public class ClinicalDocumentService
+    public class ClinicalDocumentService(IClinicalDocumentRepository repository)
     {
-        private readonly Dictionary<Guid, ClinicalDocument> _documentsById;
-        private readonly Dictionary<Guid, List<ClinicalDocument>> _documentsByPatient;
-        private readonly Dictionary<Guid, List<ClinicalDocument>> _documentsByPhysician;
-        private readonly Dictionary<Guid, ClinicalDocument> _documentsByAppointment;
-        private readonly object _lock = new object();
-
-        public ClinicalDocumentService()
-        {
-            _documentsById = new Dictionary<Guid, ClinicalDocument>();
-            _documentsByPatient = new Dictionary<Guid, List<ClinicalDocument>>();
-            _documentsByPhysician = new Dictionary<Guid, List<ClinicalDocument>>();
-            _documentsByAppointment = new Dictionary<Guid, ClinicalDocument>();
-        }
+        private readonly IClinicalDocumentRepository _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
         /// <summary>
-        /// Adds a document to the registry
+        /// Adds a document to the repository
         /// </summary>
         public bool AddDocument(ClinicalDocument document)
         {
-            if (document == null)
-                throw new ArgumentNullException(nameof(document));
+            ArgumentNullException.ThrowIfNull(document);
 
-            lock (_lock)
-            {
-                // Check for duplicate
-                if (_documentsById.ContainsKey(document.Id))
-                    return false;
+            // Check for duplicate
+            if (_repository.GetById(document.Id) != null)
+                return false;
 
-                // Check if appointment already has a document
-                if (_documentsByAppointment.ContainsKey(document.AppointmentId))
-                    return false;
+            // Check if appointment already has a document
+            if (_repository.GetByAppointment(document.AppointmentId) != null)
+                return false;
 
-                // Add to main registry
-                _documentsById[document.Id] = document;
-
-                // Add to appointment index
-                _documentsByAppointment[document.AppointmentId] = document;
-
-                // Add to patient index
-                if (!_documentsByPatient.ContainsKey(document.PatientId))
-                {
-                    _documentsByPatient[document.PatientId] = new List<ClinicalDocument>();
-                }
-                _documentsByPatient[document.PatientId].Add(document);
-
-                // Add to physician index
-                if (!_documentsByPhysician.ContainsKey(document.PhysicianId))
-                {
-                    _documentsByPhysician[document.PhysicianId] = new List<ClinicalDocument>();
-                }
-                _documentsByPhysician[document.PhysicianId].Add(document);
-
-                return true;
-            }
+            _repository.Add(document);
+            return true;
         }
 
         /// <summary>
-        /// Removes a document from the registry
+        /// Removes a document from the repository
         /// </summary>
         public bool RemoveDocument(Guid documentId)
         {
-            lock (_lock)
-            {
-                if (!_documentsById.TryGetValue(documentId, out var document))
-                    return false;
+            var document = _repository.GetById(documentId);
+            if (document == null)
+                return false;
 
-                // Remove from all indices
-                _documentsById.Remove(documentId);
-                _documentsByAppointment.Remove(document.AppointmentId);
-
-                if (_documentsByPatient.TryGetValue(document.PatientId, out var patientDocs))
-                {
-                    patientDocs.Remove(document);
-                }
-
-                if (_documentsByPhysician.TryGetValue(document.PhysicianId, out var physicianDocs))
-                {
-                    physicianDocs.Remove(document);
-                }
-
-                return true;
-            }
+            _repository.Delete(documentId);
+            return true;
         }
 
         /// <summary>
@@ -105,12 +51,7 @@ namespace Core.CliniCore.Service
         /// </summary>
         public ClinicalDocument? GetDocumentById(Guid documentId)
         {
-            lock (_lock)
-            {
-                return _documentsById.TryGetValue(documentId, out var document)
-                    ? document
-                    : null;
-            }
+            return _repository.GetById(documentId);
         }
 
         /// <summary>
@@ -118,12 +59,7 @@ namespace Core.CliniCore.Service
         /// </summary>
         public ClinicalDocument? GetDocumentByAppointment(Guid appointmentId)
         {
-            lock (_lock)
-            {
-                return _documentsByAppointment.TryGetValue(appointmentId, out var document)
-                    ? document
-                    : null;
-            }
+            return _repository.GetByAppointment(appointmentId);
         }
 
         /// <summary>
@@ -131,16 +67,7 @@ namespace Core.CliniCore.Service
         /// </summary>
         public IEnumerable<ClinicalDocument> GetPatientDocuments(Guid patientId)
         {
-            lock (_lock)
-            {
-                if (_documentsByPatient.TryGetValue(patientId, out var documents))
-                {
-                    return documents
-                        .OrderByDescending(d => d.CreatedAt)
-                        .ToList();
-                }
-                return Enumerable.Empty<ClinicalDocument>();
-            }
+            return _repository.GetByPatient(patientId);
         }
 
         /// <summary>
@@ -148,16 +75,7 @@ namespace Core.CliniCore.Service
         /// </summary>
         public IEnumerable<ClinicalDocument> GetPhysicianDocuments(Guid physicianId)
         {
-            lock (_lock)
-            {
-                if (_documentsByPhysician.TryGetValue(physicianId, out var documents))
-                {
-                    return documents
-                        .OrderByDescending(d => d.CreatedAt)
-                        .ToList();
-                }
-                return Enumerable.Empty<ClinicalDocument>();
-            }
+            return _repository.GetByPhysician(physicianId);
         }
 
         /// <summary>
@@ -169,27 +87,19 @@ namespace Core.CliniCore.Service
             Guid? patientId = null,
             Guid? physicianId = null)
         {
-            lock (_lock)
+            var documents = _repository.GetByDateRange(startDate, endDate);
+
+            if (patientId.HasValue)
             {
-                var query = _documentsById.Values.AsEnumerable();
-
-                // Filter by date range
-                query = query.Where(d => d.CreatedAt >= startDate && d.CreatedAt <= endDate);
-
-                // Optional patient filter
-                if (patientId.HasValue)
-                {
-                    query = query.Where(d => d.PatientId == patientId.Value);
-                }
-
-                // Optional physician filter
-                if (physicianId.HasValue)
-                {
-                    query = query.Where(d => d.PhysicianId == physicianId.Value);
-                }
-
-                return query.OrderByDescending(d => d.CreatedAt).ToList();
+                documents = documents.Where(d => d.PatientId == patientId.Value);
             }
+
+            if (physicianId.HasValue)
+            {
+                documents = documents.Where(d => d.PhysicianId == physicianId.Value);
+            }
+
+            return documents.OrderByDescending(d => d.CreatedAt);
         }
 
         /// <summary>
@@ -198,35 +108,20 @@ namespace Core.CliniCore.Service
         public IEnumerable<ClinicalDocument> SearchByDiagnosis(string diagnosisText)
         {
             if (string.IsNullOrWhiteSpace(diagnosisText))
-                return Enumerable.Empty<ClinicalDocument>();
+                return [];
 
-            lock (_lock)
-            {
-                return _documentsById.Values
-                    .Where(doc => doc.GetDiagnoses()
-                        .Any(d => d.Content.Contains(diagnosisText, StringComparison.OrdinalIgnoreCase) ||
-                                 d.ICD10Code != null && d.ICD10Code.Contains(diagnosisText, StringComparison.OrdinalIgnoreCase)))
-                    .OrderByDescending(d => d.CreatedAt)
-                    .ToList();
-            }
+            return _repository.SearchByDiagnosis(diagnosisText);
         }
 
         /// <summary>
-        /// Searches documents by prescription
+        /// Searches documents by prescription/medication
         /// </summary>
         public IEnumerable<ClinicalDocument> SearchByMedication(string medicationName)
         {
             if (string.IsNullOrWhiteSpace(medicationName))
-                return Enumerable.Empty<ClinicalDocument>();
+                return [];
 
-            lock (_lock)
-            {
-                return _documentsById.Values
-                    .Where(doc => doc.GetPrescriptions()
-                        .Any(p => p.MedicationName.Contains(medicationName, StringComparison.OrdinalIgnoreCase)))
-                    .OrderByDescending(d => d.CreatedAt)
-                    .ToList();
-            }
+            return _repository.SearchByMedication(medicationName);
         }
 
         /// <summary>
@@ -234,17 +129,14 @@ namespace Core.CliniCore.Service
         /// </summary>
         public IEnumerable<ClinicalDocument> GetIncompleteDocuments(Guid? physicianId = null)
         {
-            lock (_lock)
+            var documents = _repository.GetIncomplete();
+
+            if (physicianId.HasValue)
             {
-                var query = _documentsById.Values.Where(d => !d.IsCompleted);
-
-                if (physicianId.HasValue)
-                {
-                    query = query.Where(d => d.PhysicianId == physicianId.Value);
-                }
-
-                return query.OrderBy(d => d.CreatedAt).ToList();
+                documents = documents.Where(d => d.PhysicianId == physicianId.Value);
             }
+
+            return documents.OrderBy(d => d.CreatedAt);
         }
 
         /// <summary>
@@ -252,16 +144,9 @@ namespace Core.CliniCore.Service
         /// </summary>
         public ClinicalDocument? GetMostRecentPatientDocument(Guid patientId)
         {
-            lock (_lock)
-            {
-                if (_documentsByPatient.TryGetValue(patientId, out var documents))
-                {
-                    return documents
-                        .OrderByDescending(d => d.CreatedAt)
-                        .FirstOrDefault();
-                }
-                return null;
-            }
+            return _repository.GetByPatient(patientId)
+                .OrderByDescending(d => d.CreatedAt)
+                .FirstOrDefault();
         }
 
         /// <summary>
@@ -269,10 +154,7 @@ namespace Core.CliniCore.Service
         /// </summary>
         public bool DocumentExists(Guid documentId)
         {
-            lock (_lock)
-            {
-                return _documentsById.ContainsKey(documentId);
-            }
+            return _repository.GetById(documentId) != null;
         }
 
         /// <summary>
@@ -280,34 +162,7 @@ namespace Core.CliniCore.Service
         /// </summary>
         public bool AppointmentHasDocument(Guid appointmentId)
         {
-            lock (_lock)
-            {
-                return _documentsByAppointment.ContainsKey(appointmentId);
-            }
-        }
-
-        /// <summary>
-        /// Gets statistics about the registry
-        /// </summary>
-        public ClinicalDocumentStatistics GetStatistics()
-        {
-            lock (_lock)
-            {
-                var allDocs = _documentsById.Values.ToList();
-
-                return new ClinicalDocumentStatistics
-                {
-                    TotalDocuments = allDocs.Count,
-                    CompletedDocuments = allDocs.Count(d => d.IsCompleted),
-                    IncompleteDocuments = allDocs.Count(d => !d.IsCompleted),
-                    UniquePatients = _documentsByPatient.Keys.Count,
-                    UniquePhysicians = _documentsByPhysician.Keys.Count,
-                    TotalDiagnoses = allDocs.Sum(d => d.GetDiagnoses().Count()),
-                    TotalPrescriptions = allDocs.Sum(d => d.GetPrescriptions().Count()),
-                    DocumentsToday = allDocs.Count(d => d.CreatedAt.Date == DateTime.Today),
-                    DocumentsThisWeek = allDocs.Count(d => d.CreatedAt >= DateTime.Today.AddDays(-7))
-                };
-            }
+            return _repository.GetByAppointment(appointmentId) != null;
         }
 
         /// <summary>
@@ -315,24 +170,87 @@ namespace Core.CliniCore.Service
         /// </summary>
         public IEnumerable<ClinicalDocument> GetAllDocuments()
         {
-            lock (_lock)
-            {
-                return _documentsById.Values.OrderByDescending(d => d.CreatedAt).ToList();
-            }
+            return _repository.GetAll().OrderByDescending(d => d.CreatedAt);
         }
 
         /// <summary>
-        /// Clears all documents (for testing purposes)
+        /// Updates a document in the repository
         /// </summary>
-        public void Clear()
+        public void UpdateDocument(ClinicalDocument document)
         {
-            lock (_lock)
+            ArgumentNullException.ThrowIfNull(document);
+
+            _repository.Update(document);
+        }
+
+        #region Entry-Level Operations
+
+        /// <summary>
+        /// Adds an observation entry to a document and persists it
+        /// </summary>
+        public void AddObservation(Guid documentId, ObservationEntry entry)
+        {
+            ArgumentNullException.ThrowIfNull(entry);
+            _repository.AddObservation(documentId, entry);
+        }
+
+        /// <summary>
+        /// Adds an assessment entry to a document and persists it
+        /// </summary>
+        public void AddAssessment(Guid documentId, AssessmentEntry entry)
+        {
+            ArgumentNullException.ThrowIfNull(entry);
+            _repository.AddAssessment(documentId, entry);
+        }
+
+        /// <summary>
+        /// Adds a diagnosis entry to a document and persists it
+        /// </summary>
+        public void AddDiagnosis(Guid documentId, DiagnosisEntry entry)
+        {
+            ArgumentNullException.ThrowIfNull(entry);
+            _repository.AddDiagnosis(documentId, entry);
+        }
+
+        /// <summary>
+        /// Adds a plan entry to a document and persists it
+        /// </summary>
+        public void AddPlan(Guid documentId, PlanEntry entry)
+        {
+            ArgumentNullException.ThrowIfNull(entry);
+            _repository.AddPlan(documentId, entry);
+        }
+
+        /// <summary>
+        /// Adds a prescription entry to a document and persists it
+        /// </summary>
+        public void AddPrescription(Guid documentId, PrescriptionEntry entry)
+        {
+            ArgumentNullException.ThrowIfNull(entry);
+            _repository.AddPrescription(documentId, entry);
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Gets statistics about clinical documents
+        /// </summary>
+        public ClinicalDocumentStatistics GetStatistics()
+        {
+            var allDocs = _repository.GetAll().ToList();
+
+            return new ClinicalDocumentStatistics
             {
-                _documentsById.Clear();
-                _documentsByPatient.Clear();
-                _documentsByPhysician.Clear();
-                _documentsByAppointment.Clear();
-            }
+                TotalDocuments = allDocs.Count,
+                CompletedDocuments = allDocs.Count(d => d.IsCompleted),
+                IncompleteDocuments = allDocs.Count(d => !d.IsCompleted),
+                UniquePatients = allDocs.Select(d => d.PatientId).Distinct().Count(),
+                UniquePhysicians = allDocs.Select(d => d.PhysicianId).Distinct().Count(),
+                TotalDiagnoses = allDocs.Sum(d => d.GetDiagnoses().Count()),
+                TotalPrescriptions = allDocs.Sum(d => d.GetPrescriptions().Count()),
+                DocumentsToday = allDocs.Count(d => d.CreatedAt.Date == DateTime.Today),
+                DocumentsThisWeek = allDocs.Count(d => d.CreatedAt >= DateTime.Today.AddDays(-7))
+            };
         }
     }
 

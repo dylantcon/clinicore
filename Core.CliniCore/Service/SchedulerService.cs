@@ -1,27 +1,27 @@
 ﻿using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Repositories;
 using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.BookingStrategies;
 using Core.CliniCore.Scheduling.Management;
 
-namespace Core.CliniCore.Services
+namespace Core.CliniCore.Service
 {
     /// <summary>
     /// High-level facade for managing scheduling operations across the system.
-    /// This service maintains physician schedules with conflict detection and resolution.
-    /// Note: Currently uses in-memory storage via PhysicianSchedule objects.
-    /// Future: Will integrate with IAppointmentRepository for database persistence.
+    /// This service provides conflict detection and resolution while delegating
+    /// persistence to IAppointmentRepository.
     /// </summary>
     public class SchedulerService
     {
-        private readonly Dictionary<Guid, PhysicianSchedule> _physicianSchedules;
+        private readonly IAppointmentRepository _repository;
         private readonly List<UnavailableTimeInterval> _facilityUnavailableBlocks;
         private readonly ScheduleConflictDetector _conflictResolver;
         private readonly IBookingStrategy _defaultBookingStrategy;
         private readonly object _lock = new object();
 
-        public SchedulerService()
+        public SchedulerService(IAppointmentRepository repository)
         {
-            _physicianSchedules = new Dictionary<Guid, PhysicianSchedule>();
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _facilityUnavailableBlocks = new List<UnavailableTimeInterval>();
             _conflictResolver = new ScheduleConflictDetector();
             _defaultBookingStrategy = new FirstAvailableBookingStrategy();
@@ -59,17 +59,24 @@ namespace Core.CliniCore.Services
         }
 
         /// <summary>
-        /// Gets or creates a physician's schedule
+        /// Builds a physician's schedule from repository data.
+        /// The schedule is built fresh each time to reflect current database state.
         /// </summary>
         public PhysicianSchedule GetPhysicianSchedule(Guid physicianId)
         {
             lock (_lock)
             {
-                if (!_physicianSchedules.ContainsKey(physicianId))
+                var schedule = new PhysicianSchedule(physicianId);
+
+                // Load appointments from repository
+                var appointments = _repository.GetByPhysician(physicianId);
+                foreach (var appointment in appointments)
                 {
-                    _physicianSchedules[physicianId] = new PhysicianSchedule(physicianId);
+                    // Use internal method to add without conflict check (data is already persisted)
+                    schedule.LoadAppointment(appointment);
                 }
-                return _physicianSchedules[physicianId];
+
+                return schedule;
             }
         }
 
@@ -107,25 +114,27 @@ namespace Core.CliniCore.Services
                     };
                 }
 
-                // No conflicts, add the appointment
-                if (physicianSchedule.TryAddAppointment(appointment))
-                {
-                    return new ScheduleResult
-                    {
-                        Success = true,
-                        AppointmentId = appointment.Id,
-                        Message = "Appointment scheduled successfully."
-                    };
-                }
-                else
+                // Check for room conflicts (if room is assigned)
+                var roomConflict = CheckRoomConflict(appointment, excludeAppointmentId: null);
+                if (roomConflict != null)
                 {
                     return new ScheduleResult
                     {
                         Success = false,
                         AppointmentId = appointment.Id,
-                        Message = "Failed to add appointment to schedule."
+                        Message = roomConflict
                     };
                 }
+
+                // No conflicts, persist the appointment
+                _repository.Add(appointment);
+
+                return new ScheduleResult
+                {
+                    Success = true,
+                    AppointmentId = appointment.Id,
+                    Message = "Appointment scheduled successfully."
+                };
             }
         }
 
@@ -136,12 +145,12 @@ namespace Core.CliniCore.Services
         {
             lock (_lock)
             {
-                var schedule = GetPhysicianSchedule(physicianId);
-                var appointment = schedule.Appointments.FirstOrDefault(a => a.Id == appointmentId);
+                var appointment = _repository.GetById(appointmentId);
 
-                if (appointment != null)
+                if (appointment != null && appointment.PhysicianId == physicianId)
                 {
                     appointment.Cancel(reason);
+                    _repository.Update(appointment);
                     return true;
                 }
 
@@ -156,25 +165,51 @@ namespace Core.CliniCore.Services
         {
             lock (_lock)
             {
-                var schedule = GetPhysicianSchedule(physicianId);
-                return schedule.RemoveAppointment(appointmentId);
+                var appointment = _repository.GetById(appointmentId);
+                if (appointment != null && appointment.PhysicianId == physicianId)
+                {
+                    _repository.Delete(appointmentId);
+                    return true;
+                }
+                return false;
             }
         }
 
         /// <summary>
-        /// Updates an appointment's details (start time, duration, reason, notes)
-        /// Validates that time/duration changes don't create conflicts using whitelist pattern
+        /// Updates an appointment's status and persists the change
+        /// </summary>
+        public bool UpdateAppointmentStatus(Guid appointmentId, AppointmentStatus newStatus)
+        {
+            lock (_lock)
+            {
+                var appointment = _repository.GetById(appointmentId);
+                if (appointment == null)
+                {
+                    return false;
+                }
+
+                appointment.Status = newStatus;
+                appointment.ModifiedAt = DateTime.Now;
+                _repository.Update(appointment);
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Updates an appointment's details (start time, duration, reason, notes, room)
+        /// Validates that time/duration/room changes don't create conflicts using whitelist pattern
         /// </summary>
         public ScheduleResult UpdateAppointment(
             Guid appointmentId,
             string? reason = null,
             string? notes = null,
             int? durationMinutes = null,
-            DateTime? newStartTime = null)
+            DateTime? newStartTime = null,
+            int? roomNumber = null)
         {
             lock (_lock)
             {
-                var appointment = FindAppointmentById(appointmentId);
+                var appointment = _repository.GetById(appointmentId);
                 if (appointment == null)
                 {
                     return new ScheduleResult
@@ -261,7 +296,38 @@ namespace Core.CliniCore.Services
                     appointment.Notes = notes;
                 }
 
+                // Handle room number change
+                if (roomNumber.HasValue)
+                {
+                    if (roomNumber.Value < 1 || roomNumber.Value > 999)
+                    {
+                        return new ScheduleResult
+                        {
+                            Success = false,
+                            AppointmentId = appointmentId,
+                            Message = "Room number must be between 1 and 999."
+                        };
+                    }
+
+                    appointment.RoomNumber = roomNumber.Value;
+
+                    // Check for room conflicts (appointment times may have changed above)
+                    var roomConflict = CheckRoomConflict(appointment, excludeAppointmentId: appointmentId);
+                    if (roomConflict != null)
+                    {
+                        return new ScheduleResult
+                        {
+                            Success = false,
+                            AppointmentId = appointmentId,
+                            Message = roomConflict
+                        };
+                    }
+                }
+
                 appointment.ModifiedAt = DateTime.Now;
+
+                // Persist the updated appointment
+                _repository.Update(appointment);
 
                 return new ScheduleResult
                 {
@@ -328,15 +394,7 @@ namespace Core.CliniCore.Services
         {
             lock (_lock)
             {
-                var appointments = new List<AppointmentTimeInterval>();
-
-                foreach (var schedule in _physicianSchedules.Values)
-                {
-                    appointments.AddRange(
-                        schedule.Appointments.Where(a => a.PatientId == patientId));
-                }
-
-                return appointments.OrderBy(a => a.Start);
+                return _repository.GetByPatient(patientId).OrderBy(a => a.Start).ToList();
             }
         }
 
@@ -347,31 +405,42 @@ namespace Core.CliniCore.Services
         {
             lock (_lock)
             {
-                var appointments = new List<AppointmentTimeInterval>();
-
-                foreach (var schedule in _physicianSchedules.Values)
-                {
-                    appointments.AddRange(schedule.Appointments);
-                }
-
-                return appointments.OrderBy(a => a.Start);
+                return _repository.GetAll().OrderBy(a => a.Start).ToList();
             }
         }
 
         /// <summary>
-        /// Finds a specific appointment by ID across all physician schedules
+        /// Finds a specific appointment by ID
         /// </summary>
         public AppointmentTimeInterval? FindAppointmentById(Guid appointmentId)
         {
             lock (_lock)
             {
-                foreach (var schedule in _physicianSchedules.Values)
+                return _repository.GetById(appointmentId);
+            }
+        }
+
+        /// <summary>
+        /// Links or unlinks a clinical document to/from an appointment.
+        /// This persists the change to the database.
+        /// </summary>
+        /// <param name="appointmentId">The appointment to update</param>
+        /// <param name="clinicalDocumentId">The document ID to link, or null to unlink</param>
+        /// <returns>True if successful, false if appointment not found</returns>
+        public bool LinkClinicalDocument(Guid appointmentId, Guid? clinicalDocumentId)
+        {
+            lock (_lock)
+            {
+                var appointment = _repository.GetById(appointmentId);
+                if (appointment == null)
                 {
-                    var appointment = schedule.Appointments.FirstOrDefault(a => a.Id == appointmentId);
-                    if (appointment != null)
-                        return appointment;
+                    return false;
                 }
-                return null;
+
+                appointment.ClinicalDocumentId = clinicalDocumentId;
+                appointment.ModifiedAt = DateTime.Now;
+                _repository.Update(appointment);
+                return true;
             }
         }
 
@@ -481,23 +550,69 @@ namespace Core.CliniCore.Services
         }
 
         /// <summary>
+        /// Checks if a room is already booked during the appointment's time slot.
+        /// Returns an error message if there's a conflict, null otherwise.
+        /// </summary>
+        /// <param name="appointment">The appointment to check</param>
+        /// <param name="excludeAppointmentId">Optional appointment ID to exclude (for updates)</param>
+        private string? CheckRoomConflict(AppointmentTimeInterval appointment, Guid? excludeAppointmentId)
+        {
+            // Skip check if no room is assigned
+            if (!appointment.RoomNumber.HasValue)
+                return null;
+
+            var roomNumber = appointment.RoomNumber.Value;
+
+            // Validate room number range
+            if (roomNumber < 1 || roomNumber > 999)
+            {
+                return "Room number must be between 1 and 999.";
+            }
+
+            // Find any other scheduled appointments in the same room that overlap in time
+            var conflictingAppointment = _repository.GetAll()
+                .Where(a => a.RoomNumber == roomNumber &&
+                           a.Status == AppointmentStatus.Scheduled &&
+                           a.Id != appointment.Id &&
+                           (excludeAppointmentId == null || a.Id != excludeAppointmentId.Value))
+                .FirstOrDefault(a => TimesOverlap(a.Start, a.End, appointment.Start, appointment.End));
+
+            if (conflictingAppointment != null)
+            {
+                return $"Room {roomNumber} is already booked from {conflictingAppointment.Start:HH:mm} to {conflictingAppointment.End:HH:mm} on {conflictingAppointment.Start:yyyy-MM-dd}.";
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Checks if two time ranges overlap.
+        /// </summary>
+        private static bool TimesOverlap(DateTime start1, DateTime end1, DateTime start2, DateTime end2)
+        {
+            return start1 < end2 && start2 < end1;
+        }
+
+        /// <summary>
         /// Performs cleanup of old appointments
         /// </summary>
         public int CleanupOldAppointments(DateTime beforeDate)
         {
             lock (_lock)
             {
-                int totalCleaned = 0;
+                var oldAppointments = _repository.GetAll()
+                    .Where(a => a.End < beforeDate)
+                    .ToList();
 
-                foreach (var schedule in _physicianSchedules.Values)
+                foreach (var appointment in oldAppointments)
                 {
-                    totalCleaned += schedule.ClearOldAppointments(beforeDate);
+                    _repository.Delete(appointment.Id);
                 }
 
                 // Also clean up old facility blocks
                 _facilityUnavailableBlocks.RemoveAll(b => b.End < beforeDate);
 
-                return totalCleaned;
+                return oldAppointments.Count;
             }
         }
     }

@@ -1,8 +1,9 @@
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Users;
+using Core.CliniCore.Domain.Users.Concrete;
 using Core.CliniCore.Repositories;
 
-namespace Core.CliniCore.Services
+namespace Core.CliniCore.Service
 {
     /// <summary>
     /// Service for managing user profiles across all profile types.
@@ -13,21 +14,20 @@ namespace Core.CliniCore.Services
     /// - Use specific repositories (IPatientRepository, etc.) for type-specific operations
     /// - Use ProfileService for operations that need to work across profile types
     /// </summary>
-    public class ProfileService
+    public class ProfileService(
+        IPatientRepository patientRepo,
+        IPhysicianRepository physicianRepo,
+        IAdministratorRepository adminRepo,
+        ICredentialRepository? credentialRepo = null,
+        IAppointmentRepository? appointmentRepo = null,
+        IClinicalDocumentRepository? clinicalDocRepo = null)
     {
-        private readonly IPatientRepository _patientRepo;
-        private readonly IPhysicianRepository _physicianRepo;
-        private readonly IAdministratorRepository _adminRepo;
-
-        public ProfileService(
-            IPatientRepository patientRepo,
-            IPhysicianRepository physicianRepo,
-            IAdministratorRepository adminRepo)
-        {
-            _patientRepo = patientRepo ?? throw new ArgumentNullException(nameof(patientRepo));
-            _physicianRepo = physicianRepo ?? throw new ArgumentNullException(nameof(physicianRepo));
-            _adminRepo = adminRepo ?? throw new ArgumentNullException(nameof(adminRepo));
-        }
+        private readonly IPatientRepository _patientRepo = patientRepo ?? throw new ArgumentNullException(nameof(patientRepo));
+        private readonly IPhysicianRepository _physicianRepo = physicianRepo ?? throw new ArgumentNullException(nameof(physicianRepo));
+        private readonly IAdministratorRepository _adminRepo = adminRepo ?? throw new ArgumentNullException(nameof(adminRepo));
+        private readonly ICredentialRepository? _credentialRepo = credentialRepo;
+        private readonly IAppointmentRepository? _appointmentRepo = appointmentRepo;
+        private readonly IClinicalDocumentRepository? _clinicalDocRepo = clinicalDocRepo;
 
         #region Cross-Profile Lookups
 
@@ -50,7 +50,7 @@ namespace Core.CliniCore.Services
 
             return (IUserProfile?)_patientRepo.GetByUsername(username)
                 ?? (IUserProfile?)_physicianRepo.GetByUsername(username)
-                ?? (IUserProfile?)_adminRepo.GetByUsername(username);
+                ?? _adminRepo.GetByUsername(username);
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace Core.CliniCore.Services
         /// </summary>
         public bool AddProfile(IUserProfile profile)
         {
-            if (profile == null) throw new ArgumentNullException(nameof(profile));
+            ArgumentNullException.ThrowIfNull(profile);
 
             // Check username uniqueness across all profile types
             if (UsernameExists(profile.Username))
@@ -93,26 +93,120 @@ namespace Core.CliniCore.Services
         }
 
         /// <summary>
-        /// Removes a profile from the appropriate repository
+        /// Removes a profile from the appropriate repository.
+        /// Returns null on success, or an error message explaining why deletion failed.
+        /// Also removes associated credentials when successful.
         /// </summary>
-        public bool RemoveProfile(Guid profileId)
+        public string? RemoveProfile(Guid profileId)
         {
             var profile = GetProfileById(profileId);
-            if (profile == null) return false;
+            if (profile == null)
+                return "Profile not found";
 
+            // Check for related data that would be orphaned
+            var blockReason = GetDeletionBlockers(profileId, profile);
+            if (blockReason != null)
+                return blockReason;
+
+            // Delete the profile from appropriate repository
             switch (profile)
             {
                 case PatientProfile:
                     _patientRepo.Delete(profileId);
-                    return true;
+                    break;
                 case PhysicianProfile:
                     _physicianRepo.Delete(profileId);
-                    return true;
+                    break;
                 case AdministratorProfile:
                     _adminRepo.Delete(profileId);
+                    break;
+                default:
+                    return "Unknown profile type";
+            }
+
+            // Delete associated credentials
+            _credentialRepo?.Delete(profileId);
+
+            return null; // Success
+        }
+
+        /// <summary>
+        /// Checks if a profile can be safely deleted. Returns error message or null if deletable.
+        /// Only blocks on scheduled/active appointments (cancelled/completed are historical).
+        /// </summary>
+        private string? GetDeletionBlockers(Guid profileId, IUserProfile profile)
+        {
+            var blockers = new List<string>();
+
+            switch (profile)
+            {
+                case PatientProfile:
+                    if (_appointmentRepo != null)
+                    {
+                        // Only block on scheduled appointments (not cancelled/completed)
+                        var activeAppointments = _appointmentRepo.GetByPatient(profileId)
+                            .Count(a => a.Status == Domain.Enumerations.AppointmentStatus.Scheduled);
+                        if (activeAppointments > 0)
+                            blockers.Add($"{activeAppointments} scheduled appointment(s)");
+                    }
+                    if (_clinicalDocRepo != null)
+                    {
+                        var docCount = _clinicalDocRepo.GetByPatient(profileId).Count();
+                        if (docCount > 0)
+                            blockers.Add($"{docCount} clinical document(s)");
+                    }
+                    break;
+
+                case PhysicianProfile physician:
+                    if (_appointmentRepo != null)
+                    {
+                        var activeAppointments = _appointmentRepo.GetByPhysician(profileId)
+                            .Count(a => a.Status == Domain.Enumerations.AppointmentStatus.Scheduled);
+                        if (activeAppointments > 0)
+                            blockers.Add($"{activeAppointments} scheduled appointment(s)");
+                    }
+                    if (_clinicalDocRepo != null)
+                    {
+                        var docCount = _clinicalDocRepo.GetByPhysician(profileId).Count();
+                        if (docCount > 0)
+                            blockers.Add($"{docCount} clinical document(s)");
+                    }
+                    if (physician.PatientIds.Count > 0)
+                        blockers.Add($"{physician.PatientIds.Count} assigned patient(s)");
+                    break;
+
+                case AdministratorProfile:
+                    var adminCount = _adminRepo.GetAll().Count();
+                    if (adminCount <= 1)
+                        return "Cannot delete the last administrator";
+                    break;
+            }
+
+            return blockers.Count > 0
+                ? $"Has {string.Join(", ", blockers)}"
+                : null;
+        }
+
+        /// <summary>
+        /// Updates a profile in the appropriate repository based on its type
+        /// </summary>
+        public bool UpdateProfile(IUserProfile profile)
+        {
+            ArgumentNullException.ThrowIfNull(profile);
+
+            switch (profile)
+            {
+                case PatientProfile patient:
+                    _patientRepo.Update(patient);
+                    return true;
+                case PhysicianProfile physician:
+                    _physicianRepo.Update(physician);
+                    return true;
+                case AdministratorProfile admin:
+                    _adminRepo.Update(admin);
                     return true;
                 default:
-                    return false;
+                    throw new ArgumentException($"Unknown profile type: {profile.GetType().Name}");
             }
         }
 
@@ -132,7 +226,7 @@ namespace Core.CliniCore.Services
             if (typeof(T) == typeof(AdministratorProfile))
                 return _adminRepo.GetAll().Cast<T>();
 
-            return Enumerable.Empty<T>();
+            return [];
         }
 
         /// <summary>
@@ -145,7 +239,7 @@ namespace Core.CliniCore.Services
                 UserRole.Patient => _patientRepo.GetAll().Cast<IUserProfile>(),
                 UserRole.Physician => _physicianRepo.GetAll().Cast<IUserProfile>(),
                 UserRole.Administrator => _adminRepo.GetAll().Cast<IUserProfile>(),
-                _ => Enumerable.Empty<IUserProfile>()
+                _ => []
             };
         }
 
@@ -184,7 +278,7 @@ namespace Core.CliniCore.Services
         public IEnumerable<IUserProfile> SearchByName(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
-                return Enumerable.Empty<IUserProfile>();
+                return [];
 
             // Use the Search method on each repository
             return _patientRepo.Search(searchTerm).Cast<IUserProfile>()
