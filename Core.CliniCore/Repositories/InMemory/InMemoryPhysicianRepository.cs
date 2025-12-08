@@ -1,5 +1,7 @@
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Repositories.InMemory
 {
@@ -17,7 +19,11 @@ namespace Core.CliniCore.Repositories.InMemory
             lock (_lock)
             {
                 return _entities.Values
-                    .Where(p => p.Specializations != null && p.Specializations.Contains(spec))
+                    .Where(p =>
+                    {
+                        var specializations = p.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey());
+                        return specializations != null && specializations.Contains(spec);
+                    })
                     .ToList();
             }
         }
@@ -55,11 +61,17 @@ namespace Core.CliniCore.Repositories.InMemory
             {
                 return _entities.Values
                     .Where(p =>
-                        p.Name.ToLowerInvariant().Contains(lowerQuery) ||
-                        p.Username.ToLowerInvariant().Contains(lowerQuery) ||
-                        p.LicenseNumber.ToLowerInvariant().Contains(lowerQuery) ||
-                        (p.Specializations != null && p.Specializations.Any(s =>
-                            s.ToString().ToLowerInvariant().Contains(lowerQuery))))
+                    {
+                        var name = p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty;
+                        var licenseNumber = p.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty;
+                        var specializations = p.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey());
+
+                        return name.ToLowerInvariant().Contains(lowerQuery) ||
+                               p.Username.ToLowerInvariant().Contains(lowerQuery) ||
+                               licenseNumber.ToLowerInvariant().Contains(lowerQuery) ||
+                               (specializations != null && specializations.Any(s =>
+                                   s.ToString().ToLowerInvariant().Contains(lowerQuery)));
+                    })
                     .ToList();
             }
         }

@@ -1,5 +1,5 @@
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Repositories
 {

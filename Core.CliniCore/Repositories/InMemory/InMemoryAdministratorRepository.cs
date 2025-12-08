@@ -1,5 +1,7 @@
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Repositories.InMemory
 {
@@ -52,9 +54,12 @@ namespace Core.CliniCore.Repositories.InMemory
             {
                 return _entities.Values
                     .Where(a =>
-                        a.Name.ToLowerInvariant().Contains(lowerQuery) ||
-                        a.Username.ToLowerInvariant().Contains(lowerQuery) ||
-                        a.Department.ToLowerInvariant().Contains(lowerQuery))
+                    {
+                        var name = a.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty;
+                        return name.ToLowerInvariant().Contains(lowerQuery) ||
+                               a.Username.ToLowerInvariant().Contains(lowerQuery) ||
+                               a.Department.ToLowerInvariant().Contains(lowerQuery);
+                    })
                     .ToList();
             }
         }
