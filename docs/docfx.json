@@ -4,7 +4,11 @@
     {
       "src": [
         {
-          "files": ["**/*.csproj"],
+          "files": [
+            "Core.CliniCore/*.csproj",
+            "API.CliniCore/*.csproj",
+            "CLI.CliniCore/*.csproj"
+          ],
           "src": ".."
         }
       ],

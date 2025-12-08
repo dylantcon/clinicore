@@ -30,9 +30,6 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Install MAUI Workloads
-        run: dotnet workload install maui
-
       - name: Install DocFX
         run: dotnet tool install -g docfx
 
