@@ -1,4 +1,4 @@
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 
 namespace GUI.CliniCore.Services
 {

@@ -1,4 +1,4 @@
-using GUI.CliniCore.ViewModels;
+using GUI.CliniCore.ViewModels.Base;
 
 namespace GUI.CliniCore.Services
 {

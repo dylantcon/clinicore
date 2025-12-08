@@ -181,7 +181,7 @@
     </Style>
 
     <Style TargetType="Span">
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Black}, Dark={StaticResource White}}" />
+        <!-- TextColor intentionally omitted - Spans inherit from parent Label -->
     </Style>
 
     <Style TargetType="Label" x:Key="Headline">

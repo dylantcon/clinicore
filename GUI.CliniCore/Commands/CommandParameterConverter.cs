@@ -82,13 +82,12 @@ namespace GUI.CliniCore.Commands
 
         private static bool ShouldSkipProperty(string propertyName)
         {
-            // Skip MVVM infrastructure properties
-            return propertyName == nameof(GUI.CliniCore.ViewModels.BaseViewModel.ValidationErrors) ||
-                   propertyName == nameof(GUI.CliniCore.ViewModels.BaseViewModel.ValidationWarnings) ||
-                   propertyName == nameof(GUI.CliniCore.ViewModels.BaseViewModel.HasValidationErrors) ||
-                   propertyName == nameof(GUI.CliniCore.ViewModels.BaseViewModel.HasValidationWarnings) ||
-                   propertyName == nameof(GUI.CliniCore.ViewModels.BaseViewModel.IsBusy) ||
-                   propertyName == nameof(GUI.CliniCore.ViewModels.BaseViewModel.Title) ||
+            return propertyName == nameof(ViewModels.Base.BaseViewModel.ValidationErrors) ||
+                   propertyName == nameof(ViewModels.Base.BaseViewModel.ValidationWarnings) ||
+                   propertyName == nameof(ViewModels.Base.BaseViewModel.HasValidationErrors) ||
+                   propertyName == nameof(ViewModels.Base.BaseViewModel.HasValidationWarnings) ||
+                   propertyName == nameof(ViewModels.Base.BaseViewModel.IsBusy) ||
+                   propertyName == nameof(ViewModels.Base.BaseViewModel.Title) ||
                    propertyName.EndsWith("Command"); // Skip command properties
         }
     }

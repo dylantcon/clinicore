@@ -1,4 +1,5 @@
-using GUI.CliniCore.Views;
+using GUI.CliniCore.Views.Authentication;
+using GUI.CliniCore.Views.Home;
 
 namespace GUI.CliniCore.Services
 {
@@ -53,8 +54,8 @@ namespace GUI.CliniCore.Services
 
         public Task NavigateToHomeAsync()
         {
-            // Use absolute navigation with single slash for registered route
-            return NavigateToAsync($"/{nameof(HomePage)}");
+            _navigationHistory.Clear();
+            return Shell.Current.GoToAsync(nameof(HomePage));
         }
     }
 }

@@ -1,5 +1,6 @@
 using Core.CliniCore.Domain.Enumerations;
-using GUI.CliniCore.ViewModels;
+using GUI.CliniCore.ViewModels.Base;
+using GUI.CliniCore.ViewModels.Home;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GUI.CliniCore.Services

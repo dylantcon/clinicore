@@ -2,6 +2,7 @@
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:GUI.CliniCore"
+             xmlns:converters="clr-namespace:GUI.CliniCore.Converters"
              x:Class="GUI.CliniCore.App">
     <Application.Resources>
         <ResourceDictionary>
@@ -9,6 +10,12 @@
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Global converters -->
+            <converters:ContrastTextColorConverter x:Key="ContrastTextConverter"/>
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
+            <converters:IsNotNullConverter x:Key="IsNotNullConverter"/>
+            <converters:IsStringNotNullOrEmptyConverter x:Key="IsStringNotNullOrEmptyConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,4 +1,4 @@
-﻿using GUI.CliniCore.Views;
+﻿using GUI.CliniCore.Views.Authentication;
 
 namespace GUI.CliniCore
 {

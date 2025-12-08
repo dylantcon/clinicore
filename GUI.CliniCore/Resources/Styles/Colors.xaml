@@ -42,4 +42,13 @@
     <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+
+    <!-- Semantic text colors for colored backgrounds -->
+    <Color x:Key="TextOnLight">#212121</Color>
+    <Color x:Key="TextOnDark">#FFFFFF</Color>
+    <Color x:Key="TextOnPrimary">#FFFFFF</Color>
+    <Color x:Key="TextOnSuccess">#FFFFFF</Color>
+    <Color x:Key="TextOnWarning">#212121</Color>
+    <Color x:Key="TextOnDanger">#FFFFFF</Color>
+    <Color x:Key="TextOnInfo">#FFFFFF</Color>
 </ResourceDictionary>

@@ -44,8 +44,19 @@ namespace GUI.CliniCore.Resources.Fonts
         public const string Cancel = "\ue5c9";
         public const string Search = "\ue8b6";
         public const string Refresh = "\ue5d5";
+        public const string Sort = "\ue164";
+
+        // Arrows & Direction
         public const string ArrowBack = "\ue5c4";
         public const string ArrowForward = "\ue5c8";
+        public const string ArrowUpward = "\ue5d8";
+        public const string ArrowDownward = "\ue5db";
+        public const string ExpandMore = "\ue5cf";      // Chevron down (dropdown indicator)
+        public const string ExpandLess = "\ue5ce";      // Chevron up
+        public const string KeyboardArrowUp = "\ue316";
+        public const string KeyboardArrowDown = "\ue313";
+        public const string SwapVert = "\ue8d5";        // Swap vertical (sort toggle)
+        public const string UnfoldMore = "\ue5d7";      // Expand both directions
 
         // Navigation
         public const string Home = "\ue88a";

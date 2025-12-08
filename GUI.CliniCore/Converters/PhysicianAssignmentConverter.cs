@@ -1,5 +1,7 @@
-using Core.CliniCore.Domain;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 using System.Globalization;
 
 namespace GUI.CliniCore.Converters
@@ -28,8 +30,9 @@ namespace GUI.CliniCore.Converters
 
             try
             {
-                var physician = ProfileRegistry.GetProfileById(physicianId) as PhysicianProfile;
-                return physician != null ? $"Dr. {physician.Name}" : "Assigned";
+                return ProfileRegistry.GetProfileById(physicianId) is PhysicianProfile physician 
+                    ? $"Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}" 
+                    : "Assigned";
             }
             catch
             {

@@ -1,4 +1,11 @@
-﻿using GUI.CliniCore.Views;
+﻿using GUI.CliniCore.Views.Authentication;
+using GUI.CliniCore.Views.Home;
+using GUI.CliniCore.Views.Patients;
+using GUI.CliniCore.Views.Physicians;
+using GUI.CliniCore.Views.Users;
+using GUI.CliniCore.Views.ClinicalDocuments;
+using GUI.CliniCore.Views.Appointments;
+using GUI.CliniCore.Views.Stub;
 
 namespace GUI.CliniCore
 {
@@ -15,11 +22,13 @@ namespace GUI.CliniCore
             // Patient Management routes
             Routing.RegisterRoute("PatientListPage", typeof(PatientListPage));
             Routing.RegisterRoute("PatientDetailPage", typeof(PatientDetailPage));
+            Routing.RegisterRoute(nameof(CreatePatientPage), typeof(CreatePatientPage));
             Routing.RegisterRoute("PatientEditPage", typeof(PatientEditPage));
 
             // Physician Management routes
             Routing.RegisterRoute("PhysicianListPage", typeof(PhysicianListPage));
             Routing.RegisterRoute("PhysicianDetailPage", typeof(PhysicianDetailPage));
+            Routing.RegisterRoute("CreatePhysicianPage", typeof(CreatePhysicianPage));
             Routing.RegisterRoute("PhysicianEditPage", typeof(PhysicianEditPage));
 
             // User Management routes
@@ -30,6 +39,7 @@ namespace GUI.CliniCore
             Routing.RegisterRoute("ClinicalDocumentListPage", typeof(ClinicalDocumentListPage));
             Routing.RegisterRoute("ClinicalDocumentDetailPage", typeof(ClinicalDocumentDetailPage));
             Routing.RegisterRoute("ClinicalDocumentEditPage", typeof(ClinicalDocumentEditPage));
+            Routing.RegisterRoute("CreateClinicalDocumentPage", typeof(CreateClinicalDocumentPage));
 
             // Appointment routes
             Routing.RegisterRoute("AppointmentListPage", typeof(AppointmentListPage));
