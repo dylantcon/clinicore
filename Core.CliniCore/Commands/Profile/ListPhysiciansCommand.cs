@@ -2,11 +2,12 @@
 using System;
 using System.Text;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -53,18 +54,25 @@ namespace Core.CliniCore.Commands.Profile
                 if (specialization.HasValue)
                 {
                     physicians = physicians.Where(p =>
-                        p.Specializations.Contains(specialization.Value));
+                    {
+                        var specializations = p.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>();
+                        return specializations.Contains(specialization.Value);
+                    });
                 }
 
                 // Apply search filter if provided
                 if (!string.IsNullOrWhiteSpace(searchTerm))
                 {
                     physicians = physicians.Where(p =>
-                        p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                        p.LicenseNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                    {
+                        var name = p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty;
+                        var licenseNumber = p.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty;
+                        return name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                               licenseNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
+                    });
                 }
 
-                var physicianList = physicians.OrderBy(p => p.Name).ToList();
+                var physicianList = physicians.OrderBy(p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty).ToList();
 
                 if (!physicianList.Any())
                 {
@@ -93,10 +101,11 @@ namespace Core.CliniCore.Commands.Profile
         {
             // Get the base physician info from ToString and add years of experience
             var physicianInfo = physician.ToString();
-            var yearsExperience = DateTime.Now.Year - physician.GraduationDate.Year;
+            var graduationDate = physician.GetValue<DateTime>(PhysicianEntryType.GraduationDate.GetKey());
+            var yearsExperience = DateTime.Now.Year - graduationDate.Year;
 
             // Insert years of experience after graduation date
-            var graduationLine = $"  Graduation Date: {physician.GraduationDate:yyyy-MM-dd}";
+            var graduationLine = $"  Graduation Date: {graduationDate:yyyy-MM-dd}";
             var graduationWithExperience = $"{graduationLine}\n  Years Experience: {yearsExperience}";
 
             physicianInfo = physicianInfo.Replace(graduationLine, graduationWithExperience);

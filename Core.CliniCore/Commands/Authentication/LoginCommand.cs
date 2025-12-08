@@ -1,7 +1,8 @@
-﻿// Core.CliniCore/Commands/Authentication/LoginCommand.cs
 using System;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Byproducts;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
 
 namespace Core.CliniCore.Commands.Authentication
@@ -81,18 +82,17 @@ namespace Core.CliniCore.Commands.Authentication
                 var password = parameters.GetRequiredParameter<string>(Parameters.Password);
 
                 // Attempt authentication
-                var userProfile = _authService.Authenticate(username, password);
+                var authResult = _authService.Authenticate(username, password);
 
-                if (userProfile == null)
+                if (!authResult.Success)
                 {
-                    // Log failed attempt (in production, track for security)
                     LogFailedAttempt(username);
-
                     return CommandResult.Fail("Invalid username or password");
                 }
 
-                // Check if account is locked (would be in production system)
-                // For now, we'll just check if the profile is valid
+                var userProfile = authResult.Profile!;
+
+                // Check if the profile is valid
                 if (!userProfile.IsValid)
                 {
                     var errors = userProfile.GetValidationErrors();

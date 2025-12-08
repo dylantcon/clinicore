@@ -1,12 +1,13 @@
-﻿// Core.CliniCore/Commands/Clinical/CreateClinicalDocumentCommand.cs - Complete updated version
-using System;
+﻿using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Domain.ClinicalDocumentation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -18,6 +19,7 @@ namespace Core.CliniCore.Commands.Clinical
         public static class Parameters
         {
             public const string PatientId = "patient_id";
+            public const string PhysicianId = "physician_id";
             public const string AppointmentId = "appointment_id";
             public const string ChiefComplaint = "chief_complaint";
             public const string InitialObservation = "initial_observation";
@@ -47,7 +49,7 @@ namespace Core.CliniCore.Commands.Clinical
 
             // Check required parameters
             var missingParams = parameters.GetMissingRequired(
-                Parameters.PatientId, Parameters.AppointmentId, Parameters.ChiefComplaint);
+                Parameters.PatientId, Parameters.PhysicianId, Parameters.AppointmentId, Parameters.ChiefComplaint);
 
             if (missingParams.Any())
             {
@@ -68,6 +70,21 @@ namespace Core.CliniCore.Commands.Clinical
                 if (patient == null || patient.Role != UserRole.Patient)
                 {
                     result.AddError($"Patient with ID {patientId.Value} not found");
+                }
+            }
+
+            // Validate physician exists
+            var physicianId = parameters.GetParameter<Guid?>(Parameters.PhysicianId);
+            if (!physicianId.HasValue || physicianId.Value == Guid.Empty)
+            {
+                result.AddError("Invalid physician ID");
+            }
+            else
+            {
+                var physician = _profileRegistry.GetProfileById(physicianId.Value);
+                if (physician == null || physician.Role != UserRole.Physician)
+                {
+                    result.AddError($"Physician with ID {physicianId.Value} not found");
                 }
             }
 
@@ -116,11 +133,9 @@ namespace Core.CliniCore.Commands.Clinical
             try
             {
                 var patientId = parameters.GetRequiredParameter<Guid>(Parameters.PatientId);
+                var physicianId = parameters.GetRequiredParameter<Guid>(Parameters.PhysicianId);
                 var appointmentId = parameters.GetRequiredParameter<Guid>(Parameters.AppointmentId);
                 var chiefComplaint = parameters.GetRequiredParameter<string>(Parameters.ChiefComplaint);
-
-                // Get physician ID from session
-                var physicianId = session?.UserId ?? Guid.Empty;
 
                 // Create the document
                 _createdDocument = new ClinicalDocument(patientId, physicianId, appointmentId)
@@ -149,11 +164,12 @@ namespace Core.CliniCore.Commands.Clinical
 
                 // Get patient name for confirmation
                 var patient = _profileRegistry.GetProfileById(patientId) as PatientProfile;
+                var patientName = patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown";
 
                 return CommandResult.Ok(
                     $"Clinical document created successfully:\n" +
                     $"  Document ID: {_createdDocument.Id}\n" +
-                    $"  Patient: {patient?.Name ?? "Unknown"}\n" +
+                    $"  Patient: {patientName}\n" +
                     $"  Chief Complaint: {chiefComplaint}\n" +
                     $"  Created: {_createdDocument.CreatedAt:yyyy-MM-dd HH:mm}",
                     _createdDocument);

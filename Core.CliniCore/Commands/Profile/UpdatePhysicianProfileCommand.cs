@@ -1,8 +1,8 @@
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.ProfileTemplates;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -204,6 +204,9 @@ namespace Core.CliniCore.Commands.Profile
 
                 if (fieldsUpdated.Any())
                 {
+                    // Persist the changes to the repository
+                    _registry.UpdateProfile(profile);
+
                     return CommandResult.Ok(
                         $"Physician profile updated successfully. Fields changed: {string.Join(", ", fieldsUpdated)}",
                         profile);

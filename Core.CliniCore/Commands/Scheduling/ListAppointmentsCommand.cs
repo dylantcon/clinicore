@@ -2,11 +2,13 @@
 using System;
 using System.Text;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
 using Core.CliniCore.Scheduling;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -46,7 +48,7 @@ namespace Core.CliniCore.Commands.Scheduling
         {
             try
             {
-                var date = parameters.GetParameter<DateTime?>(Parameters.Date) ?? DateTime.Today;
+                var date = parameters.GetParameter<DateTime?>(Parameters.Date);
                 var physicianId = parameters.GetParameter<Guid?>(Parameters.PhysicianId);
                 var patientId = parameters.GetParameter<Guid?>(Parameters.PatientId);
 
@@ -60,13 +62,35 @@ namespace Core.CliniCore.Commands.Scheduling
                     physicianId = session.UserId;
                 }
 
-                var appointments = physicianId.HasValue
-                    ? _scheduleManager.GetDailySchedule(physicianId.Value, date)
-                    : patientId.HasValue
-                        ? _scheduleManager.GetPatientAppointments(patientId.Value)
-                        : session?.UserRole == UserRole.Administrator
-                            ? _scheduleManager.GetAllAppointments()
-                            : Enumerable.Empty<AppointmentTimeInterval>();
+                IEnumerable<AppointmentTimeInterval> appointments;
+                if (physicianId.HasValue)
+                {
+                    // If a specific date is provided, show only that day's appointments
+                    // Otherwise, show all appointments for the next 90 days (reasonable range)
+                    if (date.HasValue)
+                    {
+                        appointments = _scheduleManager.GetDailySchedule(physicianId.Value, date.Value);
+                    }
+                    else
+                    {
+                        appointments = _scheduleManager.GetScheduleInRange(
+                            physicianId.Value,
+                            DateTime.Today,
+                            DateTime.Today.AddDays(90));
+                    }
+                }
+                else if (patientId.HasValue)
+                {
+                    appointments = _scheduleManager.GetPatientAppointments(patientId.Value);
+                }
+                else if (session?.UserRole == UserRole.Administrator)
+                {
+                    appointments = _scheduleManager.GetAllAppointments();
+                }
+                else
+                {
+                    appointments = Enumerable.Empty<AppointmentTimeInterval>();
+                }
 
                 var appointmentList = appointments.ToList();
 
@@ -100,8 +124,8 @@ namespace Core.CliniCore.Commands.Scheduling
             return $"  Appointment ID: {apt.Id:N}\n" +
                    $"  Date/Time: {apt.Start:yyyy-MM-dd HH:mm} - {apt.End:HH:mm}\n" +
                    $"  Status: {apt.Status}\n" +
-                   $"  Patient: {patient?.Name ?? "Unknown"}\n" +
-                   $"  Physician: Dr. {physician?.Name ?? "Unknown"}\n" +
+                   $"  Patient: {patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
+                   $"  Physician: Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
                    $"  Reason: {apt.ReasonForVisit ?? "General Consultation"}\n" +
                    $"  ---";
         }

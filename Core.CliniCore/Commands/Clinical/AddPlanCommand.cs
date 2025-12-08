@@ -1,10 +1,10 @@
 ﻿// Core.CliniCore/Commands/Clinical/AddPlanCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -162,8 +162,8 @@ namespace Core.CliniCore.Commands.Clinical
                     }
                 }
 
-                // Add to document
-                document.AddEntry(_addedPlan);
+                // Persist the plan via the service's entry-level method
+                _documentRegistry.AddPlan(documentId, _addedPlan);
 
                 // Build confirmation message
                 var priorityStr = _addedPlan.Priority != PlanPriority.Routine

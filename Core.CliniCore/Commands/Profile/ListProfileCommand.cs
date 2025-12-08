@@ -2,10 +2,12 @@ using System;
 using System.Linq;
 using System.Text;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -79,9 +81,10 @@ namespace Core.CliniCore.Commands.Profile
                         switch (profile)
                         {
                             case PhysicianProfile physician:
-                                if (physician.Specializations.Any())
+                                var specializations = physician.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>();
+                                if (specializations.Any())
                                 {
-                                    var specs = string.Join(", ", physician.Specializations.Select(s => s.ToString()));
+                                    var specs = string.Join(", ", specializations.Select(s => s.ToString()));
                                     sb.AppendLine($"    Specializations: {specs}");
                                 }
                                 sb.AppendLine($"    Patients: {physician.PatientIds.Count}");
@@ -92,7 +95,8 @@ namespace Core.CliniCore.Commands.Profile
                                     var primaryPhysician = _registry.GetProfileById(patient.PrimaryPhysicianId.Value) as PhysicianProfile;
                                     if (primaryPhysician != null)
                                     {
-                                        sb.AppendLine($"    Primary Physician: Dr. {primaryPhysician.Name}");
+                                        var physicianName = primaryPhysician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty;
+                                        sb.AppendLine($"    Primary Physician: Dr. {physicianName}");
                                     }
                                 }
                                 break;

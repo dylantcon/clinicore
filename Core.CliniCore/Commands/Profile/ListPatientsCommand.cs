@@ -1,10 +1,11 @@
 ﻿// Core.CliniCore/Commands/Profile/ListPatientsCommand.cs
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 using System;
 using System.Text;
 
@@ -78,7 +79,7 @@ namespace Core.CliniCore.Commands.Profile
                 if (!string.IsNullOrWhiteSpace(searchTerm))
                 {
                     patients = patients.Where(p =>
-                        p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        (p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty).Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                         p.Username.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
                 }
 
@@ -89,7 +90,7 @@ namespace Core.CliniCore.Commands.Profile
                 }
 
                 // Build result
-                var patientList = patients.OrderBy(p => p.Name).ToList();
+                var patientList = patients.OrderBy(p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty).ToList();
 
                 if (!patientList.Any())
                 {
@@ -127,7 +128,7 @@ namespace Core.CliniCore.Commands.Profile
                     // Replace the generic "Primary Physician ID" line with physician name
                     patientInfo = patientInfo.Replace(
                         $"  Primary Physician ID: {patient.PrimaryPhysicianId.Value:N}",
-                        $"  Primary Physician: Dr. {primaryPhysician.Name}"
+                        $"  Primary Physician: Dr. {primaryPhysician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}"
                     );
                 }
             }

@@ -1,14 +1,11 @@
-﻿using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
-using Core.CliniCore.Domain;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Core.CliniCore.Domain.Enumerations;
 using System.Text;
-using System.Threading.Tasks;
-using Core.CliniCore.Services;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Domain.ClinicalDocumentation;
 
 namespace Core.CliniCore.Commands.Query
 {
@@ -212,8 +209,8 @@ namespace Core.CliniCore.Commands.Query
 
                 sb.AppendLine($"Document ID: {doc.Id}");
                 sb.AppendLine($"Created: {doc.CreatedAt:yyyy-MM-dd HH:mm}");
-                sb.AppendLine($"Patient: {patient?.Name ?? "Unknown"} (ID: {doc.PatientId:N})");
-                sb.AppendLine($"Physician: Dr. {physician?.Name ?? "Unknown"}");
+                sb.AppendLine($"Patient: {patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"} (ID: {doc.PatientId:N})");
+                sb.AppendLine($"Physician: Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}");
                 sb.AppendLine($"Chief Complaint: {doc.ChiefComplaint}");
                 sb.AppendLine($"Status: {(doc.IsCompleted ? "Completed" : "Draft")}");
 

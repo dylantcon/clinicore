@@ -1,10 +1,10 @@
 ﻿// Core.CliniCore/Commands/Clinical/AddObservationCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -125,7 +125,7 @@ namespace Core.CliniCore.Commands.Clinical
                 {
                     Type = parameters.GetParameter<ObservationType?>(Parameters.ObservationType)
                         ?? ObservationType.PhysicalExam,
-                    BodySystem = parameters.GetParameter<string>(Parameters.BodySystem),
+                    BodySystem = parameters.GetParameter<BodySystem?>(Parameters.BodySystem),
                     IsAbnormal = parameters.GetParameter<bool?>(Parameters.IsAbnormal) ?? false,
                     Severity = parameters.GetParameter<EntrySeverity?>(Parameters.Severity)
                         ?? EntrySeverity.Routine,
@@ -145,13 +145,13 @@ namespace Core.CliniCore.Commands.Clinical
                     }
                 }
 
-                // Add to document
-                document.AddEntry(_addedObservation);
+                // Persist the observation via the service's entry-level method
+                _documentRegistry.AddObservation(documentId, _addedObservation);
 
                 // Build confirmation message
                 var abnormalStr = _addedObservation.IsAbnormal ? " [ABNORMAL]" : "";
-                var systemStr = !string.IsNullOrEmpty(_addedObservation.BodySystem)
-                    ? $"\n  Body System: {_addedObservation.BodySystem}"
+                var systemStr = _addedObservation.BodySystem.HasValue
+                    ? $"\n  Body System: {_addedObservation.BodySystem.Value}"
                     : "";
                 var vitalsStr = _addedObservation.VitalSigns.Any()
                     ? $"\n  Vital Signs: {_addedObservation.GetVitalSignsDisplay()}"

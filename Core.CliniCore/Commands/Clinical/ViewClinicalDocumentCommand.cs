@@ -1,12 +1,11 @@
 ﻿// Core.CliniCore/Commands/Clinical/ViewClinicalDocumentCommand.cs
-using System;
-using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Domain.ClinicalDocumentation;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -136,8 +135,8 @@ namespace Core.CliniCore.Commands.Clinical
                    $"Document ID: {doc.Id}\n" +
                    $"Created: {doc.CreatedAt:yyyy-MM-dd HH:mm}\n" +
                    $"Status: {(doc.IsCompleted ? "Completed" : "Draft")}\n" +
-                   $"Patient: {patient?.Name ?? "Unknown"} (ID: {doc.PatientId:N})\n" +
-                   $"Physician: Dr. {physician?.Name ?? "Unknown"}\n" +
+                   $"Patient: {patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"} (ID: {doc.PatientId:N})\n" +
+                   $"Physician: Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
                    $"Chief Complaint: {doc.ChiefComplaint}\n" +
                    $"Total Entries: {doc.Entries.Count}\n" +
                    $"Diagnoses: {doc.GetDiagnoses().Count()}\n" +

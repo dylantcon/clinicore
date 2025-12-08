@@ -1,5 +1,4 @@
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using System;
 using System.Collections.Generic;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
 
 namespace Core.CliniCore.Commands.Clinical
 {

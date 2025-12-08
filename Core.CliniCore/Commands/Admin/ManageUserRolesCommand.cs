@@ -1,4 +1,4 @@
-﻿using Core.CliniCore.Domain.Authentication;
+﻿using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
 using System;
 using System.Collections.Generic;

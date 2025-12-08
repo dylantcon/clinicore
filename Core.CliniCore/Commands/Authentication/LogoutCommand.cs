@@ -1,7 +1,7 @@
 ﻿// Core.CliniCore/Commands/Authentication/LogoutCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
 
 namespace Core.CliniCore.Commands.Authentication

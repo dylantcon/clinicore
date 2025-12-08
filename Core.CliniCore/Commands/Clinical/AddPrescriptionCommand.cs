@@ -1,10 +1,10 @@
 ﻿// Core.CliniCore/Commands/Clinical/AddPrescriptionCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -142,8 +142,8 @@ namespace Core.CliniCore.Commands.Clinical
                 _addedPrescription = new PrescriptionEntry(physicianId, diagnosisId, medicationName)
                 {
                     Dosage = parameters.GetRequiredParameter<string>(Parameters.Dosage),
-                    Frequency = parameters.GetRequiredParameter<string>(Parameters.Frequency),
-                    Route = parameters.GetParameter<string>(Parameters.Route) ?? "Oral",
+                    Frequency = parameters.GetParameter<DosageFrequency?>(Parameters.Frequency),
+                    Route = parameters.GetParameter<MedicationRoute?>(Parameters.Route) ?? MedicationRoute.Oral,
                     Duration = parameters.GetParameter<string>(Parameters.Duration),
                     Refills = parameters.GetParameter<int?>(Parameters.Refills) ?? 0,
                     GenericAllowed = parameters.GetParameter<bool?>(Parameters.GenericAllowed) ?? true,
@@ -159,8 +159,8 @@ namespace Core.CliniCore.Commands.Clinical
                     _addedPrescription.ExpirationDate = DateTime.Now.AddMonths(6);
                 }
 
-                // Add to document (will validate diagnosis exists)
-                document.AddEntry(_addedPrescription);
+                // Persist the prescription via the service's entry-level method
+                _documentRegistry.AddPrescription(documentId, _addedPrescription);
 
                 // Get the diagnosis for display
                 var diagnosis = document.GetDiagnoses().First(d => d.Id == diagnosisId);

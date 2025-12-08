@@ -1,9 +1,9 @@
 ﻿// Core.CliniCore/Commands/Scheduling/CancelAppointmentCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Scheduling
 {

@@ -4,14 +4,16 @@ using System.Collections.Generic;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
-    public class CreatePhysicianCommand : AbstractCommand
+    public class CreatePhysicianCommand(IAuthenticationService authService, ProfileService profileService) : AbstractCommand
     {
         public const string Key = "createphysician";
         public override string CommandKey => Key;
@@ -28,15 +30,9 @@ namespace Core.CliniCore.Commands.Profile
             public const string Specializations = "specializations";
         }
 
-        private readonly ProfileService _registry;
-        private readonly IAuthenticationService _authService;
+        private readonly ProfileService _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        private readonly IAuthenticationService _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         public static readonly int MEDSPECMAXCOUNT = 5;
-
-        public CreatePhysicianCommand(IAuthenticationService authService, ProfileService profileService)
-        {
-            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
-        }
 
         public override string Description => "Creates a new physician profile in the system";
 
@@ -115,21 +111,21 @@ namespace Core.CliniCore.Commands.Profile
                     return CommandResult.ValidationFailed(errors);
                 }
 
-                // Register with auth service
+                // Add to registry first (fail-secure: profile before credentials)
                 var password = parameters.GetRequiredParameter<string>(Parameters.Password);
-                if (!_authService.Register(physician, password))
-                {
-                    return CommandResult.Fail("Failed to register physician account");
-                }
-
-                // Add to registry
                 if (!_registry.AddProfile(physician))
                 {
                     return CommandResult.Fail("Failed to add physician to registry");
                 }
 
+                // Register with auth service
+                if (!_authService.Register(physician, password))
+                {
+                    return CommandResult.Fail("Failed to register physician account");
+                }
+
                 return CommandResult.Ok(
-                    $"Physician Dr. {physician.Name} created successfully with ID {physician.Id}",
+                    $"Physician Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty} created successfully with ID {physician.Id}",
                     physician);
             }
             catch (Exception ex)

@@ -1,10 +1,10 @@
 ﻿// Core.CliniCore/Commands/Clinical/AddDiagnosisCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -19,6 +19,7 @@ namespace Core.CliniCore.Commands.Clinical
             public const string DiagnosisDescription = "diagnosis_description";
             public const string ICD10Code = "icd10_code";
             public const string DiagnosisType = "diagnosis_type";
+            public const string DiagnosisStatus = "diagnosis_status";
             public const string IsPrimary = "is_primary";
             public const string Severity = "severity";
             public const string OnsetDate = "onset_date";
@@ -114,13 +115,14 @@ namespace Core.CliniCore.Commands.Clinical
                 {
                     ICD10Code = parameters.GetParameter<string>(Parameters.ICD10Code),
                     Type = parameters.GetParameter<DiagnosisType?>(Parameters.DiagnosisType) ?? DiagnosisType.Working,
+                    Status = parameters.GetParameter<DiagnosisStatus?>(Parameters.DiagnosisStatus) ?? DiagnosisStatus.Active,
                     IsPrimary = parameters.GetParameter<bool?>(Parameters.IsPrimary) ?? false,
                     Severity = parameters.GetParameter<EntrySeverity?>(Parameters.Severity) ?? EntrySeverity.Routine,
                     OnsetDate = parameters.GetParameter<DateTime?>(Parameters.OnsetDate)
                 };
 
-                // Add to document
-                document.AddEntry(_addedDiagnosis);
+                // Persist the diagnosis via the service's entry-level method
+                _documentRegistry.AddDiagnosis(documentId, _addedDiagnosis);
 
                 var diagnosisTypeStr = _addedDiagnosis.Type != DiagnosisType.Final
                     ? $" ({_addedDiagnosis.Type})"

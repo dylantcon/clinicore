@@ -2,12 +2,13 @@
 using System;
 using System.Text;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Domain.ClinicalDocumentation;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -153,8 +154,8 @@ namespace Core.CliniCore.Commands.Clinical
             return $"  Document ID: {doc.Id:N}\n" +
                    $"  Date: {doc.CreatedAt:yyyy-MM-dd HH:mm}\n" +
                    $"  Status: {status}\n" +
-                   $"  Patient: {patient?.Name ?? "Unknown"}\n" +
-                   $"  Physician: Dr. {physician?.Name ?? "Unknown"}\n" +
+                   $"  Patient: {patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
+                   $"  Physician: Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
                    $"  Chief Complaint: {doc.ChiefComplaint}\n" +
                    $"  Diagnoses: {diagnosisCount}, Prescriptions: {prescriptionCount}\n" +
                    $"  ---";

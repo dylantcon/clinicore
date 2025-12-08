@@ -1,10 +1,10 @@
 ﻿// Core.CliniCore/Commands/Clinical/AddAssessmentCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -150,8 +150,8 @@ namespace Core.CliniCore.Commands.Clinical
                     }
                 }
 
-                // Add to document
-                document.AddEntry(_addedAssessment);
+                // Persist the assessment via the service's entry-level method
+                _documentRegistry.AddAssessment(documentId, _addedAssessment);
 
                 // Build confirmation message
                 var immediateStr = _addedAssessment.RequiresImmediateAction

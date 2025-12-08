@@ -2,11 +2,12 @@ using System;
 using System.Linq;
 using System.Text;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -91,18 +92,19 @@ namespace Core.CliniCore.Commands.Profile
                 sb.AppendLine("=== PATIENT PROFILE ===");
                 sb.AppendLine($"ID: {profile.Id:N}");
                 sb.AppendLine($"Username: {profile.Username}");
-                sb.AppendLine($"Name: {profile.Name}");
-                sb.AppendLine($"Gender: {profile.Gender.GetDisplayName()}");
-                sb.AppendLine($"Birth Date: {profile.BirthDate:yyyy-MM-dd} (Age: {DateTime.Now.Year - profile.BirthDate.Year})");
-                sb.AppendLine($"Race: {profile.Race}");
-                sb.AppendLine($"Address: {profile.Address}");
+                sb.AppendLine($"Name: {profile.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
+                sb.AppendLine($"Gender: {profile.GetValue<Gender>(PatientEntryType.Gender.GetKey()).GetDisplayName()}");
+                var birthDate = profile.GetValue<DateTime>(CommonEntryType.BirthDate.GetKey());
+                sb.AppendLine($"Birth Date: {birthDate:yyyy-MM-dd} (Age: {DateTime.Now.Year - birthDate.Year})");
+                sb.AppendLine($"Race: {profile.GetValue<string>(PatientEntryType.Race.GetKey()) ?? string.Empty}");
+                sb.AppendLine($"Address: {profile.GetValue<string>(CommonEntryType.Address.GetKey()) ?? string.Empty}");
                 sb.AppendLine($"Valid Profile: {(profile.IsValid ? "Yes" : "No")}");
 
                 // Primary physician info
                 if (profile.PrimaryPhysicianId.HasValue)
                 {
                     var primaryPhysician = _registry.GetProfileById(profile.PrimaryPhysicianId.Value) as PhysicianProfile;
-                    sb.AppendLine($"Primary Physician: {(primaryPhysician != null ? $"Dr. {primaryPhysician.Name}" : "Not found")}");
+                    sb.AppendLine($"Primary Physician: {(primaryPhysician != null ? $"Dr. {primaryPhysician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}" : "Not found")}");
                 }
                 else
                 {

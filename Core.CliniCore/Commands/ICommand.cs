@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 
 namespace Core.CliniCore.Commands
 {
@@ -25,7 +25,7 @@ namespace Core.CliniCore.Commands
 
         /// <summary>
         /// Unique key identifier for this command type (e.g., "login", "createpatient")
-        /// Used for command registration and invocation
+        /// Used for command registration and invocation.
         /// </summary>
         string CommandKey { get; }
 

@@ -19,12 +19,12 @@ namespace Core.CliniCore.Commands
         /// <summary>
         /// List of validation errors
         /// </summary>
-        public List<string> Errors { get; set; } = new List<string>();
+        public List<string> Errors { get; set; } = [];
 
         /// <summary>
         /// List of validation warnings (non-blocking)
         /// </summary>
-        public List<string> Warnings { get; set; } = new List<string>();
+        public List<string> Warnings { get; set; } = [];
 
         /// <summary>
         /// Adds an error to the validation result
@@ -61,7 +61,7 @@ namespace Core.CliniCore.Commands
             return new CommandValidationResult
             {
                 IsValid = false,
-                Errors = new List<string> { error }
+                Errors = [error]
             };
         }
 
@@ -73,7 +73,7 @@ namespace Core.CliniCore.Commands
             return new CommandValidationResult
             {
                 IsValid = false,
-                Errors = errors?.ToList() ?? new List<string>()
+                Errors = errors?.ToList() ?? []
             };
         }
 
@@ -85,7 +85,7 @@ namespace Core.CliniCore.Commands
             return new CommandValidationResult
             {
                 IsValid = false,
-                Errors = errors ?? new List<string>()
+                Errors = errors ?? []
             };
         }
 
@@ -110,7 +110,7 @@ namespace Core.CliniCore.Commands
         {
             if (IsValid)
             {
-                return Warnings.Any()
+                return Warnings.Count != 0
                     ? $"Validation passed with warnings: {string.Join("; ", Warnings)}"
                     : "Validation passed.";
             }

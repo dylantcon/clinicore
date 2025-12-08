@@ -1,13 +1,13 @@
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -170,10 +170,10 @@ namespace Core.CliniCore.Commands.Clinical
                 }
 
                 // Update body system
-                var bodySystem = parameters.GetParameter<string>(Parameters.BodySystem);
-                if (bodySystem != null && bodySystem != observation.BodySystem)
+                var bodySystem = parameters.GetParameter<BodySystem?>(Parameters.BodySystem);
+                if (bodySystem.HasValue && bodySystem != observation.BodySystem)
                 {
-                    observation.BodySystem = string.IsNullOrEmpty(bodySystem) ? null : bodySystem;
+                    observation.BodySystem = bodySystem;
                     fieldsUpdated.Add("body_system");
                 }
 
@@ -242,6 +242,9 @@ namespace Core.CliniCore.Commands.Clinical
 
                 if (fieldsUpdated.Any())
                 {
+                    // Persist the changes to the repository
+                    _documentRegistry.UpdateDocument(document);
+
                     return CommandResult.Ok(
                         $"Observation entry updated successfully. Fields changed: {string.Join(", ", fieldsUpdated)}",
                         new {

@@ -1,5 +1,4 @@
 ﻿using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
 using System;
 using System.Collections.Generic;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -80,6 +80,9 @@ namespace Core.CliniCore.Commands.Clinical
 
                 if (fieldsUpdated.Any())
                 {
+                    // Persist the changes to the repository
+                    _documentRegistry.UpdateDocument(document);
+
                     return CommandResult.Ok(
                         $"Clinical document updated successfully. Fields changed: {string.Join(", ", fieldsUpdated)}",
                         new { DocumentId = documentId, UpdatedFields = fieldsUpdated, IsCompleted = document.IsCompleted });

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Facilities;
+using Core.CliniCore.Domain.Facilities;
 
 namespace Core.CliniCore.Commands.Reports
 {

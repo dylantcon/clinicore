@@ -1,13 +1,15 @@
-﻿using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Domain;
+﻿using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Scheduling;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Query
 {
@@ -213,8 +215,8 @@ namespace Core.CliniCore.Commands.Query
             var isDateRange = startDate.Date != endDate.Date;
 
             sb.AppendLine($"=== PHYSICIAN SCHEDULE - SUMMARY ===");
-            sb.AppendLine($"Physician: Dr. {physician.Name} (ID: {physician.Id:N})");
-            sb.AppendLine($"License: {physician.LicenseNumber}");
+            sb.AppendLine($"Physician: Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty} (ID: {physician.Id:N})");
+            sb.AppendLine($"License: {physician.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty}");
 
             if (isDateRange)
             {
@@ -246,7 +248,7 @@ namespace Core.CliniCore.Commands.Query
                     foreach (var appointment in dateGroup.OrderBy(a => a.Start))
                     {
                         var patient = _profileRegistry.GetProfileById(appointment.PatientId) as PatientProfile;
-                        sb.AppendLine($"{appointment.Start:HH:mm} - {appointment.End:HH:mm} | {patient?.Name ?? "Unknown Patient"} | {appointment.Status}");
+                        sb.AppendLine($"{appointment.Start:HH:mm} - {appointment.End:HH:mm} | {(patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown Patient")} | {appointment.Status}");
                     }
 
                     sb.AppendLine();
@@ -258,7 +260,7 @@ namespace Core.CliniCore.Commands.Query
                 foreach (var appointment in appointments.OrderBy(a => a.Start))
                 {
                     var patient = _profileRegistry.GetProfileById(appointment.PatientId) as PatientProfile;
-                    sb.AppendLine($"{appointment.Start:HH:mm} - {appointment.End:HH:mm} | {patient?.Name ?? "Unknown Patient"} | {appointment.Status}");
+                    sb.AppendLine($"{appointment.Start:HH:mm} - {appointment.End:HH:mm} | {(patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown Patient")} | {appointment.Status}");
 
                     if (appointment.Status == AppointmentStatus.Cancelled && !string.IsNullOrEmpty(appointment.CancellationReason))
                     {
@@ -276,12 +278,13 @@ namespace Core.CliniCore.Commands.Query
             var isDateRange = startDate.Date != endDate.Date;
 
             sb.AppendLine($"=== PHYSICIAN SCHEDULE - DETAILED ===");
-            sb.AppendLine($"Physician: Dr. {physician.Name}");
-            sb.AppendLine($"License: {physician.LicenseNumber}");
+            sb.AppendLine($"Physician: Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
+            sb.AppendLine($"License: {physician.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty}");
 
-            if (physician.Specializations.Any())
+            var specializations = physician.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>();
+            if (specializations.Any())
             {
-                sb.AppendLine($"Specializations: {string.Join(", ", physician.Specializations.Select(s => s.ToString()))}");
+                sb.AppendLine($"Specializations: {string.Join(", ", specializations.Select(s => s.ToString()))}");
             }
 
             if (isDateRange)
@@ -309,7 +312,7 @@ namespace Core.CliniCore.Commands.Query
                 sb.AppendLine($"=== APPOINTMENT {appointment.Id:N} ===");
                 sb.AppendLine($"Time: {appointment.Start:yyyy-MM-dd HH:mm} - {appointment.End:HH:mm}");
                 sb.AppendLine($"Duration: {appointment.Duration.TotalMinutes} minutes");
-                sb.AppendLine($"Patient: {patient?.Name ?? "Unknown Patient"}");
+                sb.AppendLine($"Patient: {(patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown Patient")}");
 
                 if (session?.UserRole == UserRole.Administrator || session?.UserRole == UserRole.Physician)
                 {
@@ -350,7 +353,7 @@ namespace Core.CliniCore.Commands.Query
             var sb = new StringBuilder();
             var isDateRange = startDate.Date != endDate.Date;
 
-            sb.AppendLine($"=== SCHEDULE - Dr. {physician.Name} ===");
+            sb.AppendLine($"=== SCHEDULE - Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty} ===");
 
             if (isDateRange)
             {
@@ -381,7 +384,7 @@ namespace Core.CliniCore.Commands.Query
                     _ => "?"
                 };
 
-                sb.AppendLine($"{statusIndicator} {appointment.Start:MM/dd HH:mm} - {patient?.Name ?? "Unknown"} ({appointment.Duration.TotalMinutes}m)");
+                sb.AppendLine($"{statusIndicator} {appointment.Start:MM/dd HH:mm} - {(patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown")} ({appointment.Duration.TotalMinutes}m)");
             }
 
             return sb.ToString();
@@ -392,7 +395,7 @@ namespace Core.CliniCore.Commands.Query
             var sb = new StringBuilder();
             var isDateRange = startDate.Date != endDate.Date;
 
-            sb.AppendLine($"=== SCHEDULE STATISTICS - Dr. {physician.Name} ===");
+            sb.AppendLine($"=== SCHEDULE STATISTICS - Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty} ===");
 
             if (isDateRange)
             {

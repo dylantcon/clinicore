@@ -1,13 +1,13 @@
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -176,18 +176,18 @@ namespace Core.CliniCore.Commands.Clinical
                 }
 
                 // Update frequency
-                var frequency = parameters.GetParameter<string>(Parameters.Frequency);
-                if (frequency != null && frequency != prescription.Frequency)
+                var frequency = parameters.GetParameter<DosageFrequency?>(Parameters.Frequency);
+                if (frequency.HasValue && frequency != prescription.Frequency)
                 {
-                    prescription.Frequency = string.IsNullOrEmpty(frequency) ? null : frequency;
+                    prescription.Frequency = frequency;
                     fieldsUpdated.Add("frequency");
                 }
 
                 // Update route
-                var route = parameters.GetParameter<string>(Parameters.Route);
-                if (route != null && route != prescription.Route)
+                var route = parameters.GetParameter<MedicationRoute?>(Parameters.Route);
+                if (route.HasValue && route.Value != prescription.Route)
                 {
-                    prescription.Route = string.IsNullOrEmpty(route) ? null : route;
+                    prescription.Route = route.Value;
                     fieldsUpdated.Add("route");
                 }
 
@@ -267,8 +267,8 @@ namespace Core.CliniCore.Commands.Clinical
 
                 if (fieldsUpdated.Any())
                 {
-                    // Mark as modified
-                    // ModifiedAt is automatically updated by the Update() method called above
+                    // Persist the changes to the repository
+                    _documentRegistry.UpdateDocument(document);
 
                     return CommandResult.Ok(
                         $"Prescription entry updated successfully. Fields changed: {string.Join(", ", fieldsUpdated)}",

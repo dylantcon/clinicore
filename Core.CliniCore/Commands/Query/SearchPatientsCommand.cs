@@ -1,12 +1,14 @@
-﻿using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Domain;
+﻿using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Query
 {
@@ -127,13 +129,14 @@ namespace Core.CliniCore.Commands.Query
             sb.AppendLine($"Found {patients.Count} patient(s)");
             sb.AppendLine();
 
-            foreach (var patient in patients.OrderBy(p => p.Name))
+            var patientName = new Func<PatientProfile, string>(p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty);
+            foreach (var patient in patients.OrderBy(patientName))
             {
                 sb.AppendLine($"Patient ID: {patient.Id:N}");
-                sb.AppendLine($"Name: {patient.Name}");
+                sb.AppendLine($"Name: {patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
                 sb.AppendLine($"Username: {patient.Username}");
 
-                var birthDate = patient.GetValue<DateTime>("birthdate");
+                var birthDate = patient.GetValue<DateTime>(CommonEntryType.BirthDate.GetKey());
                 if (birthDate != default)
                 {
                     var age = DateTime.Now.Year - birthDate.Year;
@@ -142,13 +145,13 @@ namespace Core.CliniCore.Commands.Query
                     sb.AppendLine($"Birth Date: {birthDate:yyyy-MM-dd} (Age: {age})");
                 }
 
-                var gender = patient.GetValue<Gender>("gender");
+                var gender = patient.GetValue<Gender>(PatientEntryType.Gender.GetKey());
                 if (gender != default)
                 {
                     sb.AppendLine($"Gender: {gender}");
                 }
 
-                var address = patient.GetValue<string>("address");
+                var address = patient.GetValue<string>(CommonEntryType.Address.GetKey());
                 if (!string.IsNullOrEmpty(address))
                 {
                     sb.AppendLine($"Address: {address}");
@@ -160,7 +163,7 @@ namespace Core.CliniCore.Commands.Query
                     var primaryPhysician = _profileRegistry.GetProfileById(patient.PrimaryPhysicianId.Value) as PhysicianProfile;
                     if (primaryPhysician != null)
                     {
-                        sb.AppendLine($"Primary Physician: Dr. {primaryPhysician.Name}");
+                        sb.AppendLine($"Primary Physician: Dr. {primaryPhysician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
                     }
                 }
 
@@ -170,7 +173,7 @@ namespace Core.CliniCore.Commands.Query
                     var allPhysicians = _profileRegistry.GetPatientPhysicians(patient.Id);
                     if (allPhysicians.Any())
                     {
-                        sb.AppendLine($"All Physicians: {string.Join(", ", allPhysicians.Select(p => "Dr. " + p.Name))}");
+                        sb.AppendLine($"All Physicians: {string.Join(", ", allPhysicians.Select(p => "Dr. " + (p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty)))}");
                     }
                 }
 

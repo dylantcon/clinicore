@@ -1,13 +1,13 @@
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.ClinicalDoc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
@@ -269,7 +269,8 @@ namespace Core.CliniCore.Commands.Clinical
 
                 if (fieldsUpdated.Any())
                 {
-                    // ModifiedAt is automatically updated by the Update() method called above
+                    // Persist the changes to the repository
+                    _documentRegistry.UpdateDocument(document);
 
                     return CommandResult.Ok(
                         $"Plan entry updated successfully. Fields changed: {string.Join(", ", fieldsUpdated)}",

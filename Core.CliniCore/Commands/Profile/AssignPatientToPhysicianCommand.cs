@@ -1,10 +1,12 @@
 ﻿// Core.CliniCore/Commands/Profile/AssignPatientToPhysicianCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -145,7 +147,7 @@ namespace Core.CliniCore.Commands.Profile
                 }
 
                 // Build success message
-                var message = $"Patient '{patient.Name}' assigned to Dr. {physician.Name}";
+                var message = $"Patient '{patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}' assigned to Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}";
                 if (setPrimary)
                 {
                     message += " as PRIMARY physician";
@@ -153,7 +155,7 @@ namespace Core.CliniCore.Commands.Profile
 
                 // Include statistics
                 var patientCount = physician.PatientIds.Count;
-                message += $"\nDr. {physician.Name} now has {patientCount} patient(s) under care";
+                message += $"\nDr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty} now has {patientCount} patient(s) under care";
 
                 return CommandResult.Ok(message, new { PatientId = _patientId, PhysicianId = _physicianId });
             }
@@ -192,7 +194,7 @@ namespace Core.CliniCore.Commands.Profile
                     }
 
                     return CommandResult.Ok(
-                        $"Physician-patient relationship between Dr. {physician.Name} and {patient.Name} has been removed");
+                        $"Physician-patient relationship between Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty} and {patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty} has been removed");
                 }
             }
             return CommandResult.Fail("Unable to undo physician-patient assignment");

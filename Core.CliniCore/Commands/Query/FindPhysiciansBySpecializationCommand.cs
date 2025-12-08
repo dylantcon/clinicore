@@ -1,13 +1,14 @@
-﻿using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Domain;
+﻿using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Query
 {
@@ -95,8 +96,8 @@ namespace Core.CliniCore.Commands.Query
                 // Find physicians with the specified specialization
                 var allPhysicians = _profileRegistry.GetAllPhysicians();
                 var matchingPhysicians = allPhysicians
-                    .Where(p => p.Specializations.Contains(targetSpecialization))
-                    .OrderBy(p => p.Name)
+                    .Where(p => (p.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>()).Contains(targetSpecialization))
+                    .OrderBy(p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty)
                     .ToList();
 
                 if (!matchingPhysicians.Any())
@@ -158,16 +159,21 @@ namespace Core.CliniCore.Commands.Query
 
             foreach (var physician in physicians)
             {
+                var name = physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty;
+                var licenseNumber = physician.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty;
+                var graduationDate = physician.GetValue<DateTime>(PhysicianEntryType.GraduationDate.GetKey());
+                var specializations = physician.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>();
+
                 sb.AppendLine($"Physician ID: {physician.Id:N}");
-                sb.AppendLine($"Name: Dr. {physician.Name}");
+                sb.AppendLine($"Name: Dr. {name}");
                 sb.AppendLine($"Username: {physician.Username}");
-                sb.AppendLine($"License Number: {physician.LicenseNumber}");
-                sb.AppendLine($"Graduation Date: {physician.GraduationDate:yyyy-MM-dd}");
+                sb.AppendLine($"License Number: {licenseNumber}");
+                sb.AppendLine($"Graduation Date: {graduationDate:yyyy-MM-dd}");
 
                 // Show all specializations
-                if (physician.Specializations.Any())
+                if (specializations.Any())
                 {
-                    var specializationNames = physician.Specializations.Select(s => s.GetDisplayName());
+                    var specializationNames = specializations.Select(s => s.GetDisplayName());
                     sb.AppendLine($"All Specializations: {string.Join(", ", specializationNames)}");
                 }
 
@@ -202,7 +208,7 @@ namespace Core.CliniCore.Commands.Query
                             .Take(5) // Show first 5 patients
                             .Select(id => _profileRegistry.GetProfileById(id) as PatientProfile)
                             .Where(p => p != null)
-                            .Select(p => p!.Name);
+                            .Select(p => p!.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty);
 
                         sb.AppendLine($"Sample Patients: {string.Join(", ", patientNames)}" +
                             (physician.PatientIds.Count > 5 ? $" and {physician.PatientIds.Count - 5} more" : ""));

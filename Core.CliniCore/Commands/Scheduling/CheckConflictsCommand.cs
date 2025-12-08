@@ -1,8 +1,8 @@
-﻿using Core.CliniCore.Domain.Authentication;
+﻿using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.Management;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;

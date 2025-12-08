@@ -1,17 +1,16 @@
-using Core.CliniCore.Domain;
+using Core.CliniCore.Domain.Users;
+using Core.CliniCore.Domain.Users.Concrete;
 using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
-using Core.CliniCore.Domain.ProfileTemplates;
-using Core.CliniCore.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Core.CliniCore.Domain.Validation;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
-    public class CreateAdministratorCommand : AbstractCommand
+    public class CreateAdministratorCommand(IAuthenticationService authenticationService, ProfileService profileService) : AbstractCommand
     {
         public static class Parameters
         {
@@ -23,15 +22,8 @@ namespace Core.CliniCore.Commands.Profile
             public const string Email = "email";
         }
 
-        private readonly IAuthenticationService _authService;
-        private readonly ProfileService _registry;
-
-        public CreateAdministratorCommand(IAuthenticationService authenticationService, ProfileService profileService)
-        {
-            _authService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
-            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
-        }
-
+        private readonly IAuthenticationService _authService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
+        private readonly ProfileService _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         public const string Key = "createadministrator";
         public override string CommandKey => Key;
 
@@ -50,7 +42,7 @@ namespace Core.CliniCore.Commands.Profile
             var requiredParams = new[] { Parameters.Username, Parameters.Password, Parameters.Name };
             var missingParams = parameters.GetMissingRequired(requiredParams);
 
-            if (missingParams.Any())
+            if (missingParams.Count != 0)
             {
                 foreach (var error in missingParams)
                     result.AddError(error);
@@ -103,9 +95,9 @@ namespace Core.CliniCore.Commands.Profile
             if (parameters.HasParameter(Parameters.Email))
             {
                 var email = parameters.GetParameter<string>(Parameters.Email);
-                if (!string.IsNullOrWhiteSpace(email) && !IsValidEmail(email))
+                if (!string.IsNullOrWhiteSpace(email) && !ValidatorFactory.Email().IsValid(email))
                 {
-                    result.AddError("Invalid email format");
+                    result.AddError(ValidatorFactory.EMAIL_ERROR_STR);
                 }
             }
 
@@ -133,6 +125,15 @@ namespace Core.CliniCore.Commands.Profile
         {
             var result = CommandValidationResult.Success();
 
+            // Bootstrap exception: Allow unauthenticated admin creation if no admins exist
+            // This handles the chicken-egg problem of needing an admin to create the first admin
+            var existingAdmins = _registry.GetAllAdministrators();
+            if (!existingAdmins.Any())
+            {
+                // No admins exist - allow bootstrap creation without authentication
+                return result;
+            }
+
             if (session == null)
             {
                 result.AddError("Must be logged in to create administrator profiles");
@@ -157,8 +158,10 @@ namespace Core.CliniCore.Commands.Profile
                 var name = parameters.GetRequiredParameter<string>(Parameters.Name);
 
                 // Create the administrator profile
-                var adminProfile = new AdministratorProfile();
-                adminProfile.Username = username;
+                var adminProfile = new AdministratorProfile
+                {
+                    Username = username
+                };
                 adminProfile.SetValue(CommonEntryType.Name.GetKey(), name);
 
                 // Set optional fields
@@ -208,20 +211,5 @@ namespace Core.CliniCore.Commands.Profile
             }
         }
 
-        private bool IsValidEmail(string email)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-                return false;
-
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }

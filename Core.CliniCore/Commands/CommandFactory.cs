@@ -1,18 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Core.CliniCore.Commands.Authentication;
 using Core.CliniCore.Commands.Clinical;
 using Core.CliniCore.Commands.Profile;
 using Core.CliniCore.Commands.Scheduling;
-using Core.CliniCore.Commands.Admin;
 using Core.CliniCore.Commands.Query;
-using Core.CliniCore.Commands.Reports;
 using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.ClinicalDoc;
 using Core.CliniCore.Service;
-using Core.CliniCore.Services;
 
 namespace Core.CliniCore.Commands
 {
@@ -23,7 +16,7 @@ namespace Core.CliniCore.Commands
     public class CommandFactory
     {
         private readonly IAuthenticationService _authService;
-        private readonly SchedulerService _scheduleManager;
+        private readonly SchedulerService _schedulerService;
         private readonly ProfileService _profileService;
         private readonly ClinicalDocumentService _clinicalDocService;
         private readonly Dictionary<string, Type> _commandTypes;
@@ -36,7 +29,7 @@ namespace Core.CliniCore.Commands
             ClinicalDocumentService clinicalDocService)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-            _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
+            _schedulerService = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
             _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
             _clinicalDocService = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
             _commandTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
@@ -47,36 +40,41 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Discovers all command types in the assembly
+        /// Discovers all command types in the assembly by reading static Key field
         /// </summary>
         private void DiscoverCommands()
         {
             var assembly = Assembly.GetExecutingAssembly();
             var commandBaseType = typeof(ICommand);
-            
+
             var commandTypes = assembly.GetTypes()
-                .Where(t => !t.IsAbstract && 
-                           !t.IsInterface && 
-                           commandBaseType.IsAssignableFrom(t) &&
-                           t.GetConstructor(Type.EmptyTypes) != null); // Has parameterless constructor for discovery
+                .Where(t => !t.IsAbstract &&
+                           !t.IsInterface &&
+                           commandBaseType.IsAssignableFrom(t));
 
             foreach (var type in commandTypes)
             {
-                try
+                // Read the static Key field without instantiation
+                var key = GetCommandKeyFromType(type);
+                if (key != null)
                 {
-                    // Create a temporary instance to get the CommandKey
-                    var tempInstance = Activator.CreateInstance(type) as ICommand;
-                    if (tempInstance != null)
-                    {
-                        _commandTypes[tempInstance.CommandKey] = type;
-                    }
-                }
-                catch
-                {
-                    // Skip commands that can't be instantiated for discovery
-                    // They'll be registered manually in RegisterCommands
+                    _commandTypes[key] = type;
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the command key from a type's static Key field without instantiation
+        /// </summary>
+        private static string? GetCommandKeyFromType(Type type)
+        {
+            // Look for const or static field named "Key"
+            var keyField = type.GetField("Key", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+            if (keyField != null)
+            {
+                return keyField.GetRawConstantValue() as string ?? keyField.GetValue(null) as string;
+            }
+            return null;
         }
 
         /// <summary>
@@ -99,23 +97,23 @@ namespace Core.CliniCore.Commands
             RegisterCommandWithKey(() => new ListProfileCommand(_profileService));
             RegisterCommandWithKey(() => new ViewProfileCommand(_profileService));
             RegisterCommandWithKey(() => new ViewPatientProfileCommand(_profileService));
-            RegisterCommandWithKey(() => new ViewPhysicianProfileCommand(_profileService));
+            RegisterCommandWithKey(() => new ViewPhysicianProfileCommand(_profileService, _schedulerService));
             RegisterCommandWithKey(() => new ViewAdministratorProfileCommand(_profileService));
             RegisterCommandWithKey(() => new UpdateProfileCommand(_profileService));
             RegisterCommandWithKey(() => new UpdatePatientProfileCommand(_profileService));
             RegisterCommandWithKey(() => new UpdatePhysicianProfileCommand(_profileService));
             RegisterCommandWithKey(() => new UpdateAdministratorProfileCommand(_profileService));
-            RegisterCommandWithKey(() => new DeleteProfileCommand(_profileService, _scheduleManager, _clinicalDocService));
+            RegisterCommandWithKey(() => new DeleteProfileCommand(_profileService, _schedulerService, _clinicalDocService));
 
             // Scheduling Commands
-            RegisterCommandWithKey(() => new ScheduleAppointmentCommand(_scheduleManager, _profileService));
-            RegisterCommandWithKey(() => new ListAppointmentsCommand(_scheduleManager, _profileService));
-            RegisterCommandWithKey(() => new ViewAppointmentCommand(_scheduleManager, _profileService));
-            RegisterCommandWithKey(() => new CancelAppointmentCommand(_scheduleManager));
-            RegisterCommandWithKey(() => new UpdateAppointmentCommand(_scheduleManager));
-            RegisterCommandWithKey(() => new DeleteAppointmentCommand(_scheduleManager));
-            RegisterCommandWithKey(() => new CheckConflictsCommand(_scheduleManager));
-            RegisterCommandWithKey(() => new GetAvailableTimeSlotsCommand(_scheduleManager, _profileService));
+            RegisterCommandWithKey(() => new ScheduleAppointmentCommand(_schedulerService, _profileService));
+            RegisterCommandWithKey(() => new ListAppointmentsCommand(_schedulerService, _profileService));
+            RegisterCommandWithKey(() => new ViewAppointmentCommand(_schedulerService, _profileService));
+            RegisterCommandWithKey(() => new CancelAppointmentCommand(_schedulerService));
+            RegisterCommandWithKey(() => new UpdateAppointmentCommand(_schedulerService));
+            RegisterCommandWithKey(() => new DeleteAppointmentCommand(_schedulerService));
+            RegisterCommandWithKey(() => new CheckConflictsCommand(_schedulerService));
+            RegisterCommandWithKey(() => new GetAvailableTimeSlotsCommand(_schedulerService, _profileService));
             RegisterCommandWithKey(() => new SetPhysicianAvailabilityCommand());
 
             // Clinical Documentation Commands
@@ -139,8 +137,8 @@ namespace Core.CliniCore.Commands
             RegisterCommandWithKey(() => new SearchPatientsCommand(_profileService));
             RegisterCommandWithKey(() => new SearchClinicalNotesCommand(_profileService, _clinicalDocService));
             RegisterCommandWithKey(() => new FindPhysiciansBySpecializationCommand(_profileService));
-            RegisterCommandWithKey(() => new FindPhysiciansByAvailabilityCommand(_profileService, _scheduleManager));
-            RegisterCommandWithKey(() => new GetScheduleCommand(_profileService, _scheduleManager));
+            RegisterCommandWithKey(() => new FindPhysiciansByAvailabilityCommand(_profileService, _schedulerService));
+            RegisterCommandWithKey(() => new GetScheduleCommand(_profileService, _schedulerService));
             RegisterCommandWithKey(() => new ListAllUsersCommand(_profileService));
 
             // Report Commands (unimplemented)
@@ -162,23 +160,21 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Registers a command creator using the command's CommandKey property
+        /// Registers a command creator using the command type's static Key field
         /// </summary>
-        private void RegisterCommandWithKey(Func<ICommand> creator)
+        private void RegisterCommandWithKey<TCommand>(Func<TCommand> creator) where TCommand : ICommand
         {
-            try
+            var commandType = typeof(TCommand);
+            var key = GetCommandKeyFromType(commandType);
+
+            if (key != null)
             {
-                // Create a temporary instance to get the CommandKey
-                var tempInstance = creator();
-                var commandKey = tempInstance.CommandKey;
-                
-                _commandCreators[commandKey] = creator;
-                _commandTypes[commandKey] = tempInstance.GetType();
+                _commandCreators[key] = () => creator();
+                _commandTypes[key] = commandType;
             }
-            catch (Exception ex)
+            else
             {
-                // Skip commands that can't be instantiated due to missing dependencies
-                Console.WriteLine($"Warning: Could not register command due to: {ex.Message}");
+                Console.WriteLine($"Warning: Command {commandType.Name} missing static Key field");
             }
         }
 

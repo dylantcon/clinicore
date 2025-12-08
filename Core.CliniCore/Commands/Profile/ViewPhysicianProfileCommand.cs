@@ -2,11 +2,12 @@ using System;
 using System.Linq;
 using System.Text;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -21,11 +22,21 @@ namespace Core.CliniCore.Commands.Profile
             public const string ShowDetails = "show_details";
         }
 
-        private readonly ProfileService _registry;
+        public static class Results
+        {
+            public const string PatientCount = "patient_count";
+            public const string AppointmentCount = "appointment_count";
+        }
 
-        public ViewPhysicianProfileCommand(ProfileService profileService)
+        private readonly ProfileService _registry;
+        private readonly SchedulerService _schedulerService;
+
+        public ViewPhysicianProfileCommand(
+            ProfileService profileService,
+            SchedulerService schedulerService)
         {
             _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _schedulerService = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
         }
 
         public override string Description => "Views detailed information for a specific physician profile";
@@ -91,25 +102,30 @@ namespace Core.CliniCore.Commands.Profile
                 sb.AppendLine("=== PHYSICIAN PROFILE ===");
                 sb.AppendLine($"ID: {profile.Id:N}");
                 sb.AppendLine($"Username: {profile.Username}");
-                sb.AppendLine($"Name: Dr. {profile.Name}");
-                sb.AppendLine($"License Number: {profile.LicenseNumber}");
-                sb.AppendLine($"Graduation Date: {profile.GraduationDate:yyyy-MM-dd}");
+                sb.AppendLine($"Name: Dr. {profile.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
+                sb.AppendLine($"License Number: {profile.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty}");
+                sb.AppendLine($"Graduation Date: {profile.GetValue<DateTime>(PhysicianEntryType.GraduationDate.GetKey()):yyyy-MM-dd}");
                 sb.AppendLine($"Valid Profile: {(profile.IsValid ? "Yes" : "No")}");
 
                 // Specializations
-                if (profile.Specializations.Any())
+                var specializations = profile.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new();
+                if (specializations.Any())
                 {
-                    sb.AppendLine($"Specializations: {string.Join(", ", profile.Specializations.Select(s => s.GetDisplayName()))}");
+                    sb.AppendLine($"Specializations: {string.Join(", ", specializations.Select(s => s.GetDisplayName()))}");
                 }
                 else
                 {
                     sb.AppendLine("Specializations: None listed");
                 }
 
+                // Get actual counts from services
+                var patientCount = _registry.GetPhysicianPatients(profileId).Count();
+                var appointmentCount = _schedulerService.GetPhysicianSchedule(profileId).Appointments.Count();
+
                 if (showDetails)
                 {
-                    sb.AppendLine($"Patient Count: {profile.PatientIds.Count}");
-                    sb.AppendLine($"Appointment Count: {profile.AppointmentIds.Count}");
+                    sb.AppendLine($"Patient Count: {patientCount}");
+                    sb.AppendLine($"Appointment Count: {appointmentCount}");
 
                     // Show validation errors if any
                     if (!profile.IsValid)
@@ -123,7 +139,10 @@ namespace Core.CliniCore.Commands.Profile
                     }
                 }
 
-                return CommandResult.Ok(sb.ToString().TrimEnd(), profile);
+                var result = CommandResult.Ok(sb.ToString().TrimEnd(), profile);
+                result.SetData(Results.PatientCount, patientCount);
+                result.SetData(Results.AppointmentCount, appointmentCount);
+                return result;
             }
             catch (Exception ex)
             {

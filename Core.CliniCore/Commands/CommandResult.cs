@@ -62,6 +62,41 @@ namespace Core.CliniCore.Commands
         public List<string> Warnings { get; set; } = new List<string>();
 
         /// <summary>
+        /// Additional named data returned by the command
+        /// </summary>
+        private Dictionary<string, object?> _additionalData = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Sets a named data value in the result
+        /// </summary>
+        public CommandResult SetData(string key, object? value)
+        {
+            _additionalData[key] = value;
+            return this;
+        }
+
+        /// <summary>
+        /// Gets a named data value from the result
+        /// </summary>
+        public T? GetData<T>(string key)
+        {
+            if (!_additionalData.TryGetValue(key, out var value) || value == null)
+                return default;
+
+            if (value is T typedValue)
+                return typedValue;
+
+            try
+            {
+                return (T)Convert.ChangeType(value, typeof(T));
+            }
+            catch
+            {
+                return default;
+            }
+        }
+
+        /// <summary>
         /// Gets typed data from the result
         /// </summary>
         public T? GetData<T>()

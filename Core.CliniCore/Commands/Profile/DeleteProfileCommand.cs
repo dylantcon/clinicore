@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Core.CliniCore.Commands;
+﻿using Core.CliniCore.Commands;
 using Core.CliniCore.Service;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Users;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -111,10 +106,10 @@ namespace Core.CliniCore.Commands.Profile
                 }
 
                 // Remove the profile from registry
-                var success = _profileRegistry.RemoveProfile(profileId);
-                if (!success)
+                var error = _profileRegistry.RemoveProfile(profileId);
+                if (error != null)
                 {
-                    return CommandResult.Fail("Failed to remove profile from registry");
+                    return CommandResult.Fail($"Failed to remove profile: {error}");
                 }
 
                 return CommandResult.Ok(
@@ -177,13 +172,15 @@ namespace Core.CliniCore.Commands.Profile
 
         private void CleanupDependencies(Guid profileId, IUserProfile profile)
         {
-            // Clean up clinical documents
+            // Clean up clinical documents (unlink from appointments first)
             var documents = _documentRegistry.GetPatientDocuments(profileId)?.ToList();
             if (documents != null)
             {
                 foreach (var document in documents)
                 {
-                    _documentRegistry.RemoveDocument(document.Id); // Assuming this method exists
+                    // Unlink from appointment before deleting
+                    _scheduleManager.LinkClinicalDocument(document.AppointmentId, null);
+                    _documentRegistry.RemoveDocument(document.Id);
                 }
             }
 
@@ -195,6 +192,8 @@ namespace Core.CliniCore.Commands.Profile
                 {
                     foreach (var document in authoredDocs)
                     {
+                        // Unlink from appointment before deleting
+                        _scheduleManager.LinkClinicalDocument(document.AppointmentId, null);
                         _documentRegistry.RemoveDocument(document.Id);
                     }
                 }
@@ -208,8 +207,11 @@ namespace Core.CliniCore.Commands.Profile
                         if (patient?.PrimaryPhysicianId == profileId)
                         {
                             patient.PrimaryPhysicianId = null;
+                            _profileRegistry.UpdateProfile(patient);
                         }
                     }
+                    physician.PatientIds.Clear();
+                    _profileRegistry.UpdateProfile(physician);
                 }
             }
 

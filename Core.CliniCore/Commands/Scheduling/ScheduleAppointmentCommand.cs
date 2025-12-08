@@ -1,12 +1,14 @@
 ﻿// Core.CliniCore/Commands/Scheduling/ScheduleAppointmentCommand.cs
 using System;
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
 using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.Management;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -216,8 +218,8 @@ namespace Core.CliniCore.Commands.Scheduling
 
                 return CommandResult.Ok(
                     $"Appointment scheduled successfully:\n" +
-                    $"  Patient: {patient?.Name ?? "Unknown"}\n" +
-                    $"  Physician: Dr. {physician?.Name ?? "Unknown"}\n" +
+                    $"  Patient: {patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
+                    $"  Physician: Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}\n" +
                     $"  Date/Time: {startTime:yyyy-MM-dd HH:mm}\n" +
                     $"  Duration: {durationMinutes} minutes\n" +
                     $"  ID: {_createdAppointment.Id}",

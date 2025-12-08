@@ -1,13 +1,14 @@
-﻿using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Domain;
+﻿using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Query
 {
@@ -205,7 +206,11 @@ namespace Core.CliniCore.Commands.Query
                 // Apply specialization filter if specified
                 if (targetSpecialization.HasValue)
                 {
-                    allPhysicians = allPhysicians.Where(p => p.Specializations.Contains(targetSpecialization.Value));
+                    allPhysicians = allPhysicians.Where(p =>
+                    {
+                        var specializations = p.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>();
+                        return specializations.Contains(targetSpecialization.Value);
+                    });
                 }
 
                 var availablePhysicians = new List<PhysicianAvailabilityInfo>();
@@ -312,12 +317,13 @@ namespace Core.CliniCore.Commands.Query
                 var slot = info.NextAvailableSlot;
 
                 sb.AppendLine($"Physician ID: {physician.Id:N}");
-                sb.AppendLine($"Name: Dr. {physician.Name}");
-                sb.AppendLine($"License: {physician.LicenseNumber}");
+                sb.AppendLine($"Name: Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
+                sb.AppendLine($"License: {physician.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty}");
 
-                if (physician.Specializations.Any())
+                var specializations = physician.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>();
+                if (specializations.Any())
                 {
-                    var specializationNames = physician.Specializations.Select(s => s.GetDisplayName());
+                    var specializationNames = specializations.Select(s => s.GetDisplayName());
                     sb.AppendLine($"Specializations: {string.Join(", ", specializationNames)}");
                 }
 

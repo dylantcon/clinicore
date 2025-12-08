@@ -1,7 +1,10 @@
-using Core.CliniCore.Domain;
-using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Services;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users;
+using Core.CliniCore.Domain.Users.Concrete;
+using Core.CliniCore.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -101,10 +104,10 @@ namespace Core.CliniCore.Commands.Query
                 sb.AppendLine($"Total: {administrators.Count()}");
                 sb.AppendLine();
 
-                foreach (var admin in administrators.OrderBy(a => a.Name))
+                foreach (var admin in administrators.OrderBy(a => a.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty))
                 {
                     sb.AppendLine($"ID: {admin.Id:N}");
-                    sb.AppendLine($"Name: {admin.Name}");
+                    sb.AppendLine($"Name: {admin.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
                     sb.AppendLine($"Username: {admin.Username}");
 
                     var email = admin.GetValue<string>("email");
@@ -124,16 +127,17 @@ namespace Core.CliniCore.Commands.Query
                 sb.AppendLine($"Total: {physicians.Count()}");
                 sb.AppendLine();
 
-                foreach (var physician in physicians.OrderBy(p => p.Name))
+                foreach (var physician in physicians.OrderBy(p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty))
                 {
                     sb.AppendLine($"ID: {physician.Id:N}");
-                    sb.AppendLine($"Name: Dr. {physician.Name}");
+                    sb.AppendLine($"Name: Dr. {physician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
                     sb.AppendLine($"Username: {physician.Username}");
-                    sb.AppendLine($"License Number: {physician.LicenseNumber}");
+                    sb.AppendLine($"License Number: {physician.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty}");
 
-                    if (physician.Specializations.Any())
+                    var specializations = physician.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new List<MedicalSpecialization>();
+                    if (specializations.Any())
                     {
-                        var specializationNames = string.Join(", ", physician.Specializations.Select(s => s.ToString()));
+                        var specializationNames = string.Join(", ", specializations.Select(s => s.ToString()));
                         sb.AppendLine($"Specializations: {specializationNames}");
                     }
 
@@ -149,10 +153,10 @@ namespace Core.CliniCore.Commands.Query
                 sb.AppendLine($"Total: {patients.Count()}");
                 sb.AppendLine();
 
-                foreach (var patient in patients.OrderBy(p => p.Name))
+                foreach (var patient in patients.OrderBy(p => p.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty))
                 {
                     sb.AppendLine($"ID: {patient.Id:N}");
-                    sb.AppendLine($"Name: {patient.Name}");
+                    sb.AppendLine($"Name: {patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
                     sb.AppendLine($"Username: {patient.Username}");
 
                     var birthDate = patient.GetValue<DateTime>("birthdate");
@@ -168,7 +172,7 @@ namespace Core.CliniCore.Commands.Query
                         var primaryPhysician = _profileRegistry.GetProfileById(patient.PrimaryPhysicianId.Value) as PhysicianProfile;
                         if (primaryPhysician != null)
                         {
-                            sb.AppendLine($"Primary Physician: Dr. {primaryPhysician.Name}");
+                            sb.AppendLine($"Primary Physician: Dr. {primaryPhysician.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}");
                         }
                     }
 

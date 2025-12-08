@@ -3,15 +3,17 @@ using System;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
+using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
+using Core.CliniCore.Domain.Users.Concrete;
 using Core.CliniCore.Domain.Validation;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
-    public class CreatePatientCommand : AbstractCommand
+    public class CreatePatientCommand(IAuthenticationService authService, ProfileService profileService) : AbstractCommand
     {
         public const string Key = "createpatient";
         public override string CommandKey => Key;
@@ -27,14 +29,8 @@ namespace Core.CliniCore.Commands.Profile
             public const string Race = "race";
         }
 
-        private readonly ProfileService _registry;
-        private readonly IAuthenticationService _authService;
-
-        public CreatePatientCommand(IAuthenticationService authService, ProfileService profileService)
-        {
-            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-            _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
-        }
+        private readonly ProfileService _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+        private readonly IAuthenticationService _authService = authService ?? throw new ArgumentNullException(nameof(authService));
 
         public override string Description => "Creates a new patient profile in the system";
 
@@ -102,21 +98,21 @@ namespace Core.CliniCore.Commands.Profile
                     return CommandResult.ValidationFailed(errors);
                 }
 
-                // Register with authentication service
+                // Add to registry first (fail-secure: profile before credentials)
                 var password = parameters.GetRequiredParameter<string>(Parameters.Password);
-                if (!_authService.Register(patient, password))
-                {
-                    return CommandResult.Fail("Failed to register patient account");
-                }
-
-                // Add to registry
                 if (!_registry.AddProfile(patient))
                 {
                     return CommandResult.Fail("Failed to add patient to registry");
                 }
 
+                // Register with authentication service
+                if (!_authService.Register(patient, password))
+                {
+                    return CommandResult.Fail("Failed to register patient account");
+                }
+
                 return CommandResult.Ok(
-                    $"Patient '{patient.Name}' created successfully with ID {patient.Id}",
+                    $"Patient '{patient.GetValue<string>(CommonEntryType.Name.GetKey()) ?? string.Empty}' created successfully with ID {patient.Id}",
                     patient);
             }
             catch (Exception ex)

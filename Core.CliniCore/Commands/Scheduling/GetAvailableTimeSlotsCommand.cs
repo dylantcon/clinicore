@@ -1,13 +1,15 @@
-﻿using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Domain;
+﻿using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Scheduling.BookingStrategies;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -152,13 +154,13 @@ namespace Core.CliniCore.Commands.Scheduling
                 if (!slotsForDate.Any())
                 {
                     return CommandResult.Ok(
-                        $"No available time slots found for Dr. {physician?.Name ?? "Unknown"} on {date:yyyy-MM-dd}.\n" +
+                        $"No available time slots found for Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"} on {date:yyyy-MM-dd}.\n" +
                         "Appointments are only available Monday through Friday from 8:00 AM to 5:00 PM.");
                 }
 
                 // Format the results
                 var slotsText = new StringBuilder();
-                slotsText.AppendLine($"Available time slots for Dr. {physician?.Name ?? "Unknown"} on {date:yyyy-MM-dd}:");
+                slotsText.AppendLine($"Available time slots for Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"} on {date:yyyy-MM-dd}:");
                 slotsText.AppendLine($"Duration: {durationMinutes} minutes\n");
 
                 foreach (var slot in slotsForDate)

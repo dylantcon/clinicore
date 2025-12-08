@@ -1,6 +1,6 @@
-﻿using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Domain;
+﻿using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Enumerations.EntryTypes;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.Management;
 using System;
@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
+using Core.CliniCore.Domain.Authentication.Representation;
+using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
@@ -120,25 +122,26 @@ namespace Core.CliniCore.Commands.Scheduling
                 appointmentDetails.AppendLine($"  Duration: {(appointment.End - appointment.Start).TotalMinutes} minutes");
                 appointmentDetails.AppendLine();
                 appointmentDetails.AppendLine("=== PATIENT INFORMATION ===");
-                appointmentDetails.AppendLine($"  Name: {patient?.Name ?? "Unknown"}");
+                appointmentDetails.AppendLine($"  Name: {patient?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}");
                 appointmentDetails.AppendLine($"  Patient ID: {appointment.PatientId:N}");
                 if (patient != null)
                 {
-                    appointmentDetails.AppendLine($"  Address: {patient.Address}");
-                    appointmentDetails.AppendLine($"  Gender: {patient.Gender}");
-                    appointmentDetails.AppendLine($"  Birth Date: {patient.BirthDate:yyyy-MM-dd}");
+                    appointmentDetails.AppendLine($"  Address: {patient.GetValue<string>(CommonEntryType.Address.GetKey()) ?? string.Empty}");
+                    appointmentDetails.AppendLine($"  Gender: {patient.GetValue<Gender>(PatientEntryType.Gender.GetKey())}");
+                    appointmentDetails.AppendLine($"  Birth Date: {patient.GetValue<DateTime>(CommonEntryType.BirthDate.GetKey()):yyyy-MM-dd}");
                 }
                 appointmentDetails.AppendLine();
                 appointmentDetails.AppendLine("=== PHYSICIAN INFORMATION ===");
-                appointmentDetails.AppendLine($"  Name: Dr. {physician?.Name ?? "Unknown"}");
+                appointmentDetails.AppendLine($"  Name: Dr. {physician?.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown"}");
                 appointmentDetails.AppendLine($"  Physician ID: {appointment.PhysicianId:N}");
                 if (physician != null)
                 {
-                    var specializations = physician.Specializations.Any() ? 
-                        string.Join(", ", physician.Specializations) : "General Practice";
-                    appointmentDetails.AppendLine($"  Specializations: {specializations}");
-                    appointmentDetails.AppendLine($"  License: {physician.LicenseNumber}");
-                    appointmentDetails.AppendLine($"  Graduation: {physician.GraduationDate:yyyy-MM-dd}");
+                    var specializations = physician.GetValue<List<MedicalSpecialization>>(PhysicianEntryType.Specializations.GetKey()) ?? new();
+                    var specializationsText = specializations.Any() ?
+                        string.Join(", ", specializations) : "General Practice";
+                    appointmentDetails.AppendLine($"  Specializations: {specializationsText}");
+                    appointmentDetails.AppendLine($"  License: {physician.GetValue<string>(PhysicianEntryType.LicenseNumber.GetKey()) ?? string.Empty}");
+                    appointmentDetails.AppendLine($"  Graduation: {physician.GetValue<DateTime>(PhysicianEntryType.GraduationDate.GetKey()):yyyy-MM-dd}");
                 }
                 appointmentDetails.AppendLine();
                 appointmentDetails.AppendLine("=== APPOINTMENT DETAILS ===");
