@@ -30,11 +30,17 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build projects
+        run: dotnet build --no-restore --configuration Release
+
       - name: Install DocFX
         run: dotnet tool install -g docfx
 
       - name: Build Documentation
-        run: docfx docs/docfx.json
+        run: docfx docs/docfx.json --logLevel verbose
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
