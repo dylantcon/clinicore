@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Scheduling.BookingStrategies
 {

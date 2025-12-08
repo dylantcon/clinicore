@@ -96,6 +96,12 @@ namespace Core.CliniCore.Scheduling
         public string? CancellationReason { get; set; }
 
         /// <summary>
+        /// Room number where the appointment takes place (1-999).
+        /// Used to prevent double-booking of rooms.
+        /// </summary>
+        public int? RoomNumber { get; set; }
+
+        /// <summary>
         /// Override to add appointment-specific description
         /// </summary>
         public override string Description

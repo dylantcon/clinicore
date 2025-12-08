@@ -79,6 +79,21 @@ namespace Core.CliniCore.Scheduling
         }
 
         /// <summary>
+        /// Loads an appointment directly without conflict checking.
+        /// Used when loading persisted data from repository.
+        /// </summary>
+        internal void LoadAppointment(AppointmentTimeInterval appointment)
+        {
+            if (appointment == null || appointment.PhysicianId != PhysicianId)
+                return;
+
+            lock (_lock)
+            {
+                _appointments.Add(appointment);
+            }
+        }
+
+        /// <summary>
         /// Removes an appointment from the schedule
         /// </summary>
         public bool RemoveAppointment(Guid appointmentId)

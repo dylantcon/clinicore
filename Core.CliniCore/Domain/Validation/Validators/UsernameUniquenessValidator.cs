@@ -1,4 +1,5 @@
-﻿using Core.CliniCore.Services;
+﻿using Core.CliniCore.Domain.Users;
+using Core.CliniCore.Service;
 using System.Linq;
 
 namespace Core.CliniCore.Domain.Validation.Validators

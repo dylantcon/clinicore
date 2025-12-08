@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Core.CliniCore.Domain.Validation.Validators;
 using System.Linq.Expressions;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Domain.Validation
 {

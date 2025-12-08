@@ -1,5 +1,5 @@
 ﻿using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Services;
+using Core.CliniCore.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
