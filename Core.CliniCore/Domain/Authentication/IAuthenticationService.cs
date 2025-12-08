@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Core.CliniCore.Domain.Authentication.Byproducts;
+using Core.CliniCore.Domain.Users;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,8 +18,8 @@ namespace Core.CliniCore.Domain.Authentication
         /// </summary>
         /// <param name="username">The username to authenticate</param>
         /// <param name="password">The password to verify</param>
-        /// <returns>An authenticated user profile if successful, null otherwise</returns>
-        IUserProfile? Authenticate(string username, string password);
+        /// <returns>Authentication result with profile on success, or failure reason</returns>
+        AuthenticationResult Authenticate(string username, string password);
 
         /// <summary>
         /// Registers a new user in the system
@@ -49,20 +51,6 @@ namespace Core.CliniCore.Domain.Authentication
         /// <param name="username">The username to check</param>
         /// <returns>True if username exists, false otherwise</returns>
         bool UserExists(string username);
-
-        /// <summary>
-        /// Locks a user account (admin function)
-        /// </summary>
-        /// <param name="username">The username to lock</param>
-        /// <returns>True if account locked successfully, false otherwise</returns>
-        bool LockAccount(string username);
-
-        /// <summary>
-        /// Unlocks a user account (admin function)
-        /// </summary>
-        /// <param name="username">The username to unlock</param>
-        /// <returns>True if account unlocked successfully, false otherwise</returns>
-        bool UnlockAccount(string username);
 
         /// <summary>
         /// Gets the last login time for a user
