@@ -9,33 +9,61 @@ using Core.CliniCore.Domain.ClinicalDocumentation;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that retrieves and formats a single clinical document for viewing.
+    /// </summary>
     public class ViewClinicalDocumentCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "viewclinicaldocument";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ViewClinicalDocumentCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the clinical document identifier to view.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the desired output format (e.g. "full", "summary", "soap").
+            /// </summary>
             public const string Format = "format";
         }
 
         private readonly ClinicalDocumentService _documentRegistry;
         private readonly ProfileService _profileRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ViewClinicalDocumentCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service used to resolve patient and physician details.</param>
+        /// <param name="clinicalDocService">The clinical document service used to retrieve documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any dependency is <c>null</c>.</exception>
         public ViewClinicalDocumentCommand(ProfileService profileService, ClinicalDocumentService clinicalDocService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Views the full details of a clinical document";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewOwnClinicalDocuments;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -61,6 +89,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -98,6 +127,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

@@ -14,29 +14,53 @@ using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
+    /// <summary>
+    /// Command that retrieves and formats detailed information about a specific appointment.
+    /// </summary>
     public class ViewAppointmentCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "viewappointment";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
+
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ViewAppointmentCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the appointment identifier to view.
+            /// </summary>
             public const string AppointmentId = "appointment_id";
         }
 
         private readonly SchedulerService _scheduleManager;
         private readonly ProfileService _profileRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ViewAppointmentCommand"/> class.
+        /// </summary>
+        /// <param name="scheduleManager">The scheduler service used to retrieve appointments.</param>
+        /// <param name="profileService">The profile service used to resolve patient and physician details.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any dependency is <c>null</c>.</exception>
         public ViewAppointmentCommand(SchedulerService scheduleManager, ProfileService profileService)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Views detailed information about a specific appointment";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewOwnAppointments;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -61,6 +85,7 @@ namespace Core.CliniCore.Commands.Scheduling
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -91,6 +116,7 @@ namespace Core.CliniCore.Commands.Scheduling
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -165,16 +191,20 @@ namespace Core.CliniCore.Commands.Scheduling
         }
 
         /// <summary>
-        /// Finds an appointment by ID across all physician schedules
+        /// Finds an appointment by its identifier using the scheduler service.
         /// </summary>
+        /// <param name="appointmentId">The unique appointment identifier.</param>
+        /// <returns>The matching <see cref="AppointmentTimeInterval"/>, or <c>null</c> if not found.</returns>
         private AppointmentTimeInterval? FindAppointmentById(Guid appointmentId)
         {
             return _scheduleManager.FindAppointmentById(appointmentId);
         }
 
         /// <summary>
-        /// Checks for scheduling conflicts at the appointment time
+        /// Checks for scheduling conflicts at the appointment time.
         /// </summary>
+        /// <param name="appointment">The appointment for which to check conflicts.</param>
+        /// <returns>A list of detected scheduling conflicts.</returns>
         private List<ScheduleConflict> CheckAppointmentConflicts(AppointmentTimeInterval appointment)
         {
             try
@@ -206,8 +236,10 @@ namespace Core.CliniCore.Commands.Scheduling
         }
 
         /// <summary>
-        /// Validates if the appointment is within business hours
+        /// Validates whether the given appointment occurs within business hours.
         /// </summary>
+        /// <param name="appointment">The appointment to validate.</param>
+        /// <returns><c>true</c> if the appointment is within business hours; otherwise, <c>false</c>.</returns>
         private bool ValidateBusinessHours(AppointmentTimeInterval appointment)
         {
             // Check day of week (Monday-Friday)

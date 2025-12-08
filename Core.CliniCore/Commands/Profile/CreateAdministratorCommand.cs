@@ -10,30 +10,70 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that creates a new administrator profile and associated authentication account.
+    /// Includes bootstrap logic allowing the first admin to be created without authentication.
+    /// </summary>
     public class CreateAdministratorCommand(IAuthenticationService authenticationService, ProfileService profileService) : AbstractCommand
     {
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="CreateAdministratorCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the administrator's username.
+            /// </summary>
             public const string Username = "username";
+
+            /// <summary>
+            /// Parameter key for the administrator's password.
+            /// </summary>
             public const string Password = "password";
+
+            /// <summary>
+            /// Parameter key for the administrator's full name.
+            /// </summary>
             public const string Name = "name";
+
+            /// <summary>
+            /// Parameter key for the administrator's address.
+            /// </summary>
             public const string Address = "address";
+
+            /// <summary>
+            /// Parameter key for the administrator's birthdate.
+            /// </summary>
             public const string BirthDate = "birthdate";
+
+            /// <summary>
+            /// Parameter key for the administrator's email address.
+            /// </summary>
             public const string Email = "email";
         }
 
         private readonly IAuthenticationService _authService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
         private readonly ProfileService _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "createadministrator";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <inheritdoc />
         public override string Description => "Creates a new administrator profile";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.CreatePhysicianProfile; // Using similar permission - only admins can create admins
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -120,7 +160,8 @@ namespace Core.CliniCore.Commands.Profile
 
             return result;
         }
-
+        
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -149,6 +190,7 @@ namespace Core.CliniCore.Commands.Profile
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

@@ -11,32 +11,64 @@ using System.Text;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that retrieves and displays a list of patient profiles.
+    /// Supports filtering by assigned physician, search terms, and active/inactive status.
+    /// </summary>
     public class ListPatientsCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "listpatients";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ListPatientsCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for filtering patients by their assigned physician's ID.
+            /// </summary>
             public const string PhysicianId = "physician_id";
+
+            /// <summary>
+            /// Parameter key for searching patients by name or username.
+            /// </summary>
             public const string Search = "search";
+
+            /// <summary>
+            /// Parameter key indicating whether to include inactive patient profiles in results.
+            /// </summary>
             public const string IncludeInactive = "include_inactive";
         }
 
         private readonly ProfileService _registry;
 
+        /// <summary>
+        /// Constructs a ListPatientCommand, sourcing data from the provided ProfileService
+        /// </summary>
+        /// <param name="profileService"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public ListPatientsCommand(ProfileService profileService)
         {
             _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Lists all patients or patients for a specific physician";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewAllPatients;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -55,6 +87,7 @@ namespace Core.CliniCore.Commands.Profile
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

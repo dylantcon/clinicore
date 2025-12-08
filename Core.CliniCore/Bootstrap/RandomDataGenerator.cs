@@ -91,6 +91,13 @@ namespace Core.CliniCore.Bootstrap
 
         #endregion
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RandomDataGenerator"/> class, optionally using a specified seed
+        /// for deterministic random data generation.
+        /// </summary>
+        /// <param name="seed">An optional seed value to initialize the random number generator. If specified, the generated data will be
+        /// repeatable for the same seed; otherwise, a time-dependent default seed is used for non-deterministic
+        /// results.</param>
         public RandomDataGenerator(int? seed = null)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
@@ -99,6 +106,7 @@ namespace Core.CliniCore.Bootstrap
         /// <summary>
         /// Reserves usernames that should not be generated (e.g., hardcoded ones).
         /// </summary>
+        /// <param name="usernames">A collection of usernames to reserve.</param>
         public void ReserveUsernames(IEnumerable<string> usernames)
         {
             foreach (var username in usernames)
@@ -110,6 +118,7 @@ namespace Core.CliniCore.Bootstrap
         /// <summary>
         /// Reserves room numbers that should not be generated.
         /// </summary>
+        /// <param name="roomNumbers">A collection of room numbers to reserve.</param>
         public void ReserveRoomNumbers(IEnumerable<int> roomNumbers)
         {
             foreach (var room in roomNumbers)
@@ -120,22 +129,44 @@ namespace Core.CliniCore.Bootstrap
 
         #region Name Generation
 
+        /// <summary>
+        /// Returns a randomly selected gender value.
+        /// </summary>
+        /// <returns>A <see cref="Gender"/> value representing either <see cref="Gender.Man"/> or <see cref="Gender.Woman"/>
+        /// chosen at random.</returns>
         public Gender RandomGender()
         {
             return _random.Next(2) == 0 ? Gender.Man : Gender.Woman;
         }
 
+        /// <summary>
+        /// Returns a randomly selected first name appropriate for the specified gender.
+        /// </summary>
+        /// <param name="gender">The gender for which to generate a first name. Determines whether a male or female name is returned.</param>
+        /// <returns>A randomly chosen first name corresponding to the specified gender.</returns>
         public string RandomFirstName(Gender gender)
         {
             var names = gender == Gender.Man ? MaleFirstNames : FemaleFirstNames;
             return names[_random.Next(names.Length)];
         }
 
+        /// <summary>
+        /// Returns a randomly selected last name from the available list.
+        /// </summary>
+        /// <returns>A string containing a last name chosen at random from the collection. The returned value is never null or
+        /// empty.</returns>
         public string RandomLastName()
         {
             return LastNames[_random.Next(LastNames.Length)];
         }
 
+        /// <summary>
+        /// Generates a random patient name and associated gender.
+        /// </summary>
+        /// <remarks>The generated names and gender are selected randomly. This method is useful for
+        /// creating test data or anonymized patient records.</remarks>
+        /// <returns>A tuple containing the patient's full name, first name, last name, and gender.  The <c>FullName</c> is a
+        /// concatenation of the first and last names. </returns>
         public (string FullName, string FirstName, string LastName, Gender Gender) GeneratePatientName()
         {
             var gender = RandomGender();
@@ -144,6 +175,13 @@ namespace Core.CliniCore.Bootstrap
             return ($"{firstName} {lastName}", firstName, lastName, gender);
         }
 
+        /// <summary>
+        /// Generates a physician's name using a randomly selected last name.
+        /// </summary>
+        /// <remarks>Physicians are typically referred to by their last name only. The returned tuple
+        /// provides both the full name and last name for convenience.</remarks>
+        /// <returns>A tuple containing the physician's full name and last name. Both values will be the same, representing the
+        /// physician's last name.</returns>
         public (string FullName, string LastName) GeneratePhysicianName()
         {
             var lastName = RandomLastName();
@@ -154,6 +192,17 @@ namespace Core.CliniCore.Bootstrap
 
         #region Username Generation
 
+        /// <summary>
+        /// Generates a unique username based on the specified first and last names.
+        /// </summary>
+        /// <remarks>The generated username is guaranteed to be unique among previously generated
+        /// usernames within the current instance. Usernames are case-insensitive and always returned in
+        /// lowercase.</remarks>
+        /// <param name="firstName">The user's first name. Must not be null or empty.</param>
+        /// <param name="lastName">The user's last name. Must not be null or empty.</param>
+        /// <returns>A unique username in lowercase, formed by combining the first character of <paramref name="firstName"/> with
+        /// <paramref name="lastName"/>. If the generated username is already in use, a numeric suffix is appended to
+        /// ensure uniqueness.</returns>
         public string GenerateUsername(string firstName, string lastName)
         {
             // Try variations until we find a unique one
@@ -175,6 +224,14 @@ namespace Core.CliniCore.Bootstrap
 
         #region Address Generation
 
+        /// <summary>
+        /// Generates a random address string composed of a street number, street name, street suffix, city, state, and
+        /// ZIP code.
+        /// </summary>
+        /// <remarks>The generated address is intended for use in testing, sample data, or scenarios where
+        /// a realistic but fictitious address is required. The format of the returned address is: "StreetNumber
+        /// StreetName StreetSuffix, City, State ZIP".</remarks>
+        /// <returns>A string containing a randomly generated address in the format "1234 Main St, Springfield, NY 12345".</returns>
         public string GenerateAddress()
         {
             var streetNumber = _random.Next(100, 9999);
@@ -191,6 +248,19 @@ namespace Core.CliniCore.Bootstrap
 
         #region Date Generation
 
+        /// <summary>
+        /// Generates a random birth date such that the resulting age falls within the specified minimum and maximum age
+        /// range.
+        /// </summary>
+        /// <remarks>The generated birth date is calculated based on the current date. The age range is
+        /// inclusive, meaning the returned date will result in an age between <paramref name="minAge"/> and <paramref
+        /// name="maxAge"/>, inclusive, as of today.</remarks>
+        /// <param name="minAge">The minimum age, in years, that the generated birth date should correspond to. Must be greater than zero and
+        /// less than or equal to <paramref name="maxAge"/>.</param>
+        /// <param name="maxAge">The maximum age, in years, that the generated birth date should correspond to. Must be greater than or equal
+        /// to <paramref name="minAge"/>.</param>
+        /// <returns>A <see cref="DateTime"/> representing a birth date for an individual whose age is between <paramref
+        /// name="minAge"/> and <paramref name="maxAge"/>, inclusive.</returns>
         public DateTime GenerateBirthDate(int minAge = 18, int maxAge = 85)
         {
             var today = DateTime.Today;
@@ -200,6 +270,16 @@ namespace Core.CliniCore.Bootstrap
             return minDate.AddDays(_random.Next(range));
         }
 
+        /// <summary>
+        /// Generates a plausible medical school graduation date based on the specified birth date.
+        /// </summary>
+        /// <remarks>The returned date assumes a typical medical school graduation age range and randomly
+        /// selects either May or June as the graduation month. If the calculated graduation year is in the future, it
+        /// is capped to the previous year.</remarks>
+        /// <param name="birthDate">The date of birth used to estimate the graduation year. Must be a valid <see cref="DateTime"/> value.</param>
+        /// <returns>A <see cref="DateTime"/> representing the estimated graduation date, typically in May or June, when the
+        /// individual would be between 26 and 30 years old. The graduation year will not be in the current year or
+        /// later.</returns>
         public DateTime GenerateGraduationDate(DateTime birthDate)
         {
             // Medical school graduation typically at age 26-30
@@ -213,11 +293,28 @@ namespace Core.CliniCore.Bootstrap
 
         #region Medical Data Generation
 
+        /// <summary>
+        /// Returns a randomly selected race from the available set of races.
+        /// </summary>
+        /// <returns>A string representing a race chosen at random from the predefined list of races.</returns>
         public string RandomRace()
         {
             return Races[_random.Next(Races.Length)];
         }
 
+        /// <summary>
+        /// Generates a random list of distinct medical specializations.
+        /// </summary>
+        /// <remarks>The returned list will not contain duplicate specializations. If the range specified
+        /// by <paramref name="min"/> and <paramref name="max"/> exceeds the number of available specializations, the
+        /// list will contain at most all available specializations.</remarks>
+        /// <param name="min">The minimum number of specializations to generate. Must be greater than zero and less than or equal to
+        /// <paramref name="max"/>.</param>
+        /// <param name="max">The maximum number of specializations to generate. Must be greater than or equal to <paramref name="min"/>
+        /// and less than or equal to the total number of available specializations.</param>
+        /// <returns>A list of <see cref="MedicalSpecialization"/> values containing randomly selected, distinct specializations.
+        /// The list will contain between <paramref name="min"/> and <paramref name="max"/> items, depending on the
+        /// available specializations.</returns>
         public List<MedicalSpecialization> GenerateSpecializations(int min = 1, int max = 5)
         {
             var allSpecs = Enum.GetValues<MedicalSpecialization>().ToArray();
@@ -233,6 +330,13 @@ namespace Core.CliniCore.Bootstrap
             return selected.ToList();
         }
 
+        /// <summary>
+        /// Generates a random medical license number in the format "MD{stateCode}{number}".
+        /// </summary>
+        /// <remarks>The generated license number is not guaranteed to be unique or valid for any official
+        /// use. The format follows "MD" prefix, a state code, and a five-digit number.</remarks>
+        /// <returns>A string representing a medical license number, where <c>stateCode</c> is a randomly selected state
+        /// abbreviation and <c>number</c> is a five-digit number.</returns>
         public string GenerateLicenseNumber()
         {
             var stateCode = States[_random.Next(States.Length)];
@@ -240,6 +344,10 @@ namespace Core.CliniCore.Bootstrap
             return $"MD{stateCode}{number}";
         }
 
+        /// <summary>
+        /// Returns a randomly selected visit reason from the available list.
+        /// </summary>
+        /// <returns>A string containing one of the predefined visit reasons, chosen at random.</returns>
         public string RandomVisitReason()
         {
             return VisitReasons[_random.Next(VisitReasons.Length)];
@@ -252,6 +360,10 @@ namespace Core.CliniCore.Bootstrap
         /// <summary>
         /// Generates a unique room number that hasn't been used.
         /// </summary>
+        /// <param name="min">The minimum room number (inclusive).</param>
+        /// <param name="max">The maximum room number (inclusive).</param>
+        /// <returns>A unique integer representing a room number.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when all available room numbers in the specified range have been used.</exception>
         public int GenerateUniqueRoomNumber(int min = 100, int max = 999)
         {
             if (_usedRoomNumbers.Count >= (max - min + 1))
@@ -273,6 +385,14 @@ namespace Core.CliniCore.Bootstrap
 
         #region Password Generation
 
+        /// <summary>
+        /// Generates a simple password consisting of a predefined word followed by a random three-digit number.
+        /// </summary>
+        /// <remarks>This method is intended for development or testing scenarios and does not produce
+        /// secure passwords suitable for production use. The generated password combines one of several fixed words
+        /// with a random number between 100 and 998.</remarks>
+        /// <returns>A string containing the generated password in the format "word###", where "word" is one of the predefined
+        /// options and "###" is a random three-digit number.</returns>
         public string GeneratePassword()
         {
             // Simple password for dev: word + numbers

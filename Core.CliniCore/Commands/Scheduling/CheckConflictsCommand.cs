@@ -11,30 +11,65 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
+    /// <summary>
+    /// Command that checks for scheduling conflicts for a proposed appointment time without booking it.
+    /// </summary>
     public class CheckConflictsCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "checkconflicts";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
+
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="CheckConflictsCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the physician identifier whose schedule should be checked.
+            /// </summary>
             public const string PhysicianId = "physician_id";
+
+            /// <summary>
+            /// Parameter key for the proposed appointment start time.
+            /// </summary>
             public const string StartTime = "start_time";
+
+            /// <summary>
+            /// Parameter key for the proposed appointment duration in minutes.
+            /// </summary>
             public const string DurationMinutes = "duration_minutes";
+
+            /// <summary>
+            /// Parameter key for an existing appointment identifier to exclude (for rescheduling scenarios).
+            /// </summary>
             public const string ExcludeAppointmentId = "exclude_appointment_id"; // For rescheduling scenarios
         }
 
         private readonly SchedulerService _scheduleManager;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CheckConflictsCommand"/> class.
+        /// </summary>
+        /// <param name="scheduleManager">The scheduler service used to access appointment schedules.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="scheduleManager"/> is <c>null</c>.</exception>
         public CheckConflictsCommand(SchedulerService scheduleManager)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
         }
 
+        /// <inheritdoc />
         public override string Description => "Checks for scheduling conflicts for a proposed appointment time without booking it";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewAllAppointments; // Can check conflicts if can view appointments
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -102,6 +137,7 @@ namespace Core.CliniCore.Commands.Scheduling
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

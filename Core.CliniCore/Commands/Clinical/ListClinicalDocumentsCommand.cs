@@ -12,36 +12,76 @@ using Core.CliniCore.Domain.ClinicalDocumentation;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that lists clinical documents using optional filters such as patient, physician, and date range.
+    /// </summary>
     public class ListClinicalDocumentsCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "listclinicaldocuments";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ListClinicalDocumentsCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for filtering by patient identifier.
+            /// </summary>
             public const string PatientId = "patient_id";
+
+            /// <summary>
+            /// Parameter key for filtering by physician identifier.
+            /// </summary>
             public const string PhysicianId = "physician_id";
+
+            /// <summary>
+            /// Parameter key for the start of the creation date range filter.
+            /// </summary>
             public const string StartDate = "start_date";
+
+            /// <summary>
+            /// Parameter key for the end of the creation date range filter.
+            /// </summary>
             public const string EndDate = "end_date";
+
+            /// <summary>
+            /// Parameter key indicating that only incomplete (draft) documents should be returned.
+            /// </summary>
             public const string IncompleteOnly = "incomplete_only";
         }
 
         private readonly ClinicalDocumentService _documentRegistry;
         private readonly ProfileService _profileRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ListClinicalDocumentsCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service used to resolve patient and physician details.</param>
+        /// <param name="clinicalDocService">The clinical document service used to query documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any dependency is <c>null</c>.</exception>
         public ListClinicalDocumentsCommand(ProfileService profileService, ClinicalDocumentService clinicalDocService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Lists clinical documents with various filters";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.CreateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -58,6 +98,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -75,6 +116,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

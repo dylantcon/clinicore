@@ -11,40 +11,103 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that updates an existing assessment entry within a clinical document.
+    /// </summary>
     public class UpdateAssessmentCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "updateassessment";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="UpdateAssessmentCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the clinical document identifier that owns the assessment.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the assessment entry identifier.
+            /// </summary>
             public const string AssessmentId = "assessment_id";
+
+            /// <summary>
+            /// Parameter key for the updated clinical impression text.
+            /// </summary>
             public const string ClinicalImpression = "clinical_impression";
+
+            /// <summary>
+            /// Parameter key for the patient condition.
+            /// </summary>
             public const string Condition = "condition";
+
+            /// <summary>
+            /// Parameter key for the prognosis value.
+            /// </summary>
             public const string Prognosis = "prognosis";
+
+            /// <summary>
+            /// Parameter key for the collection of differential diagnoses.
+            /// </summary>
             public const string DifferentialDiagnoses = "differential_diagnoses";
+
+            /// <summary>
+            /// Parameter key for the collection of risk factors.
+            /// </summary>
             public const string RiskFactors = "risk_factors";
+
+            /// <summary>
+            /// Parameter key indicating whether immediate action is required.
+            /// </summary>
             public const string RequiresImmediateAction = "requires_immediate_action";
+
+            /// <summary>
+            /// Parameter key for the confidence level of the assessment.
+            /// </summary>
             public const string Confidence = "confidence";
+
+            /// <summary>
+            /// Parameter key for a coding system identifier associated with the assessment.
+            /// </summary>
             public const string Code = "code";
+
+            /// <summary>
+            /// Parameter key for the assessment severity.
+            /// </summary>
             public const string Severity = "severity";
         }
 
         private readonly ClinicalDocumentService _documentRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UpdateAssessmentCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and update documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public UpdateAssessmentCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Updates an assessment entry within a clinical document";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.UpdateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -151,6 +214,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

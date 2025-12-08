@@ -9,20 +9,54 @@ using System.Linq;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that updates an existing patient profile.
+    /// Supports updating common fields (name, address, birthdate) and patient-specific fields (gender, race).
+    /// Patients can update their own profile; physicians can update their assigned patients.
+    /// </summary>
     public class UpdatePatientProfileCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "updatepatientprofile";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="UpdatePatientProfileCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the unique identifier of the patient profile to update.
+            /// </summary>
             public const string ProfileId = "profileId";
-            // Common fields
+
+            /// <summary>
+            /// Parameter key for the patient's full name.
+            /// </summary>
             public const string Name = "name";
+
+            /// <summary>
+            /// Parameter key for the patient's address.
+            /// </summary>
             public const string Address = "address";
+
+            /// <summary>
+            /// Parameter key for the patient's birthdate.
+            /// </summary>
             public const string BirthDate = "birthdate";
-            // Patient-specific fields
+
+            /// <summary>
+            /// Parameter key for the patient's gender.
+            /// </summary>
             public const string Gender = "patient_gender";
+
+            /// <summary>
+            /// Parameter key for the patient's race/ethnicity.
+            /// </summary>
             public const string Race = "patient_race";
         }
 

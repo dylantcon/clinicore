@@ -11,20 +11,50 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that retrieves and displays detailed information for a specific physician profile.
+    /// Includes credentials, specializations, patient roster, and appointment statistics.
+    /// </summary>
     public class ViewPhysicianProfileCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "viewphysicianprofile";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ViewPhysicianProfileCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the unique identifier of the physician profile to view.
+            /// </summary>
             public const string ProfileId = "profile_id";
+
+            /// <summary>
+            /// Parameter key indicating whether to include extended details like patient
+            /// and appointment counts, and validation errors if present.
+            /// </summary>
             public const string ShowDetails = "show_details";
         }
 
+        /// <summary>
+        /// Defines the result data keys returned by this command.
+        /// </summary>
         public static class Results
         {
+            /// <summary>
+            /// Result key for the number of patients assigned to this physician.
+            /// </summary>
             public const string PatientCount = "patient_count";
+
+            /// <summary>
+            /// Result key for the total number of appointments for this physician.
+            /// </summary>
             public const string AppointmentCount = "appointment_count";
         }
 

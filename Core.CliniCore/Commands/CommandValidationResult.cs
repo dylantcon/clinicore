@@ -7,28 +7,30 @@ using System.Threading.Tasks;
 namespace Core.CliniCore.Commands
 {
     /// <summary>
-    /// Represents the result of command validation
+    /// Represents the result of command validation.
     /// </summary>
     public class CommandValidationResult
     {
         /// <summary>
-        /// Whether the validation passed
+        /// Gets or sets a value indicating whether the validation passed.
         /// </summary>
         public bool IsValid { get; set; }
 
         /// <summary>
-        /// List of validation errors
+        /// Gets or sets the list of validation errors.
         /// </summary>
         public List<string> Errors { get; set; } = [];
 
         /// <summary>
-        /// List of validation warnings (non-blocking)
+        /// Gets or sets the list of non-blocking validation warnings.
         /// </summary>
         public List<string> Warnings { get; set; } = [];
 
         /// <summary>
-        /// Adds an error to the validation result
+        /// Adds an error to the validation result.
         /// </summary>
+        /// <param name="error">The error message to add.</param>
+        /// <returns>The current <see cref="CommandValidationResult"/> instance for method chaining.</returns>
         public CommandValidationResult AddError(string error)
         {
             Errors.Add(error);
@@ -37,8 +39,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Adds a warning to the validation result
+        /// Adds a warning to the validation result.
         /// </summary>
+        /// <param name="warning">The warning message to add.</param>
+        /// <returns>The current <see cref="CommandValidationResult"/> instance for method chaining.</returns>
         public CommandValidationResult AddWarning(string warning)
         {
             Warnings.Add(warning);
@@ -46,16 +50,19 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Factory method for successful validation
+        /// Creates a successful validation result.
         /// </summary>
+        /// <returns>A <see cref="CommandValidationResult"/> indicating validation success.</returns>
         public static CommandValidationResult Success()
         {
             return new CommandValidationResult { IsValid = true };
         }
 
         /// <summary>
-        /// Factory method for failed validation with single error
+        /// Creates a failed validation result with a single error message.
         /// </summary>
+        /// <param name="error">The validation error message.</param>
+        /// <returns>A <see cref="CommandValidationResult"/> indicating validation failure.</returns>
         public static CommandValidationResult Failure(string error)
         {
             return new CommandValidationResult
@@ -66,8 +73,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Factory method for failed validation with multiple errors
+        /// Creates a failed validation result with multiple error messages.
         /// </summary>
+        /// <param name="errors">The validation error messages.</param>
+        /// <returns>A <see cref="CommandValidationResult"/> indicating validation failure.</returns>
         public static CommandValidationResult Failure(params string[] errors)
         {
             return new CommandValidationResult
@@ -78,8 +87,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Factory method for failed validation with error list
+        /// Creates a failed validation result with the specified list of error messages.
         /// </summary>
+        /// <param name="errors">The validation error messages.</param>
+        /// <returns>A <see cref="CommandValidationResult"/> indicating validation failure.</returns>
         public static CommandValidationResult Failure(List<string> errors)
         {
             return new CommandValidationResult
@@ -90,8 +101,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Merges another validation result into this one
+        /// Merges another validation result into this instance.
         /// </summary>
+        /// <param name="other">The other validation result to merge.</param>
+        /// <returns>The current <see cref="CommandValidationResult"/> instance for method chaining.</returns>
         public CommandValidationResult Merge(CommandValidationResult other)
         {
             if (other != null)
@@ -104,8 +117,9 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Gets a display message for the validation result
+        /// Gets a user-friendly display message describing the validation result.
         /// </summary>
+        /// <returns>A formatted message indicating whether validation passed and any errors or warnings.</returns>
         public string GetDisplayMessage()
         {
             if (IsValid)
@@ -120,6 +134,10 @@ namespace Core.CliniCore.Commands
             }
         }
 
+        /// <summary>
+        /// Returns a string that represents the current <see cref="CommandValidationResult"/>.
+        /// </summary>
+        /// <returns>A formatted string containing validation status, error count, and warning count.</returns>
         public override string ToString()
         {
             return $"CommandValidationResult[IsValid={IsValid}, Errors={Errors.Count}, Warnings={Warnings.Count}]";

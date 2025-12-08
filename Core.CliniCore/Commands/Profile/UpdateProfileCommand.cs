@@ -15,41 +15,105 @@ namespace Core.CliniCore.Commands.Profile
     /// </summary>
     public class UpdateProfileCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "updateprofile";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="UpdateProfileCommand"/>.
+        /// Includes common fields shared by all profile types and role-specific fields.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the unique identifier of the profile to update.
+            /// </summary>
             public const string ProfileId = "profileId";
-            // Common fields (all profile types)
+
+            /// <summary>
+            /// Parameter key for the user's full name (all profile types).
+            /// </summary>
             public const string Name = "name";
+
+            /// <summary>
+            /// Parameter key for the user's address (all profile types).
+            /// </summary>
             public const string Address = "address";
+
+            /// <summary>
+            /// Parameter key for the user's birthdate (all profile types).
+            /// </summary>
             public const string BirthDate = "birthdate";
-            // Patient-specific fields
+
+            /// <summary>
+            /// Parameter key for the patient's gender (patient-specific).
+            /// </summary>
             public const string Gender = "patient_gender";
+
+            /// <summary>
+            /// Parameter key for the patient's race/ethnicity (patient-specific).
+            /// </summary>
             public const string Race = "patient_race";
-            // Physician-specific fields
+
+            /// <summary>
+            /// Parameter key for the physician's medical license number (physician-specific).
+            /// </summary>
             public const string LicenseNumber = "physician_license";
+
+            /// <summary>
+            /// Parameter key for the physician's graduation date (physician-specific).
+            /// </summary>
             public const string GraduationDate = "physician_graduation";
+
+            /// <summary>
+            /// Parameter key for the physician's medical specializations (physician-specific).
+            /// </summary>
             public const string Specializations = "physician_specializations";
-            // Administrator-specific field
+
+            /// <summary>
+            /// Parameter key for the administrator's email address (administrator-specific).
+            /// </summary>
             public const string Email = "email";
         }
 
         private readonly ProfileService _registry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UpdateProfileCommand"/> class using the specified profile
+        /// service.
+        /// </summary>
+        /// <param name="profileService">The <see cref="ProfileService"/> instance used to perform profile updates. Cannot be <see langword="null"/>.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="profileService"/> is <see langword="null"/>.</exception>
         public UpdateProfileCommand(ProfileService profileService)
         {
             _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Updates an existing user profile (routes to appropriate profile-specific command)";
 
+        /// <inheritdoc />
         public override bool CanUndo => false; // Profile updates are not undoable for data integrity
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.UpdatePatientProfile; // Base permission - concrete commands will check specific permissions
 
+        /// <summary>
+        /// Validates the specified command parameters to ensure that a valid profile identifier is provided and that
+        /// the corresponding profile exists.
+        /// </summary>
+        /// <remarks>This method checks for the presence and validity of the <c>ProfileId</c> parameter
+        /// and verifies that a profile with the specified identifier exists in the registry. Additional parameter
+        /// validation may be performed by derived command implementations.</remarks>
+        /// <param name="parameters">The <see cref="CommandParameters"/> instance containing the parameters to validate. Must include a non-empty
+        /// <c>ProfileId</c> parameter.</param>
+        /// <returns>A <see cref="CommandValidationResult"/> indicating the outcome of the validation. The result contains errors
+        /// if required parameters are missing, the profile identifier is invalid, or the profile does not exist.</returns>
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -82,12 +146,14 @@ namespace Core.CliniCore.Commands.Profile
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             // Delegate session validation to the concrete commands
             return CommandValidationResult.Success();
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

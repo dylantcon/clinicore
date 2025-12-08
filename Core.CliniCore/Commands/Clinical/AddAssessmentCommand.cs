@@ -8,21 +8,67 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that adds a new clinical assessment entry to an existing clinical document.
+    /// </summary>
     public class AddAssessmentCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "addassessment";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="AddAssessmentCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the target clinical document identifier.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the clinical impression text.
+            /// </summary>
             public const string ClinicalImpression = "clinical_impression";
+
+            /// <summary>
+            /// Parameter key for the patient's overall condition assessment.
+            /// </summary>
             public const string Condition = "condition";
+
+            /// <summary>
+            /// Parameter key for the prognosis assessment.
+            /// </summary>
             public const string Prognosis = "prognosis";
+
+            /// <summary>
+            /// Parameter key indicating whether the assessment requires immediate action.
+            /// </summary>
             public const string RequiresImmediateAction = "requires_immediate_action";
+
+            /// <summary>
+            /// Parameter key for the severity of the clinical situation.
+            /// </summary>
             public const string Severity = "severity";
+
+            /// <summary>
+            /// Parameter key for the confidence level in the assessment.
+            /// </summary>
             public const string Confidence = "confidence";
+
+            /// <summary>
+            /// Parameter key for a collection of differential diagnoses.
+            /// </summary>
             public const string DifferentialDiagnoses = "differential_diagnoses";
+
+            /// <summary>
+            /// Parameter key for a collection of identified risk factors.
+            /// </summary>
             public const string RiskFactors = "risk_factors";
         }
 
@@ -30,18 +76,27 @@ namespace Core.CliniCore.Commands.Clinical
         private AssessmentEntry? _addedAssessment;
         private Guid? _targetDocumentId;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AddAssessmentCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and modify documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public AddAssessmentCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Adds a clinical assessment to a document";
 
+        /// <inheritdoc />
         public override bool CanUndo => true;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.CreateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -100,6 +155,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -179,6 +235,7 @@ namespace Core.CliniCore.Commands.Clinical
             }
         }
 
+        /// <inheritdoc />
         protected override object? CaptureStateForUndo(CommandParameters parameters, SessionContext? session)
         {
             return new UndoState
@@ -188,6 +245,7 @@ namespace Core.CliniCore.Commands.Clinical
             };
         }
 
+        /// <inheritdoc />
         protected override CommandResult UndoCore(object previousState, SessionContext? session)
         {
             if (previousState is UndoState state)
@@ -210,7 +268,14 @@ namespace Core.CliniCore.Commands.Clinical
 
         private class UndoState
         {
+            /// <summary>
+            /// Gets or sets the identifier of the clinical document that owns the assessment.
+            /// </summary>
             public Guid DocumentId { get; set; }
+
+            /// <summary>
+            /// Gets or sets the identifier of the assessment entry that was added.
+            /// </summary>
             public Guid AssessmentId { get; set; }
         }
     }

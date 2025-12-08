@@ -9,30 +9,66 @@ using Core.CliniCore.Domain.ClinicalDocumentation;
 
 namespace Core.CliniCore.Commands.Query
 {
+    /// <summary>
+    /// Command that searches clinical documents by diagnosis, medication, or general text content.
+    /// Supports role-based access control where patients can only search their own documents
+    /// and physicians can search documents for patients under their care.
+    /// </summary>
     public class SearchClinicalNotesCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "searchclinicalnotes";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="SearchClinicalNotesCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the text to search for in clinical documents.
+            /// </summary>
             public const string SearchTerm = "searchTerm";
+
+            /// <summary>
+            /// Parameter key for the search category (general, diagnosis, medication, prescription).
+            /// </summary>
             public const string SearchType = "searchType";
+
+            /// <summary>
+            /// Parameter key for filtering results to a specific patient.
+            /// </summary>
             public const string PatientId = "patientId";
+
+            /// <summary>
+            /// Parameter key for filtering results to documents authored by a specific physician.
+            /// </summary>
             public const string PhysicianId = "physicianId";
         }
 
         private readonly ClinicalDocumentService _documentRegistry;
         private readonly ProfileService _profileRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SearchClinicalNotesCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service for accessing user profiles.</param>
+        /// <param name="clinicalDocService">The clinical document service for searching documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown if any parameter is <see langword="null"/>.</exception>
         public SearchClinicalNotesCommand(ProfileService profileService, ClinicalDocumentService clinicalDocService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Search clinical documents by diagnosis, medication, or general text";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewOwnClinicalDocuments;
 

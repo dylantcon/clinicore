@@ -12,31 +12,71 @@ using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Query
 {
+    /// <summary>
+    /// Command that finds physicians available for appointments within a specified time window.
+    /// Supports filtering by medical specialization and offers flexible time specification
+    /// via either explicit start/end times or date with duration.
+    /// </summary>
     public class FindPhysiciansByAvailabilityCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "findphysiciansbyavailability";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="FindPhysiciansByAvailabilityCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the appointment start time (use with EndTime).
+            /// </summary>
             public const string StartTime = "startTime";
+
+            /// <summary>
+            /// Parameter key for the appointment end time (use with StartTime).
+            /// </summary>
             public const string EndTime = "endTime";
+
+            /// <summary>
+            /// Parameter key for the appointment duration in minutes (use with Date).
+            /// </summary>
             public const string Duration = "duration";
+
+            /// <summary>
+            /// Parameter key for filtering by medical specialization.
+            /// </summary>
             public const string Specialization = "specialization";
+
+            /// <summary>
+            /// Parameter key for the target date (use with Duration).
+            /// </summary>
             public const string Date = "date";
         }
 
         private readonly ProfileService _profileRegistry;
         private readonly SchedulerService _scheduleManager;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FindPhysiciansByAvailabilityCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service for accessing physician profiles.</param>
+        /// <param name="schedulerService">The scheduler service for checking availability.</param>
+        /// <exception cref="ArgumentNullException">Thrown if any parameter is <see langword="null"/>.</exception>
         public FindPhysiciansByAvailabilityCommand(ProfileService profileService, SchedulerService schedulerService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
             _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Find available physicians for a specific time slot";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewAllAppointments;
 

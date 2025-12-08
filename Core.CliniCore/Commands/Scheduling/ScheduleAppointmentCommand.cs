@@ -12,17 +12,52 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
+    /// <summary>
+    /// Command that schedules a new appointment between a patient and a physician.
+    /// </summary>
     public class ScheduleAppointmentCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "scheduleappointment";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
+
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ScheduleAppointmentCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the patient profile identifier.
+            /// </summary>
             public const string PatientId = "patient_id";
+
+            /// <summary>
+            /// Parameter key for the physician profile identifier.
+            /// </summary>
             public const string PhysicianId = "physician_id";
+
+            /// <summary>
+            /// Parameter key for the appointment start time.
+            /// </summary>
             public const string StartTime = "start_time";
+
+            /// <summary>
+            /// Parameter key for the appointment duration in minutes.
+            /// </summary>
             public const string DurationMinutes = "duration_minutes";
+
+            /// <summary>
+            /// Parameter key for the reason for visit.
+            /// </summary>
             public const string Reason = "reason";
+
+            /// <summary>
+            /// Parameter key for optional appointment notes.
+            /// </summary>
             public const string Notes = "notes";
         }
 
@@ -30,19 +65,29 @@ namespace Core.CliniCore.Commands.Scheduling
         private readonly SchedulerService _scheduleManager;
         private AppointmentTimeInterval? _createdAppointment;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ScheduleAppointmentCommand"/> class.
+        /// </summary>
+        /// <param name="scheduleManager">The scheduler service responsible for managing appointments.</param>
+        /// <param name="profileService">The profile service used to resolve patients and physicians.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any dependency is <c>null</c>.</exception>
         public ScheduleAppointmentCommand(SchedulerService scheduleManager, ProfileService profileService)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
             _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Schedules a new appointment between a patient and physician";
 
+        /// <inheritdoc />
         public override bool CanUndo => true;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ScheduleAnyAppointment;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -133,6 +178,7 @@ namespace Core.CliniCore.Commands.Scheduling
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -150,6 +196,7 @@ namespace Core.CliniCore.Commands.Scheduling
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -231,11 +278,13 @@ namespace Core.CliniCore.Commands.Scheduling
             }
         }
 
+        /// <inheritdoc />
         protected override object? CaptureStateForUndo(CommandParameters parameters, SessionContext? session)
         {
             return _createdAppointment;
         }
 
+        /// <inheritdoc />
         protected override CommandResult UndoCore(object previousState, SessionContext? session)
         {
             if (previousState is AppointmentTimeInterval appointment)

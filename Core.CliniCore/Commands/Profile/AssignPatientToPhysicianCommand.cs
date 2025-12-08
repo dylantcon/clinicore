@@ -10,35 +10,67 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that establishes or updates a physician-patient care relationship.
+    /// Supports setting a physician as a patient's primary care provider.
+    /// </summary>
     public class AssignPatientToPhysicianCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "assignpatienttophysician";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="AssignPatientToPhysicianCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the patient's unique identifier.
+            /// </summary>
             public const string PatientId = "patient_id";
+
+            /// <summary>
+            /// Parameter key for the physician's unique identifier.
+            /// </summary>
             public const string PhysicianId = "physician_id";
+
+            /// <summary>
+            /// Parameter key indicating whether to set this physician as the patient's primary care provider.
+            /// </summary>
             public const string SetPrimary = "set_primary";
         }
 
         private readonly ProfileService _registry;
         private Guid? _patientId;
+        private Guid? _physicianId;
+        private bool _wasPrimary;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AssignPatientToPhysicianCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service for accessing patient and physician profiles.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="profileService"/> is <see langword="null"/>.</exception>
         public AssignPatientToPhysicianCommand(ProfileService profileService)
         {
             _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
-        private Guid? _physicianId;
-        private bool _wasPrimary;
 
+        /// <inheritdoc />
         public override string Description => "Establishes or updates a physician-patient care relationship";
 
+        /// <inheritdoc />
         public override bool CanUndo => true;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.CreatePatientProfile; // Physicians and admins can assign patients
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -103,6 +135,7 @@ namespace Core.CliniCore.Commands.Profile
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -120,6 +153,7 @@ namespace Core.CliniCore.Commands.Profile
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -165,6 +199,7 @@ namespace Core.CliniCore.Commands.Profile
             }
         }
 
+        /// <inheritdoc />
         protected override object? CaptureStateForUndo(CommandParameters parameters, SessionContext? session)
         {
             return new UndoState
@@ -175,6 +210,7 @@ namespace Core.CliniCore.Commands.Profile
             };
         }
 
+        /// <inheritdoc />
         protected override CommandResult UndoCore(object previousState, SessionContext? session)
         {
             if (previousState is UndoState state)

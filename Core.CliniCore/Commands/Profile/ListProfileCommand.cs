@@ -11,13 +11,28 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that retrieves and displays all user profiles in the system.
+    /// Groups profiles by role (Administrator, Physician, Patient) for organized output.
+    /// </summary>
     public class ListProfileCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "listprofiles";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ListProfileCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key indicating whether to include profiles that fail validation in results.
+            /// </summary>
             public const string IncludeInvalid = "include_invalid";
         }
 

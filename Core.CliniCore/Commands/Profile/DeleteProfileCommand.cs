@@ -7,21 +7,49 @@ using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that permanently deletes a user profile from the system.
+    /// Performs dependency checks for clinical documents, appointments, and patient assignments
+    /// before deletion. Supports force deletion with automatic cleanup of dependencies.
+    /// </summary>
     public class DeleteProfileCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "deleteprofile";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="DeleteProfileCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the unique identifier of the profile to delete.
+            /// </summary>
             public const string ProfileId = "profileId";
-            public const string Force = "force"; // Skip dependency checks if true
+
+            /// <summary>
+            /// Parameter key indicating whether to skip dependency checks and force deletion.
+            /// When true, all dependencies (documents, appointments, assignments) are cleaned up automatically.
+            /// </summary>
+            public const string Force = "force";
         }
 
         private readonly ProfileService _profileRegistry;
         private readonly ClinicalDocumentService _documentRegistry;
         private readonly SchedulerService _scheduleManager;
 
+        /// <summary>
+        /// Creates a DeleteProfileCommand with the supplied parameters.
+        /// </summary>
+        /// <param name="profileService"></param>
+        /// <param name="schedulerService"></param>
+        /// <param name="clinicalDocService"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public DeleteProfileCommand(ProfileService profileService, SchedulerService schedulerService, ClinicalDocumentService clinicalDocService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
@@ -29,13 +57,17 @@ namespace Core.CliniCore.Commands.Profile
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Permanently deletes a user profile from the system";
 
+        /// <inheritdoc />
         public override bool CanUndo => false; // Deletions cannot be undone
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.DeletePatientProfile;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -82,6 +114,7 @@ namespace Core.CliniCore.Commands.Profile
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

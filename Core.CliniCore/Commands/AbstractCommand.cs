@@ -16,10 +16,36 @@ namespace Core.CliniCore.Commands
     public abstract class AbstractCommand : ICommand
     {
         private readonly RoleBasedAuthorizationService _authorizationService;
+
+        /// <summary>
+        /// Stores the parameters used in the most recent command execution.
+        /// </summary>
+        /// <remarks>This field is intended for use by derived classes to access or track the parameters
+        /// passed to the last executed command. The value may be <c>null</c> if no command has been executed yet or if
+        /// the parameters were not specified.</remarks>
         protected CommandParameters? _lastExecutionParameters;
+
+        /// <summary>
+        /// Stores the session context from the most recent execution.
+        /// </summary>
+        /// <remarks>This field is intended for use by derived classes to access or track the session
+        /// associated with the last operation. The value may be <c>null</c> if no execution has occurred or if the
+        /// session is unavailable.</remarks>
         protected SessionContext? _lastExecutionSession;
+
+        /// <summary>
+        /// Stores the previous state of the object to support undo operations.
+        /// </summary>
+        /// <remarks>This field is used to retain the state prior to a change, enabling the ability to
+        /// revert to an earlier state if needed.</remarks>
         protected object? _previousState; // For undo functionality
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AbstractCommand"/> class with a unique command identifier and
+        /// default role-based authorization service.
+        /// </summary>
+        /// <remarks>The <see cref="CommandId"/> property is assigned a new <see cref="Guid"/> value for
+        /// each instance. The command is configured to use a role-based authorization service by default.</remarks>
         protected AbstractCommand()
         {
             CommandId = Guid.NewGuid();
@@ -299,6 +325,10 @@ namespace Core.CliniCore.Commands
 
         #endregion
 
+        /// <summary>
+        /// Returns a string that represents the current command, including its name and identifier in a formatted form.
+        /// </summary>
+        /// <returns>A string containing the command name followed by the command identifier in a hyphenated, 32-digit format.</returns>
         public override string ToString()
         {
             return $"{CommandName} [{CommandId:N}]";

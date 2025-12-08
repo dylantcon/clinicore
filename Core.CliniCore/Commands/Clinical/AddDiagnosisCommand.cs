@@ -8,20 +8,62 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that adds a diagnosis entry to an existing clinical document.
+    /// </summary>
     public class AddDiagnosisCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "adddiagnosis";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="AddDiagnosisCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the target clinical document identifier.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the diagnosis description.
+            /// </summary>
             public const string DiagnosisDescription = "diagnosis_description";
+
+            /// <summary>
+            /// Parameter key for the ICD-10 diagnosis code.
+            /// </summary>
             public const string ICD10Code = "icd10_code";
+
+            /// <summary>
+            /// Parameter key for the diagnosis type.
+            /// </summary>
             public const string DiagnosisType = "diagnosis_type";
+
+            /// <summary>
+            /// Parameter key for the diagnosis status.
+            /// </summary>
             public const string DiagnosisStatus = "diagnosis_status";
+
+            /// <summary>
+            /// Parameter key indicating whether this is the primary diagnosis.
+            /// </summary>
             public const string IsPrimary = "is_primary";
+
+            /// <summary>
+            /// Parameter key for the severity of the diagnosis.
+            /// </summary>
             public const string Severity = "severity";
+
+            /// <summary>
+            /// Parameter key for the diagnosis onset date.
+            /// </summary>
             public const string OnsetDate = "onset_date";
         }
 
@@ -29,18 +71,27 @@ namespace Core.CliniCore.Commands.Clinical
         private DiagnosisEntry? _addedDiagnosis;
         private Guid? _targetDocumentId;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AddDiagnosisCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and modify documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public AddDiagnosisCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Adds a diagnosis to a clinical document";
 
+        /// <inheritdoc />
         public override bool CanUndo => true;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.CreateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -95,6 +146,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -145,6 +197,7 @@ namespace Core.CliniCore.Commands.Clinical
             }
         }
 
+        /// <inheritdoc />
         protected override object? CaptureStateForUndo(CommandParameters parameters, SessionContext? session)
         {
             return new UndoState
@@ -154,6 +207,7 @@ namespace Core.CliniCore.Commands.Clinical
             };
         }
 
+        /// <inheritdoc />
         protected override CommandResult UndoCore(object previousState, SessionContext? session)
         {
             if (previousState is UndoState state)
@@ -176,7 +230,14 @@ namespace Core.CliniCore.Commands.Clinical
 
         private class UndoState
         {
+            /// <summary>
+            /// Gets or sets the identifier of the clinical document that owns the diagnosis.
+            /// </summary>
             public Guid DocumentId { get; set; }
+
+            /// <summary>
+            /// Gets or sets the identifier of the diagnosis entry that was added.
+            /// </summary>
             public Guid DiagnosisId { get; set; }
         }
     }

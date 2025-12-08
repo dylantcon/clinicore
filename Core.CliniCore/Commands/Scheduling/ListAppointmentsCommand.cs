@@ -12,38 +12,72 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
+    /// <summary>
+    /// Command that lists appointments using optional filters such as date, physician, and patient.
+    /// </summary>
     public class ListAppointmentsCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "listappointments";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
+
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ListAppointmentsCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the date on which to filter appointments.
+            /// </summary>
             public const string Date = "date";
+
+            /// <summary>
+            /// Parameter key for filtering by physician identifier.
+            /// </summary>
             public const string PhysicianId = "physician_id";
+
+            /// <summary>
+            /// Parameter key for filtering by patient identifier.
+            /// </summary>
             public const string PatientId = "patient_id";
         }
 
         private readonly SchedulerService _scheduleManager;
         private readonly ProfileService _profileRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ListAppointmentsCommand"/> class.
+        /// </summary>
+        /// <param name="scheduleManager">The scheduler service responsible for managing appointments.</param>
+        /// <param name="profileService">The profile service used to resolve patient and physician details.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any dependency is <c>null</c>.</exception>
         public ListAppointmentsCommand(SchedulerService scheduleManager, ProfileService profileService)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Lists appointments with various filters";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewOwnAppointments;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             return CommandValidationResult.Success();
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

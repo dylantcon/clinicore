@@ -12,25 +12,48 @@ using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Query
 {
+    /// <summary>
+    /// Command that searches for patients by name.
+    /// Physicians can only search among their assigned patients, while administrators
+    /// can search all patients in the system. Patients cannot use this command.
+    /// </summary>
     public class SearchPatientsCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "searchpatients";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="SearchPatientsCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the patient name to search for (minimum 2 characters).
+            /// </summary>
             public const string SearchTerm = "searchTerm";
         }
 
         private readonly ProfileService _profileRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SearchPatientsCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service for searching patient profiles.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="profileService"/> is <see langword="null"/>.</exception>
         public SearchPatientsCommand(ProfileService profileService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Search patients by name";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewAllPatients;
 

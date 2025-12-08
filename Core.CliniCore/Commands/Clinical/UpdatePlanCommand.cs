@@ -11,40 +11,103 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that updates an existing plan entry within a clinical document.
+    /// </summary>
     public class UpdatePlanCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "updateplan";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="UpdatePlanCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the clinical document identifier that owns the plan.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the plan entry identifier.
+            /// </summary>
             public const string PlanId = "plan_id";
+
+            /// <summary>
+            /// Parameter key for the updated plan content.
+            /// </summary>
             public const string Content = "content";
+
+            /// <summary>
+            /// Parameter key for the plan type.
+            /// </summary>
             public const string Type = "type";
+
+            /// <summary>
+            /// Parameter key for the target completion date.
+            /// </summary>
             public const string TargetDate = "target_date";
+
+            /// <summary>
+            /// Parameter key indicating whether the plan is completed.
+            /// </summary>
             public const string IsCompleted = "is_completed";
+
+            /// <summary>
+            /// Parameter key for the plan priority.
+            /// </summary>
             public const string Priority = "priority";
+
+            /// <summary>
+            /// Parameter key for identifiers of related diagnoses.
+            /// </summary>
             public const string RelatedDiagnoses = "related_diagnoses";
+
+            /// <summary>
+            /// Parameter key for follow-up instructions.
+            /// </summary>
             public const string FollowUpInstructions = "follow_up_instructions";
+
+            /// <summary>
+            /// Parameter key for a coding system identifier associated with the plan.
+            /// </summary>
             public const string Code = "code";
+
+            /// <summary>
+            /// Parameter key for the severity associated with the plan.
+            /// </summary>
             public const string Severity = "severity";
         }
 
         private readonly ClinicalDocumentService _documentRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UpdatePlanCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and update documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public UpdatePlanCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Updates a plan entry within a clinical document";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.UpdateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -147,6 +210,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

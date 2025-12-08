@@ -13,34 +13,85 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that creates a new physician profile and associated authentication account.
+    /// Validates license information, graduation date, and medical specializations.
+    /// </summary>
     public class CreatePhysicianCommand(IAuthenticationService authService, ProfileService profileService) : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "createphysician";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="CreatePhysicianCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the physician's username.
+            /// </summary>
             public const string Username = "username";
+
+            /// <summary>
+            /// Parameter key for the physician's password.
+            /// </summary>
             public const string Password = "password";
+
+            /// <summary>
+            /// Parameter key for the physician's full name.
+            /// </summary>
             public const string Name = "name";
+
+            /// <summary>
+            /// Parameter key for the physician's address.
+            /// </summary>
             public const string Address = "address";
+
+            /// <summary>
+            /// Parameter key for the physician's birthdate.
+            /// </summary>
             public const string Birthdate = "birthdate";
+
+            /// <summary>
+            /// Parameter key for the physician's medical license number.
+            /// </summary>
             public const string LicenseNumber = "license_number";
+
+            /// <summary>
+            /// Parameter key for the physician's medical school graduation date.
+            /// </summary>
             public const string GraduationDate = "graduation_date";
+
+            /// <summary>
+            /// Parameter key for the physician's list of medical specializations.
+            /// </summary>
             public const string Specializations = "specializations";
         }
 
         private readonly ProfileService _registry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         private readonly IAuthenticationService _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+
+        /// <summary>
+        /// Maximum number of medical specializations allowed per physician.
+        /// </summary>
         public static readonly int MEDSPECMAXCOUNT = 5;
 
+        /// <inheritdoc />
         public override string Description => "Creates a new physician profile in the system";
 
+        /// <inheritdoc />
         public override bool CanUndo => true;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission() 
             => Permission.CreatePhysicianProfile;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -85,6 +136,7 @@ namespace Core.CliniCore.Commands.Profile
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -134,11 +186,13 @@ namespace Core.CliniCore.Commands.Profile
             }
         }
 
+        /// <inheritdoc />
         protected override object? CaptureStateForUndo(CommandParameters parameters, SessionContext? session)
         {
             return parameters.GetParameter<string>(Parameters.Username);
         }
 
+        /// <inheritdoc/>
         protected override CommandResult UndoCore(object previousState, SessionContext? session)
         {
             if (previousState is string username)

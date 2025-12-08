@@ -6,32 +6,51 @@ using Core.CliniCore.Domain.Enumerations;
 
 namespace Core.CliniCore.Commands.Authentication
 {
+    /// <summary>
+    /// Command that ends the current user session.
+    /// </summary>
     public class LogoutCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "logout";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="LogoutCommand"/>.
+        /// </summary>
         public static class Parameters
         {
             // LogoutCommand requires no parameters
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LogoutCommand"/> class.
+        /// </summary>
         public LogoutCommand()
         {
         }
 
+        /// <inheritdoc />
         public override string Description => "Ends the current user session";
 
+        /// <inheritdoc />
         public override bool CanUndo => false; // Logout cannot be undone for security
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission() => null; // Anyone logged in can logout
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             // No parameters needed for logout
             return CommandValidationResult.Success();
         }
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -48,6 +67,7 @@ namespace Core.CliniCore.Commands.Authentication
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

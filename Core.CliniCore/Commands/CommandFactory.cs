@@ -10,8 +10,8 @@ using Core.CliniCore.Service;
 namespace Core.CliniCore.Commands
 {
     /// <summary>
-    /// Factory for creating command instances based on command names or types
-    /// Uses CommandKey property for consistent command identification
+    /// Factory for creating command instances based on command names or types.
+    /// Uses the <see cref="ICommand.CommandKey"/> property for consistent command identification.
     /// </summary>
     public class CommandFactory
     {
@@ -22,6 +22,14 @@ namespace Core.CliniCore.Commands
         private readonly Dictionary<string, Type> _commandTypes;
         private readonly Dictionary<string, Func<ICommand>> _commandCreators;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandFactory"/> class.
+        /// </summary>
+        /// <param name="authService">The authentication service used by authentication-related commands.</param>
+        /// <param name="scheduleManager">The scheduler service used by scheduling-related commands.</param>
+        /// <param name="profileService">The profile service used by profile-related commands.</param>
+        /// <param name="clinicalDocService">The clinical document service used by clinical documentation commands.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any required service dependency is <c>null</c>.</exception>
         public CommandFactory(
             IAuthenticationService authService,
             SchedulerService scheduleManager,
@@ -40,7 +48,7 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Discovers all command types in the assembly by reading static Key field
+        /// Discovers all command types in the assembly by reading the static <c>Key</c> field.
         /// </summary>
         private void DiscoverCommands()
         {
@@ -64,8 +72,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Gets the command key from a type's static Key field without instantiation
+        /// Gets the command key from a type's static <c>Key</c> field without instantiation.
         /// </summary>
+        /// <param name="type">The command type to inspect.</param>
+        /// <returns>The command key if found; otherwise, <c>null</c>.</returns>
         private static string? GetCommandKeyFromType(Type type)
         {
             // Look for const or static field named "Key"
@@ -78,7 +88,7 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Registers all available commands with their specific dependencies
+        /// Registers all available commands with their specific dependencies.
         /// </summary>
         private void RegisterCommands()
         {
@@ -160,8 +170,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Registers a command creator using the command type's static Key field
+        /// Registers a command creator using the command type's static <c>Key</c> field.
         /// </summary>
+        /// <typeparam name="TCommand">The concrete command type.</typeparam>
+        /// <param name="creator">The factory method used to construct the command instance.</param>
         private void RegisterCommandWithKey<TCommand>(Func<TCommand> creator) where TCommand : ICommand
         {
             var commandType = typeof(TCommand);
@@ -179,8 +191,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Registers an alias for a command
+        /// Registers an alias for a command.
         /// </summary>
+        /// <param name="alias">The alternate name that can be used to identify the command.</param>
+        /// <param name="commandKey">The canonical command key to map the alias to.</param>
         private void RegisterAlias(string alias, string commandKey)
         {
             if (_commandCreators.TryGetValue(commandKey, out var creator))
@@ -190,8 +204,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Creates a command by name or key
+        /// Creates a command by name or key.
         /// </summary>
+        /// <param name="commandIdentifier">The command name or key (case-insensitive).</param>
+        /// <returns>An instance of the requested command, or <c>null</c> if the command cannot be resolved.</returns>
         public ICommand? CreateCommand(string commandIdentifier)
         {
             if (string.IsNullOrWhiteSpace(commandIdentifier))
@@ -215,8 +231,11 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Creates a command with pre-populated parameters
+        /// Creates a command with pre-populated parameters.
         /// </summary>
+        /// <param name="commandIdentifier">The command name or key (case-insensitive).</param>
+        /// <param name="parameterValues">The parameter values to populate the <see cref="CommandParameters"/> instance.</param>
+        /// <returns>A tuple containing the created command (or <c>null</c> if not found) and the associated parameters.</returns>
         public (ICommand? Command, CommandParameters Parameters) CreateCommandWithParameters(
             string commandIdentifier,
             Dictionary<string, object?> parameterValues)
@@ -230,8 +249,9 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Gets all available command keys
+        /// Gets all available command keys.
         /// </summary>
+        /// <returns>A sorted collection of available command keys.</returns>
         public IEnumerable<string> GetAvailableCommands()
         {
             return _commandTypes.Keys
@@ -240,16 +260,20 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Gets the command type for a given key
+        /// Gets the command type for a given key.
         /// </summary>
+        /// <param name="commandKey">The command key.</param>
+        /// <returns>The command <see cref="Type"/> if registered; otherwise, <c>null</c>.</returns>
         public Type? GetCommandType(string commandKey)
         {
             return _commandTypes.TryGetValue(commandKey, out var type) ? type : null;
         }
 
         /// <summary>
-        /// Gets command help information
+        /// Gets descriptive help information for a specific command.
         /// </summary>
+        /// <param name="commandIdentifier">The command name or key.</param>
+        /// <returns>A short help string describing the command, or an error message if not found.</returns>
         public string GetCommandHelp(string commandIdentifier)
         {
             var command = CreateCommand(commandIdentifier);
@@ -260,8 +284,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Checks if a command exists
+        /// Determines whether a command exists for the specified identifier.
         /// </summary>
+        /// <param name="commandIdentifier">The command name or key to check.</param>
+        /// <returns><c>true</c> if the command exists; otherwise, <c>false</c>.</returns>
         public bool CommandExists(string commandIdentifier)
         {
             if (string.IsNullOrWhiteSpace(commandIdentifier))
@@ -278,8 +304,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Gets commands available for a specific role
+        /// Gets the command keys that are available for a specific user role.
         /// </summary>
+        /// <param name="role">The role for which to retrieve available commands.</param>
+        /// <returns>An ordered collection of command keys that the specified role can access.</returns>
         public IEnumerable<string> GetCommandsForRole(Domain.Enumerations.UserRole role)
         {
             var availableCommands = new List<string>();

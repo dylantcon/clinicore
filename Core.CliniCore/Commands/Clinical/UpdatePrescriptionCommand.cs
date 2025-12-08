@@ -11,43 +11,118 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that updates an existing prescription entry within a clinical document.
+    /// </summary>
     public class UpdatePrescriptionCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "updateprescription";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="UpdatePrescriptionCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the clinical document identifier that owns the prescription.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the prescription entry identifier.
+            /// </summary>
             public const string PrescriptionId = "prescription_id";
+
+            /// <summary>
+            /// Parameter key for the prescribed medication name.
+            /// </summary>
             public const string MedicationName = "medication_name";
+
+            /// <summary>
+            /// Parameter key for the dosage instructions.
+            /// </summary>
             public const string Dosage = "dosage";
+
+            /// <summary>
+            /// Parameter key for the medication frequency.
+            /// </summary>
             public const string Frequency = "frequency";
+
+            /// <summary>
+            /// Parameter key for the administration route.
+            /// </summary>
             public const string Route = "route";
+
+            /// <summary>
+            /// Parameter key for the treatment duration.
+            /// </summary>
             public const string Duration = "duration";
+
+            /// <summary>
+            /// Parameter key for the allowed number of refills.
+            /// </summary>
             public const string Refills = "refills";
+
+            /// <summary>
+            /// Parameter key indicating whether generic substitution is allowed.
+            /// </summary>
             public const string GenericAllowed = "generic_allowed";
+
+            /// <summary>
+            /// Parameter key for the DEA schedule classification.
+            /// </summary>
             public const string DEASchedule = "dea_schedule";
+
+            /// <summary>
+            /// Parameter key for the prescription expiration date.
+            /// </summary>
             public const string ExpirationDate = "expiration_date";
+
+            /// <summary>
+            /// Parameter key for additional patient instructions.
+            /// </summary>
             public const string Instructions = "instructions";
+
+            /// <summary>
+            /// Parameter key for the NDC (National Drug Code) identifier.
+            /// </summary>
             public const string NDCCode = "ndc_code";
+
+            /// <summary>
+            /// Parameter key for the severity associated with the prescription.
+            /// </summary>
             public const string Severity = "severity";
         }
 
         private readonly ClinicalDocumentService _documentRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UpdatePrescriptionCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and update documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public UpdatePrescriptionCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Updates a prescription entry within a clinical document";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.UpdateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -138,6 +213,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

@@ -11,14 +11,34 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that retrieves and displays detailed information for a specific patient profile.
+    /// Includes demographics, primary physician assignment, and appointment/document counts.
+    /// </summary>
     public class ViewPatientProfileCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "viewpatientprofile";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ViewPatientProfileCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the unique identifier of the patient profile to view.
+            /// </summary>
             public const string ProfileId = "profile_id";
+
+            /// <summary>
+            /// Parameter key indicating whether to include extended details like appointment
+            /// and clinical document counts, and validation errors if present.
+            /// </summary>
             public const string ShowDetails = "show_details";
         }
 

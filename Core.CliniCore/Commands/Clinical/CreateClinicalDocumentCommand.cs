@@ -11,17 +11,47 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that creates a clinical document for a specific patient encounter.
+    /// </summary>
     public class CreateClinicalDocumentCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "createclinicaldocument";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="CreateClinicalDocumentCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the patient profile identifier.
+            /// </summary>
             public const string PatientId = "patient_id";
+
+            /// <summary>
+            /// Parameter key for the physician profile identifier.
+            /// </summary>
             public const string PhysicianId = "physician_id";
+
+            /// <summary>
+            /// Parameter key for the related appointment identifier.
+            /// </summary>
             public const string AppointmentId = "appointment_id";
+
+            /// <summary>
+            /// Parameter key for the chief complaint text.
+            /// </summary>
             public const string ChiefComplaint = "chief_complaint";
+
+            /// <summary>
+            /// Parameter key for an optional initial observation.
+            /// </summary>
             public const string InitialObservation = "initial_observation";
         }
 
@@ -29,20 +59,29 @@ namespace Core.CliniCore.Commands.Clinical
         private readonly ProfileService _profileRegistry;
         private ClinicalDocument? _createdDocument;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CreateClinicalDocumentCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service used to resolve patients and physicians.</param>
+        /// <param name="clinicalDocService">The clinical document service used to persist documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when any dependency is <c>null</c>.</exception>
         public CreateClinicalDocumentCommand(ProfileService profileService, ClinicalDocumentService clinicalDocService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Creates a new clinical document for a patient encounter";
 
+        /// <inheritdoc />
         public override bool CanUndo => true;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.CreateClinicalDocument;
 
-        // ValidateParameters updated to use registry
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -109,7 +148,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
-        // ValidateSpecific stays the same
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -127,7 +166,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
-        // ExecuteCore updated to use registry's AddDocument method
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -180,13 +219,13 @@ namespace Core.CliniCore.Commands.Clinical
             }
         }
 
-        // CaptureStateForUndo stays the same
+        /// <inheritdoc />
         protected override object? CaptureStateForUndo(CommandParameters parameters, SessionContext? session)
         {
             return _createdDocument?.Id;
         }
 
-        // UndoCore updated to use registry's RemoveDocument method
+        /// <inheritdoc />
         protected override CommandResult UndoCore(object previousState, SessionContext? session)
         {
             if (previousState is Guid documentId)

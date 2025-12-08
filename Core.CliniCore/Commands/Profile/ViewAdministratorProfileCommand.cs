@@ -9,14 +9,33 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that retrieves and displays detailed information for a specific administrator profile.
+    /// Requires <see cref="Permission.ViewAdministratorProfile"/> permission.
+    /// </summary>
     public class ViewAdministratorProfileCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "viewadminprofile";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ViewAdministratorProfileCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the unique identifier of the administrator profile to view.
+            /// </summary>
             public const string ProfileId = "profile_id";
+
+            /// <summary>
+            /// Parameter key indicating whether to include validation errors in the output.
+            /// </summary>
             public const string ShowDetails = "show_details";
         }
 

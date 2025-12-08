@@ -20,17 +20,41 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         private readonly Dictionary<Guid, DiagnosisEntry> _diagnoses = [];
         private readonly Dictionary<Guid, PrescriptionEntry> _prescriptions = [];
 
+        /// <summary>
+        /// Gets the unique identifier for the clinical document.
+        /// </summary>
         public Guid Id { get; }
+        /// <summary>
+        /// Gets the unique identifier of the patient associated with this document.
+        /// </summary>
         public Guid PatientId { get; }
+        /// <summary>
+        /// Gets the unique identifier of the physician who authored this document.
+        /// </summary>
         public Guid PhysicianId { get; }
+        /// <summary>
+        /// Gets the unique identifier of the appointment related to this document.
+        /// </summary>
         public Guid AppointmentId { get; }
+        /// <summary>
+        /// Gets the date and time when the document was created.
+        /// </summary>
         public DateTime CreatedAt { get; }
+        /// <summary>
+        /// Gets the date and time when the document was completed, or null if it is not yet completed.
+        /// </summary>
         public DateTime? CompletedAt { get; private set; }
+        /// <summary>
+        /// Gets a value indicating whether the document has been completed.
+        /// </summary>
         public bool IsCompleted => CompletedAt.HasValue;
 
         /// <summary>
         /// Creates a new clinical document with an auto-generated ID
         /// </summary>
+        /// <param name="patientId">The unique identifier of the patient.</param>
+        /// <param name="physicianId">The unique identifier of the physician.</param>
+        /// <param name="appointmentId">The unique identifier of the appointment.</param>
         public ClinicalDocument(Guid patientId, Guid physicianId, Guid appointmentId)
             : this(Guid.NewGuid(), patientId, physicianId, appointmentId)
         {
@@ -39,6 +63,10 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Creates a new clinical document with a specified ID (for client-server ID synchronization)
         /// </summary>
+        /// <param name="id">The unique identifier for the document.</param>
+        /// <param name="patientId">The unique identifier of the patient.</param>
+        /// <param name="physicianId">The unique identifier of the physician.</param>
+        /// <param name="appointmentId">The unique identifier of the appointment.</param>
         public ClinicalDocument(Guid id, Guid patientId, Guid physicianId, Guid appointmentId)
         {
             Id = id;
@@ -61,6 +89,8 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Adds an entry to the document
         /// </summary>
+        /// <param name="entry">The clinical entry to add.</param>
+        /// <exception cref="InvalidOperationException">Thrown when attempting to modify a completed document or add a prescription for a non-existent diagnosis.</exception>
         public void AddEntry(AbstractClinicalEntry entry)
         {
             if (IsCompleted)
@@ -94,6 +124,7 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// Bypasses IsCompleted check and prescription-diagnosis validation since
         /// the data was already validated when originally persisted.
         /// </summary>
+        /// <param name="entry">The clinical entry to restore.</param>
         internal void RestoreEntry(AbstractClinicalEntry entry)
         {
             ArgumentNullException.ThrowIfNull(entry);
@@ -118,6 +149,8 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Gets all entries of a specific type
         /// </summary>
+        /// <typeparam name="T">The type of clinical entry to retrieve.</typeparam>
+        /// <returns>An enumerable collection of entries of the specified type.</returns>
         public IEnumerable<T> GetEntries<T>() where T : AbstractClinicalEntry
         {
             return _entries.OfType<T>();
@@ -126,36 +159,43 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Gets all observations (can be Subjective or Objective depending on Type)
         /// </summary>
+        /// <returns>An enumerable collection of observation entries.</returns>
         public IEnumerable<ObservationEntry> GetObservations()
             => GetEntries<ObservationEntry>();
 
         /// <summary>
         /// Gets all assessments
         /// </summary>
+        /// <returns>An enumerable collection of assessment entries.</returns>
         public IEnumerable<AssessmentEntry> GetAssessments()
             => GetEntries<AssessmentEntry>();
 
         /// <summary>
         /// Gets all diagnoses
         /// </summary>
+        /// <returns>An enumerable collection of diagnosis entries.</returns>
         public IEnumerable<DiagnosisEntry> GetDiagnoses()
             => _diagnoses.Values;
 
         /// <summary>
         /// Gets all prescriptions
         /// </summary>
+        /// <returns>An enumerable collection of prescription entries.</returns>
         public IEnumerable<PrescriptionEntry> GetPrescriptions()
             => _prescriptions.Values;
 
         /// <summary>
         /// Gets all plan entries
         /// </summary>
+        /// <returns>An enumerable collection of plan entries.</returns>
         public IEnumerable<PlanEntry> GetPlans()
             => GetEntries<PlanEntry>();
 
         /// <summary>
         /// Gets prescriptions for a specific diagnosis
         /// </summary>
+        /// <param name="diagnosisId">The unique identifier of the diagnosis.</param>
+        /// <returns>An enumerable collection of prescription entries related to the specified diagnosis.</returns>
         public IEnumerable<PrescriptionEntry> GetPrescriptionsForDiagnosis(Guid diagnosisId)
         {
             if (_diagnoses.TryGetValue(diagnosisId, out var diagnosis))
@@ -170,6 +210,7 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Validates the document is complete
         /// </summary>
+        /// <returns>True if the document meets the minimum requirements for completion; otherwise, false.</returns>
         public bool IsComplete()
         {
             // Minimum requirements for a complete document
@@ -183,6 +224,7 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Gets validation errors
         /// </summary>
+        /// <returns>A list of strings describing any validation errors found in the document.</returns>
         public List<string> GetValidationErrors()
         {
             var errors = new List<string>();
@@ -224,6 +266,7 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Completes the document, preventing further modifications
         /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown when the document is already completed or fails validation.</exception>
         public void Complete()
         {
             if (IsCompleted)
@@ -242,6 +285,7 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Generates a formatted SOAP note
         /// </summary>
+        /// <returns>A string containing the formatted SOAP note.</returns>
         public string GenerateSOAPNote()
         {
             var sb = new StringBuilder();

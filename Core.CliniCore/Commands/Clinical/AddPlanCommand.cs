@@ -8,20 +8,62 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that adds a treatment or care plan entry to an existing clinical document.
+    /// </summary>
     public class AddPlanCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "addplan";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="AddPlanCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the target clinical document identifier.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the plan description.
+            /// </summary>
             public const string PlanDescription = "plan_description";
+
+            /// <summary>
+            /// Parameter key for the plan type.
+            /// </summary>
             public const string PlanType = "plan_type";
+
+            /// <summary>
+            /// Parameter key for the plan priority.
+            /// </summary>
             public const string Priority = "priority";
+
+            /// <summary>
+            /// Parameter key for the target date by which the plan should be completed.
+            /// </summary>
             public const string TargetDate = "target_date";
+
+            /// <summary>
+            /// Parameter key for follow-up instructions.
+            /// </summary>
             public const string FollowUpInstructions = "follow_up_instructions";
+
+            /// <summary>
+            /// Parameter key for the severity associated with the plan.
+            /// </summary>
             public const string Severity = "severity";
+
+            /// <summary>
+            /// Parameter key for identifiers of related diagnoses.
+            /// </summary>
             public const string RelatedDiagnoses = "related_diagnoses";
         }
 
@@ -29,18 +71,27 @@ namespace Core.CliniCore.Commands.Clinical
         private PlanEntry? _addedPlan;
         private Guid? _targetDocumentId;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AddPlanCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and modify documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public AddPlanCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Adds a treatment plan entry to a document";
 
+        /// <inheritdoc />
         public override bool CanUndo => true;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.CreateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -126,6 +177,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -192,6 +244,7 @@ namespace Core.CliniCore.Commands.Clinical
             }
         }
 
+        /// <inheritdoc />
         protected override object? CaptureStateForUndo(CommandParameters parameters, SessionContext? session)
         {
             return new UndoState
@@ -201,6 +254,7 @@ namespace Core.CliniCore.Commands.Clinical
             };
         }
 
+        /// <inheritdoc />
         protected override CommandResult UndoCore(object previousState, SessionContext? session)
         {
             if (previousState is UndoState state)
@@ -222,7 +276,14 @@ namespace Core.CliniCore.Commands.Clinical
 
         private class UndoState
         {
+            /// <summary>
+            /// Gets or sets the identifier of the clinical document that owns the plan.
+            /// </summary>
             public Guid DocumentId { get; set; }
+
+            /// <summary>
+            /// Gets or sets the identifier of the plan entry that was added.
+            /// </summary>
             public Guid PlanId { get; set; }
         }
     }

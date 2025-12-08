@@ -7,30 +7,57 @@ using Core.CliniCore.Domain.Enumerations;
 
 namespace Core.CliniCore.Commands.Authentication
 {
+    /// <summary>
+    /// Command that authenticates a user and creates a new session.
+    /// </summary>
     public class LoginCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "login";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="LoginCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the username.
+            /// </summary>
             public const string Username = "username";
+
+            /// <summary>
+            /// Parameter key for the password.
+            /// </summary>
             public const string Password = "password";
         }
 
         private readonly IAuthenticationService _authService;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LoginCommand"/> class.
+        /// </summary>
+        /// <param name="authService">The authentication service used to validate credentials.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="authService"/> is <c>null</c>.</exception>
         public LoginCommand(IAuthenticationService authService)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Authenticates a user and creates a session";
 
+        /// <inheritdoc />
         public override bool CanUndo => false; // Login cannot be undone, use logout instead
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission() => null; // Anyone can attempt login
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -61,6 +88,7 @@ namespace Core.CliniCore.Commands.Authentication
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateSpecific(CommandParameters parameters, SessionContext? session)
         {
             var result = CommandValidationResult.Success();
@@ -74,6 +102,7 @@ namespace Core.CliniCore.Commands.Authentication
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

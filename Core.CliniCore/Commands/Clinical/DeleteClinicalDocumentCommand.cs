@@ -10,31 +10,58 @@ using Core.CliniCore.Domain.Authentication.Representation;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that permanently deletes a clinical document from the system.
+    /// </summary>
     public class DeleteClinicalDocumentCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "deleteclinicaldocument";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="DeleteClinicalDocumentCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the clinical document identifier to delete.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key indicating whether to force deletion of a completed document.
+            /// </summary>
             public const string Force = "force";
         }
 
         private readonly ClinicalDocumentService _documentRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteClinicalDocumentCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and remove documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public DeleteClinicalDocumentCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Permanently deletes a clinical document from the system";
 
+        /// <inheritdoc />
         public override bool CanUndo => false; // Deletions cannot be undone
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.DeleteClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -74,6 +101,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

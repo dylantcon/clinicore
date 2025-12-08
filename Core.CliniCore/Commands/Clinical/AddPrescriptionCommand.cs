@@ -8,24 +8,86 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that adds a prescription entry to an existing clinical document.
+    /// </summary>
+    /// <remarks>
+    /// Prescriptions created by this command must be linked to a diagnosis within the same document
+    /// to maintain clinical traceability and support auditing.
+    /// </remarks>
     public class AddPrescriptionCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "addprescription";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="AddPrescriptionCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the target clinical document identifier.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the identifier of the diagnosis this prescription is linked to.
+            /// </summary>
             public const string DiagnosisId = "diagnosis_id";
+
+            /// <summary>
+            /// Parameter key for the prescribed medication name.
+            /// </summary>
             public const string MedicationName = "medication_name";
+
+            /// <summary>
+            /// Parameter key for the dosage instructions.
+            /// </summary>
             public const string Dosage = "dosage";
+
+            /// <summary>
+            /// Parameter key for the medication frequency.
+            /// </summary>
             public const string Frequency = "frequency";
+
+            /// <summary>
+            /// Parameter key for the medication administration route.
+            /// </summary>
             public const string Route = "route";
+
+            /// <summary>
+            /// Parameter key for the treatment duration.
+            /// </summary>
             public const string Duration = "duration";
+
+            /// <summary>
+            /// Parameter key for the allowed number of refills.
+            /// </summary>
             public const string Refills = "refills";
+
+            /// <summary>
+            /// Parameter key indicating whether generic substitution is allowed.
+            /// </summary>
             public const string GenericAllowed = "generic_allowed";
+
+            /// <summary>
+            /// Parameter key for the DEA schedule classification of the medication.
+            /// </summary>
             public const string DeaSchedule = "dea_schedule";
+
+            /// <summary>
+            /// Parameter key for additional patient instructions.
+            /// </summary>
             public const string Instructions = "instructions";
+
+            /// <summary>
+            /// Parameter key for the NDC (National Drug Code) identifier.
+            /// </summary>
             public const string NdcCode = "ndc_code";
         }
 
@@ -33,18 +95,27 @@ namespace Core.CliniCore.Commands.Clinical
         private PrescriptionEntry? _addedPrescription;
         private Guid? _targetDocumentId;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AddPrescriptionCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and modify documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public AddPrescriptionCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Adds a prescription to a clinical document (requires diagnosis)";
 
+        /// <inheritdoc />
         public override bool CanUndo => true;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.CreateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -122,6 +193,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try
@@ -192,6 +264,7 @@ namespace Core.CliniCore.Commands.Clinical
             }
         }
 
+        /// <inheritdoc />
         protected override object? CaptureStateForUndo(CommandParameters parameters, SessionContext? session)
         {
             return new UndoState
@@ -201,6 +274,7 @@ namespace Core.CliniCore.Commands.Clinical
             };
         }
 
+        /// <inheritdoc />
         protected override CommandResult UndoCore(object previousState, SessionContext? session)
         {
             if (previousState is UndoState state)
@@ -223,7 +297,14 @@ namespace Core.CliniCore.Commands.Clinical
 
         private class UndoState
         {
+            /// <summary>
+            /// Gets or sets the identifier of the clinical document that owns the prescription.
+            /// </summary>
             public Guid DocumentId { get; set; }
+
+            /// <summary>
+            /// Gets or sets the identifier of the prescription entry that was added.
+            /// </summary>
             public Guid PrescriptionId { get; set; }
         }
     }

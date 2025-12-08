@@ -11,19 +11,49 @@ using System.Linq;
 
 namespace Core.CliniCore.Commands.Profile
 {
+    /// <summary>
+    /// Command that updates an existing administrator profile.
+    /// Supports updating common fields (name, address, birthdate) and administrator-specific fields (email).
+    /// Only administrators can execute this command.
+    /// </summary>
     public class UpdateAdministratorProfileCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "updateadministratorprofile";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="UpdateAdministratorProfileCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the unique identifier of the administrator profile to update.
+            /// </summary>
             public const string ProfileId = "profileId";
-            // Common fields
+
+            /// <summary>
+            /// Parameter key for the administrator's full name.
+            /// </summary>
             public const string Name = "name";
+
+            /// <summary>
+            /// Parameter key for the administrator's address.
+            /// </summary>
             public const string Address = "address";
+
+            /// <summary>
+            /// Parameter key for the administrator's birthdate.
+            /// </summary>
             public const string BirthDate = "birthdate";
-            // Administrator-specific field
+
+            /// <summary>
+            /// Parameter key for the administrator's email address.
+            /// </summary>
             public const string Email = "email";
         }
 

@@ -8,34 +8,73 @@ using Core.CliniCore.Service;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
+    /// <summary>
+    /// Command that updates appointment details such as time, duration, reason, and notes.
+    /// </summary>
     public class UpdateAppointmentCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "updateappointment";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="UpdateAppointmentCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the appointment identifier to update.
+            /// </summary>
             public const string AppointmentId = "appointment_id";
+
+            /// <summary>
+            /// Parameter key for the updated reason for visit.
+            /// </summary>
             public const string ReasonForVisit = "reason";
+
+            /// <summary>
+            /// Parameter key for updated appointment notes.
+            /// </summary>
             public const string Notes = "notes";
+
+            /// <summary>
+            /// Parameter key for the updated appointment duration in minutes.
+            /// </summary>
             public const string DurationMinutes = "duration_minutes";
+
+            /// <summary>
+            /// Parameter key for the new appointment start time.
+            /// </summary>
             public const string NewStartTime = "new_start_time";
         }
 
         private readonly SchedulerService _scheduleManager;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UpdateAppointmentCommand"/> class.
+        /// </summary>
+        /// <param name="scheduleManager">The scheduler service responsible for managing appointments.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="scheduleManager"/> is <c>null</c>.</exception>
         public UpdateAppointmentCommand(SchedulerService scheduleManager)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
         }
 
+        /// <inheritdoc />
         public override string Description => "Updates appointment details (time, duration, reason, and notes)";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ScheduleAnyAppointment;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -141,6 +180,7 @@ namespace Core.CliniCore.Commands.Scheduling
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

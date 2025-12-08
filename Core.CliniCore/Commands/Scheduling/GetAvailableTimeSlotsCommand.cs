@@ -13,15 +13,42 @@ using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Scheduling
 {
+    /// <summary>
+    /// Command that retrieves available appointment time slots for a physician on a specific date.
+    /// </summary>
     public class GetAvailableTimeSlotsCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "getavailabletimeslots";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
+
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="GetAvailableTimeSlotsCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the physician identifier whose availability is requested.
+            /// </summary>
             public const string PhysicianId = "physician_id";
+
+            /// <summary>
+            /// Parameter key for the date on which to search for time slots.
+            /// </summary>
             public const string Date = "date";
+
+            /// <summary>
+            /// Parameter key for the desired appointment duration in minutes.
+            /// </summary>
             public const string DurationMinutes = "duration_minutes";
+
+            /// <summary>
+            /// Parameter key for the maximum number of time slots to return.
+            /// </summary>
             public const string MaxSlots = "max_slots";
         }
 
@@ -29,6 +56,13 @@ namespace Core.CliniCore.Commands.Scheduling
         private readonly SchedulerService _scheduleManager;
         private readonly IBookingStrategy _bookingStrategy;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetAvailableTimeSlotsCommand"/> class.
+        /// </summary>
+        /// <param name="scheduleManager">The scheduler service responsible for managing appointments.</param>
+        /// <param name="profileService">The profile service used to resolve physician details.</param>
+        /// <param name="bookingStrategy">Optional booking strategy used to select optimal time slots.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="scheduleManager"/> or <paramref name="profileService"/> is <c>null</c>.</exception>
         public GetAvailableTimeSlotsCommand(SchedulerService scheduleManager, ProfileService profileService, IBookingStrategy? bookingStrategy = null)
         {
             _scheduleManager = scheduleManager ?? throw new ArgumentNullException(nameof(scheduleManager));
@@ -36,11 +70,14 @@ namespace Core.CliniCore.Commands.Scheduling
             _bookingStrategy = bookingStrategy ?? new FirstAvailableBookingStrategy();
         }
 
+        /// <inheritdoc />
         public override string Description => "Gets available appointment time slots for a physician on a specific date";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ScheduleAnyAppointment;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -113,6 +150,7 @@ namespace Core.CliniCore.Commands.Scheduling
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

@@ -7,68 +7,71 @@ using System.Threading.Tasks;
 namespace Core.CliniCore.Commands
 {
     /// <summary>
-    /// Represents the result of a command execution
+    /// Represents the result of a command execution.
     /// </summary>
     public class CommandResult
     {
         /// <summary>
-        /// Whether the command executed successfully
+        /// Gets or sets a value indicating whether the command executed successfully.
         /// </summary>
         public bool Success { get; set; }
 
         /// <summary>
-        /// Message describing the result
+        /// Gets or sets a message describing the result of the command.
         /// </summary>
         public string Message { get; set; } = string.Empty;
 
         /// <summary>
-        /// Any data returned by the command
+        /// Gets or sets any data returned by the command.
         /// </summary>
         public object? Data { get; set; }
 
         /// <summary>
-        /// Error details if the command failed
+        /// Gets or sets error details if the command failed.
         /// </summary>
         public string? ErrorMessage { get; set; }
 
         /// <summary>
-        /// Exception if one occurred
+        /// Gets or sets the exception that occurred during command execution, if any.
         /// </summary>
         public Exception? Exception { get; set; }
 
         /// <summary>
-        /// Validation errors if validation failed
+        /// Gets or sets the collection of validation errors produced during command execution.
         /// </summary>
         public List<string> ValidationErrors { get; set; } = new List<string>();
 
         /// <summary>
-        /// The ID of the command that produced this result
+        /// Gets or sets the ID of the command that produced this result.
         /// </summary>
         public Guid CommandId { get; set; }
 
         /// <summary>
-        /// When the command was executed
+        /// Gets or sets the date and time when the command was executed.
         /// </summary>
         public DateTime ExecutedAt { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// How long the command took to execute
+        /// Gets or sets the duration of the command execution.
         /// </summary>
         public TimeSpan? ExecutionTime { get; set; }
 
         /// <summary>
-        /// Any warnings that occurred during execution
+        /// Gets or sets the collection of warnings generated during command execution.
         /// </summary>
         public List<string> Warnings { get; set; } = new List<string>();
 
         /// <summary>
-        /// Additional named data returned by the command
+        /// Additional named data returned by the command, keyed by a descriptive name.
         /// </summary>
-        private Dictionary<string, object?> _additionalData = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, object?> _additionalData = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Sets a named data value in the result
+        /// Sets a named data value in the result.
         /// </summary>
+        /// <param name="key">The key under which the data value is stored.</param>
+        /// <param name="value">The value to store.</param>
+        /// <returns>The current <see cref="CommandResult"/> instance for method chaining.</returns>
         public CommandResult SetData(string key, object? value)
         {
             _additionalData[key] = value;
@@ -76,8 +79,11 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Gets a named data value from the result
+        /// Gets a named data value from the result.
         /// </summary>
+        /// <typeparam name="T">The expected type of the stored value.</typeparam>
+        /// <param name="key">The key associated with the stored value.</param>
+        /// <returns>The value converted to <typeparamref name="T"/>, or the default value of <typeparamref name="T"/> if not found or not convertible.</returns>
         public T? GetData<T>(string key)
         {
             if (!_additionalData.TryGetValue(key, out var value) || value == null)
@@ -97,8 +103,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Gets typed data from the result
+        /// Gets the primary data payload of the result, converted to the specified type.
         /// </summary>
+        /// <typeparam name="T">The expected type of the primary data.</typeparam>
+        /// <returns>The data converted to <typeparamref name="T"/>, or the default value of <typeparamref name="T"/> if not set or not convertible.</returns>
         public T? GetData<T>()
         {
             if (Data == null)
@@ -118,8 +126,11 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Factory method for successful result
+        /// Creates a successful <see cref="CommandResult"/> instance.
         /// </summary>
+        /// <param name="message">An optional message describing the success.</param>
+        /// <param name="data">Optional data returned by the command.</param>
+        /// <returns>A configured <see cref="CommandResult"/> indicating success.</returns>
         public static CommandResult Ok(string message = "Command executed successfully.", object? data = null)
         {
             return new CommandResult
@@ -131,8 +142,11 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Factory method for failed result
+        /// Creates a failed <see cref="CommandResult"/> instance.
         /// </summary>
+        /// <param name="errorMessage">A message describing the cause of the failure.</param>
+        /// <param name="exception">The exception that triggered the failure, if available.</param>
+        /// <returns>A configured <see cref="CommandResult"/> indicating failure.</returns>
         public static CommandResult Fail(string errorMessage, Exception? exception = null)
         {
             return new CommandResult
@@ -145,8 +159,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Factory method for validation failure
+        /// Creates a <see cref="CommandResult"/> representing a validation failure.
         /// </summary>
+        /// <param name="errors">The collection of validation errors.</param>
+        /// <returns>A configured <see cref="CommandResult"/> indicating validation failure.</returns>
         public static CommandResult ValidationFailed(List<string> errors)
         {
             return new CommandResult
@@ -159,8 +175,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Factory method for authorization failure
+        /// Creates a <see cref="CommandResult"/> representing an authorization failure.
         /// </summary>
+        /// <param name="message">An optional message describing the authorization issue.</param>
+        /// <returns>A configured <see cref="CommandResult"/> indicating unauthorized access.</returns>
         public static CommandResult Unauthorized(string message = "Unauthorized to execute this command.")
         {
             return new CommandResult
@@ -172,8 +190,10 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Adds a warning to the result
+        /// Adds a warning message to the result.
         /// </summary>
+        /// <param name="warning">The warning message to add.</param>
+        /// <returns>The current <see cref="CommandResult"/> instance for method chaining.</returns>
         public CommandResult AddWarning(string warning)
         {
             Warnings.Add(warning);
@@ -181,8 +201,9 @@ namespace Core.CliniCore.Commands
         }
 
         /// <summary>
-        /// Gets a user-friendly message about the result
+        /// Gets a user-friendly message summarizing the outcome of the command execution.
         /// </summary>
+        /// <returns>A human-readable message that describes the result.</returns>
         public string GetDisplayMessage()
         {
             if (Success)
@@ -203,6 +224,10 @@ namespace Core.CliniCore.Commands
             }
         }
 
+        /// <summary>
+        /// Returns a string that represents the current <see cref="CommandResult"/>.
+        /// </summary>
+        /// <returns>A formatted string containing the success status and primary message.</returns>
         public override string ToString()
         {
             return $"CommandResult[Success={Success}, Message={Message}]";

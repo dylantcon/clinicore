@@ -12,11 +12,25 @@ using System.Text;
 
 namespace Core.CliniCore.Commands.Query
 {
+    /// <summary>
+    /// Command that retrieves and displays all users in the system, grouped by role.
+    /// Administrator-only command that provides a comprehensive system user roster
+    /// including administrators, physicians, and patients.
+    /// </summary>
     public class ListAllUsersCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "listallusers";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="ListAllUsersCommand"/>.
+        /// This command requires no parameters.
+        /// </summary>
         public static class Parameters
         {
             // No parameters needed for this command
@@ -24,13 +38,20 @@ namespace Core.CliniCore.Commands.Query
 
         private readonly ProfileService _profileRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ListAllUsersCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service for accessing user profiles.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="profileService"/> is <see langword="null"/>.</exception>
         public ListAllUsersCommand(ProfileService profileService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Lists all users in the system (administrators, physicians, and patients)";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewAllPatients; // Reusing existing permission - only admins have this
 

@@ -13,31 +13,70 @@ using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Query
 {
+    /// <summary>
+    /// Command that retrieves a physician's appointment schedule for a specific date or date range.
+    /// Supports multiple view types (summary, detailed, compact, statistics) for flexible output formatting.
+    /// </summary>
     public class GetScheduleCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "getschedule";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="GetScheduleCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the physician's unique identifier.
+            /// </summary>
             public const string PhysicianId = "physicianId";
+
+            /// <summary>
+            /// Parameter key for the start date of the date range.
+            /// </summary>
             public const string StartDate = "startDate";
+
+            /// <summary>
+            /// Parameter key for the end date of the date range.
+            /// </summary>
             public const string EndDate = "endDate";
+
+            /// <summary>
+            /// Parameter key for a single date query (alternative to date range).
+            /// </summary>
             public const string Date = "date";
+
+            /// <summary>
+            /// Parameter key for the output view type (summary, detailed, compact, statistics).
+            /// </summary>
             public const string ViewType = "viewType";
         }
 
         private readonly ProfileService _profileRegistry;
         private readonly SchedulerService _scheduleManager;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetScheduleCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service for accessing physician profiles.</param>
+        /// <param name="schedulerService">The scheduler service for retrieving appointments.</param>
+        /// <exception cref="ArgumentNullException">Thrown if any parameter is <see langword="null"/>.</exception>
         public GetScheduleCommand(ProfileService profileService, SchedulerService schedulerService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
             _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Get schedule for a physician for a specific date or date range";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewAllAppointments;
 

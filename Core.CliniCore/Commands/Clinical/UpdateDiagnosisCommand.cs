@@ -11,38 +11,93 @@ using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
 
 namespace Core.CliniCore.Commands.Clinical
 {
+    /// <summary>
+    /// Command that updates an existing diagnosis entry within a clinical document.
+    /// </summary>
     public class UpdateDiagnosisCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "updatediagnosis";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="UpdateDiagnosisCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the clinical document identifier that owns the diagnosis.
+            /// </summary>
             public const string DocumentId = "document_id";
+
+            /// <summary>
+            /// Parameter key for the diagnosis entry identifier.
+            /// </summary>
             public const string DiagnosisId = "diagnosis_id";
+
+            /// <summary>
+            /// Parameter key for the updated diagnosis description.
+            /// </summary>
             public const string Content = "content";
+
+            /// <summary>
+            /// Parameter key for the diagnosis type.
+            /// </summary>
             public const string Type = "type";
+
+            /// <summary>
+            /// Parameter key for the ICD-10 diagnosis code.
+            /// </summary>
             public const string ICD10Code = "icd10_code";
+
+            /// <summary>
+            /// Parameter key indicating whether this is the primary diagnosis.
+            /// </summary>
             public const string IsPrimary = "is_primary";
+
+            /// <summary>
+            /// Parameter key for the diagnosis onset date.
+            /// </summary>
             public const string OnsetDate = "onset_date";
+
+            /// <summary>
+            /// Parameter key for the diagnosis status.
+            /// </summary>
             public const string Status = "status";
+
+            /// <summary>
+            /// Parameter key for the severity associated with the diagnosis.
+            /// </summary>
             public const string Severity = "severity";
         }
 
         private readonly ClinicalDocumentService _documentRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UpdateDiagnosisCommand"/> class.
+        /// </summary>
+        /// <param name="clinicalDocService">The clinical document service used to access and update documents.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="clinicalDocService"/> is <c>null</c>.</exception>
         public UpdateDiagnosisCommand(ClinicalDocumentService clinicalDocService)
         {
             _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Updates a diagnosis entry within a clinical document";
 
+        /// <inheritdoc />
         public override bool CanUndo => false;
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.UpdateClinicalDocument;
 
+        /// <inheritdoc />
         protected override CommandValidationResult ValidateParameters(CommandParameters parameters)
         {
             var result = CommandValidationResult.Success();
@@ -140,6 +195,7 @@ namespace Core.CliniCore.Commands.Clinical
             return result;
         }
 
+        /// <inheritdoc />
         protected override CommandResult ExecuteCore(CommandParameters parameters, SessionContext? session)
         {
             try

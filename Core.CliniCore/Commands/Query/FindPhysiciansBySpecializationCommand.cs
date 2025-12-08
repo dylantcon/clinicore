@@ -12,26 +12,53 @@ using Core.CliniCore.Domain.Users.Concrete;
 
 namespace Core.CliniCore.Commands.Query
 {
+    /// <summary>
+    /// Command that searches for physicians by their medical specialization.
+    /// Supports partial matching of specialization names and optionally includes
+    /// availability information in the results.
+    /// </summary>
     public class FindPhysiciansBySpecializationCommand : AbstractCommand
     {
+        /// <summary>
+        /// The unique key used to identify this command.
+        /// </summary>
         public const string Key = "findphysiciansbyspecialization";
+
+        /// <inheritdoc />
         public override string CommandKey => Key;
 
+        /// <summary>
+        /// Defines the parameter keys used by <see cref="FindPhysiciansBySpecializationCommand"/>.
+        /// </summary>
         public static class Parameters
         {
+            /// <summary>
+            /// Parameter key for the medical specialization to search for.
+            /// </summary>
             public const string Specialization = "specialization";
+
+            /// <summary>
+            /// Parameter key indicating whether to include availability information in results.
+            /// </summary>
             public const string IncludeAvailability = "includeAvailability";
         }
 
         private readonly ProfileService _profileRegistry;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FindPhysiciansBySpecializationCommand"/> class.
+        /// </summary>
+        /// <param name="profileService">The profile service for accessing physician profiles.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="profileService"/> is <see langword="null"/>.</exception>
         public FindPhysiciansBySpecializationCommand(ProfileService profileService)
         {
             _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
         }
 
+        /// <inheritdoc />
         public override string Description => "Find physicians by their medical specialization";
 
+        /// <inheritdoc />
         public override Permission? GetRequiredPermission()
             => Permission.ViewAllPatients; // Using existing permission as there's no specific "ViewPhysicians" permission
 
