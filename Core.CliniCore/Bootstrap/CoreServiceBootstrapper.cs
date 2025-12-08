@@ -1,42 +1,14 @@
 using Core.CliniCore.Commands;
-using Core.CliniCore.Domain;
 using Core.CliniCore.Domain.Authentication;
-using Core.CliniCore.Domain.Enumerations;
-using Core.CliniCore.Domain.Enumerations.EntryTypes;
-using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Repositories;
 using Core.CliniCore.Repositories.InMemory;
-using Core.CliniCore.Scheduling;
 using Core.CliniCore.Scheduling.Management;
 using Core.CliniCore.Service;
-using Core.CliniCore.Services;
 using Microsoft.Extensions.DependencyInjection;
-using System;
+using System.Diagnostics;
 
 namespace Core.CliniCore.Bootstrap
 {
-    /// <summary>
-    /// Sample development credentials for testing and demonstration purposes.
-    /// These credentials match the users created in InitializeDevelopmentData.
-    /// </summary>
-    public static class SampleCredentials
-    {
-        // Administrator
-        public static string AdminUsername => "admin";
-        public static string AdminPassword => "admin123";
-        public static string AdminDisplayName => "System Administrator";
-
-        // Physician
-        public static string PhysicianUsername => "greeneggsnham";
-        public static string PhysicianPassword => "password";
-        public static string PhysicianDisplayName => "Dr. Seuss";
-
-        // Patient
-        public static string PatientUsername => "jdoe";
-        public static string PatientPassword => "patient123";
-        public static string PatientDisplayName => "Jane Doe";
-    }
-
     /// <summary>
     /// Provides dependency injection registration for all core CliniCore services.
     /// This bootstrapper ensures consistent service configuration across different client applications (CLI, GUI, etc.)
@@ -45,23 +17,23 @@ namespace Core.CliniCore.Bootstrap
     {
         /// <summary>
         /// Registers all core CliniCore services with the dependency injection container.
+        /// IMPORTANT: You must also register repositories separately using either:
+        /// - AddInMemoryRepositories() for standalone/testing
+        /// - AddRemoteRepositories(apiBaseUrl) for API-backed persistence
         /// Call this method from your client application's startup/configuration.
         /// </summary>
         /// <param name="services">The service collection to register services with</param>
         /// <returns>The service collection for chaining</returns>
         public static IServiceCollection AddCliniCoreServices(this IServiceCollection services)
         {
-            // Core Authentication Services
+            // NOTE: Repository registration (including ICredentialRepository) is handled separately via:
+            // - services.AddInMemoryRepositories() for standalone/testing
+            // - services.AddRemoteRepositories(url) for API-backed persistence
+            // Repositories MUST be registered BEFORE calling this method.
+
+            // Core Authentication Service (depends on repositories)
             services.AddSingleton<IAuthenticationService, BasicAuthenticationService>();
             services.AddSingleton<RoleBasedAuthorizationService>();
-
-            // Repository Layer (In-Memory implementations)
-            // Note: Using Singleton to maintain data across the application lifetime
-            services.AddSingleton<IPatientRepository, InMemoryPatientRepository>();
-            services.AddSingleton<IPhysicianRepository, InMemoryPhysicianRepository>();
-            services.AddSingleton<IAdministratorRepository, InMemoryAdministratorRepository>();
-            services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
-            services.AddSingleton<IClinicalDocumentRepository, InMemoryClinicalDocumentRepository>();
 
             // Service Layer (uses repositories via DI)
             services.AddSingleton<ProfileService>();
@@ -87,6 +59,17 @@ namespace Core.CliniCore.Bootstrap
         }
 
         /// <summary>
+        /// Registers all core CliniCore services WITH InMemory repositories.
+        /// Use this for backwards compatibility or standalone operation.
+        /// </summary>
+        public static IServiceCollection AddCliniCoreServicesWithInMemory(this IServiceCollection services)
+        {
+            services.AddInMemoryRepositories();
+            services.AddCliniCoreServices();
+            return services;
+        }
+
+        /// <summary>
         /// Registers core services with custom implementations.
         /// Useful for testing or when you need to override default implementations.
         /// </summary>
@@ -107,6 +90,7 @@ namespace Core.CliniCore.Bootstrap
             services.AddSingleton<IAdministratorRepository, InMemoryAdministratorRepository>();
             services.AddSingleton<IAppointmentRepository, InMemoryAppointmentRepository>();
             services.AddSingleton<IClinicalDocumentRepository, InMemoryClinicalDocumentRepository>();
+            services.AddSingleton<ICredentialRepository, InMemoryCredentialRepository>();
 
             // Service Layer
             services.AddSingleton<ProfileService>();
@@ -127,206 +111,183 @@ namespace Core.CliniCore.Bootstrap
             return services;
         }
 
+        #region API Server Management
+
+        private static Process? _apiProcess;
+        private static readonly object _apiLock = new();
+
         /// <summary>
-        /// Initializes development/demo data in the system for testing purposes.
-        /// Call this AFTER building the service provider, not during service registration.
-        /// This should only be called in development or demo environments.
+        /// Ensures the API server is available. If localProvider is true and the API
+        /// is not running, attempts to start it as an independent background process.
         /// </summary>
-        /// <param name="serviceProvider">The built service provider</param>
-        /// <param name="createSampleData">Whether to create sample patient/physician data in addition to admin</param>
-        public static void InitializeDevelopmentData(IServiceProvider serviceProvider, bool createSampleData = true)
+        /// <param name="apiBaseUrl">The base URL of the API (e.g., "http://localhost:5000")</param>
+        /// <param name="localProvider">If true, will attempt to start API locally if not running</param>
+        /// <param name="timeoutSeconds">How long to wait for API to become healthy</param>
+        /// <returns>True if API is available, false otherwise</returns>
+        public static async Task<bool> EnsureApiAvailableAsync(string apiBaseUrl, bool localProvider, int timeoutSeconds = 30)
         {
-            if (serviceProvider == null)
-                throw new ArgumentNullException(nameof(serviceProvider));
+            // Check if API is already running
+            if (await IsApiHealthyAsync(apiBaseUrl).ConfigureAwait(false))
+            {
+                Console.WriteLine($"API server available at {apiBaseUrl}");
+                return true;
+            }
 
-            var authService = serviceProvider.GetRequiredService<IAuthenticationService>();
-            var profileRegistry = serviceProvider.GetRequiredService<ProfileService>();
-            var scheduleManager = serviceProvider.GetRequiredService<SchedulerService>();
+            // If not a local provider, we can't start it
+            if (!localProvider)
+            {
+                Console.WriteLine($"Remote API at {apiBaseUrl} is not available");
+                return false;
+            }
 
+            // Try to start the local API server
+            if (!TryStartLocalApiServer(apiBaseUrl))
+            {
+                return false;
+            }
+
+            // Wait for API to become healthy
+            return await WaitForApiHealthyAsync(apiBaseUrl, timeoutSeconds).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Checks if the API is responding to health check requests.
+        /// Uses dedicated /health endpoint - lightweight, no database queries.
+        /// Catches expected network exceptions by type to avoid debugger breaks.
+        /// </summary>
+        public static async Task<bool> IsApiHealthyAsync(string apiBaseUrl)
+        {
             try
             {
-                // Note: Admin is already created by BasicAuthenticationService constructor
-                // We only need to create additional development data here
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+                var response = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/health").ConfigureAwait(false);
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException)
+            {
+                // Expected when server is not running - connection refused, host unreachable, etc.
+                return false;
+            }
+            catch (TaskCanceledException)
+            {
+                // Expected on timeout
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected on cancellation/timeout
+                return false;
+            }
+        }
 
-                // Create sample data if requested and database is nearly empty
-                if (createSampleData)
+        /// <summary>
+        /// Attempts to start the API server as an independent background process.
+        /// </summary>
+        private static bool TryStartLocalApiServer(string apiBaseUrl)
+        {
+            lock (_apiLock)
+            {
+                if (_apiProcess != null && !_apiProcess.HasExited)
                 {
-                    var allProfiles = new List<IUserProfile>();
-                    allProfiles.AddRange(profileRegistry.GetAllAdministrators());
-                    allProfiles.AddRange(profileRegistry.GetAllPhysicians());
-                    allProfiles.AddRange(profileRegistry.GetAllPatients());
+                    Console.WriteLine("API server process already started");
+                    return true;
+                }
 
-                    // Only create sample data if we have just the admin account
-                    if (allProfiles.Count <= 1)
+                var apiProjectPath = FindApiProjectPath();
+                if (apiProjectPath == null)
+                {
+                    Console.WriteLine("Could not locate API.CliniCore project");
+                    return false;
+                }
+
+                try
+                {
+                    Console.WriteLine($"Starting API server from {apiProjectPath}...");
+
+                    var startInfo = new ProcessStartInfo
                     {
-                        Console.WriteLine("Creating sample data for demonstration...");
+                        FileName = "dotnet",
+                        Arguments = $"run --project \"{apiProjectPath}\" --urls \"{apiBaseUrl}\""
+                    };
 
-                        // Create sample physician - Dr. Seuss
-                        PhysicianProfile physician = new()
-                        {
-                            Username = SampleCredentials.PhysicianUsername
-                        };
-                        physician.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.Name), "Seuss");
-                        physician.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.Address), "456 Medical Plaza, Whoville, WH 12345");
-                        physician.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.BirthDate), new DateTime(1975, 3, 2));
-                        physician.SetValue(PhysicianEntryTypeExtensions.GetKey(PhysicianEntryType.LicenseNumber), "MD12345");
-                        physician.SetValue(PhysicianEntryTypeExtensions.GetKey(PhysicianEntryType.GraduationDate), new DateTime(2010, 5, 15));
-                        physician.SetValue(PhysicianEntryTypeExtensions.GetKey(PhysicianEntryType.Specializations),
-                            new List<MedicalSpecialization> { MedicalSpecialization.FamilyMedicine, MedicalSpecialization.Pediatrics });
-
-                        if (!string.IsNullOrEmpty(physician.Username) && profileRegistry.AddProfile(physician))
-                        {
-                            authService.Register(physician, SampleCredentials.PhysicianPassword);
-                            Console.WriteLine($"  Created sample physician: {SampleCredentials.PhysicianDisplayName}");
-                        }
-
-                        // Create sample patient - Jane Doe
-                        var patient = new PatientProfile
-                        {
-                            Username = SampleCredentials.PatientUsername
-                        };
-                        patient.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.Name), SampleCredentials.PatientDisplayName);
-                        patient.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.Address), "123 Main St, Anytown, USA");
-                        patient.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.BirthDate), new DateTime(1985, 3, 20));
-                        patient.SetValue(PatientEntryTypeExtensions.GetKey(PatientEntryType.Gender), Gender.Woman);
-                        patient.SetValue(PatientEntryTypeExtensions.GetKey(PatientEntryType.Race), "White");
-
-                        if (!string.IsNullOrEmpty(patient.Username) && profileRegistry.AddProfile(patient))
-                        {
-                            authService.Register(patient, SampleCredentials.PatientPassword);
-                            Console.WriteLine($"  Created sample patient: {SampleCredentials.PatientDisplayName}");
-                        }
-
-                        // Create sample appointments - start on next Monday at 10 AM
-                        var baseAppointmentTime = GetNextWeekday(DateTime.Now.AddDays(7).Date).AddHours(10);
-
-                        // Create appointment for Jane Doe
-                        if (physician != null && patient != null)
-                        {
-                            ScheduleSampleAppointment(patient, physician, scheduleManager, ref baseAppointmentTime, "Annual checkup");
-                        }
-
-                        // Create additional sample patients for list views
-                        var additionalPatients = new[]
-                        {
-                            ("johndoe", "John Doe", "456 Oak Ave", new DateTime(1980, 6, 15), Gender.Man),
-                            ("asmith", "Alice Smith", "789 Pine Rd", new DateTime(1992, 9, 3), Gender.Woman),
-                            ("bwilson", "Bob Wilson", "321 Elm St", new DateTime(1975, 12, 25), Gender.Man)
-                        };
-
-                        foreach (var (username, name, address, birthDate, gender) in additionalPatients)
-                        {
-                            var p = new PatientProfile
-                            {
-                                Username = username
-                            };
-                            p.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.Name), name);
-                            p.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.Address), address);
-                            p.SetValue(CommonEntryTypeExtensions.GetKey(CommonEntryType.BirthDate), birthDate);
-                            p.SetValue(PatientEntryTypeExtensions.GetKey(PatientEntryType.Gender), gender);
-                            p.SetValue(PatientEntryTypeExtensions.GetKey(PatientEntryType.Race), "Other");
-
-                            if (profileRegistry.AddProfile(p))
-                            {
-                                authService.Register(p, "password");
-                                Console.WriteLine($"  Created sample patient: {name}");
-
-                                // Schedule appointment for this patient
-                                if (physician != null)
-                                {
-                                    ScheduleSampleAppointment(p, physician, scheduleManager, ref baseAppointmentTime, "Follow-up visit");
-                                }
-                            }
-                        }
-
-                        Console.WriteLine("Sample data created successfully!");
+                    // Platform-specific window behavior
+                    if (OperatingSystem.IsWindows())
+                    {
+                        // Windows: open visible console window (close window = kill process)
+                        startInfo.UseShellExecute = true;
+                        startInfo.CreateNoWindow = false;
                     }
+                    else
+                    {
+                        // Linux/macOS: run headless (no display required)
+                        startInfo.UseShellExecute = false;
+                        startInfo.CreateNoWindow = true;
+                        startInfo.RedirectStandardOutput = true;
+                        startInfo.RedirectStandardError = true;
+                    }
+
+                    _apiProcess = Process.Start(startInfo);
+                    if (_apiProcess == null)
+                    {
+                        Console.WriteLine("Failed to start API server process");
+                        return false;
+                    }
+
+                    Console.WriteLine($"API server process started (PID: {_apiProcess.Id})");
+                    return true;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Warning: Could not create development data: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Gets the next weekday (Monday-Friday) from the given date
-        /// </summary>
-        private static DateTime GetNextWeekday(DateTime date)
-        {
-            while (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
-            {
-                date = date.AddDays(1);
-            }
-            return date;
-        }
-
-        /// <summary>
-        /// Advances time to next business day slot, respecting weekends and business hours (8 AM - 5 PM)
-        /// </summary>
-        private static DateTime GetNextBusinessSlot(DateTime time, int slotMinutes)
-        {
-            var nextSlot = time.AddMinutes(slotMinutes);
-
-            // If we go past 5 PM, move to next day at 8 AM
-            if (nextSlot.Hour >= 17 || nextSlot.TimeOfDay > new TimeSpan(17, 0, 0))
-            {
-                nextSlot = nextSlot.Date.AddDays(1).AddHours(8);
-            }
-
-            // Skip weekends
-            nextSlot = GetNextWeekday(nextSlot);
-
-            return nextSlot;
-        }
-
-        /// <summary>
-        /// Schedules a sample appointment for a patient with conflict-aware time slot allocation
-        /// </summary>
-        private static void ScheduleSampleAppointment(
-            PatientProfile patient,
-            PhysicianProfile physician,
-            SchedulerService scheduleManager,
-            ref DateTime baseTime,
-            string reason)
-        {
-            const int SLOT_DURATION_MINUTES = 30;
-            const int MAX_ATTEMPTS = 50; // Try up to 50 slots to account for weekends
-
-            var physicianSchedule = scheduleManager.GetPhysicianSchedule(physician.Id);
-
-            // Ensure we start on a weekday during business hours
-            var attemptTime = GetNextWeekday(baseTime.Date).AddHours(Math.Max(8, Math.Min(16, baseTime.Hour)));
-            var scheduled = false;
-
-            for (int attempt = 0; attempt < MAX_ATTEMPTS && !scheduled; attempt++)
-            {
-                var appointment = new AppointmentTimeInterval(
-                    attemptTime,
-                    attemptTime.AddMinutes(SLOT_DURATION_MINUTES),
-                    patient.Id,
-                    physician.Id,
-                    reason,
-                    AppointmentStatus.Scheduled
-                );
-
-                if (physicianSchedule.TryAddAppointment(appointment))
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"  Scheduled appointment: {patient.GetValue<string>(CommonEntryTypeExtensions.GetKey(CommonEntryType.Name))} on {attemptTime:yyyy-MM-dd HH:mm}");
-                    baseTime = GetNextBusinessSlot(attemptTime, SLOT_DURATION_MINUTES); // Next slot on next business day
-                    scheduled = true;
+                    Console.WriteLine($"Error starting API server: {ex.Message}");
+                    return false;
                 }
-                else
-                {
-                    // Conflict detected, try next business slot
-                    attemptTime = GetNextBusinessSlot(attemptTime, SLOT_DURATION_MINUTES);
-                }
-            }
-
-            if (!scheduled)
-            {
-                Console.WriteLine($"  Warning: Could not schedule appointment for {patient.GetValue<string>(CommonEntryTypeExtensions.GetKey(CommonEntryType.Name))} (no available slots)");
             }
         }
+
+        /// <summary>
+        /// Waits for the API to become healthy within the specified timeout.
+        /// </summary>
+        private static async Task<bool> WaitForApiHealthyAsync(string apiBaseUrl, int timeoutSeconds)
+        {
+            Console.WriteLine($"Waiting for API to become healthy (timeout: {timeoutSeconds}s)...");
+            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+
+            while (DateTime.UtcNow < deadline)
+            {
+                if (await IsApiHealthyAsync(apiBaseUrl).ConfigureAwait(false))
+                {
+                    Console.WriteLine("API server is healthy and ready");
+                    return true;
+                }
+                await Task.Delay(500).ConfigureAwait(false);
+            }
+
+            Console.WriteLine("Timeout waiting for API server");
+            return false;
+        }
+
+        /// <summary>
+        /// Locates the API.CliniCore project by searching up the directory tree.
+        /// </summary>
+        private static string? FindApiProjectPath()
+        {
+            // Start from executable location and walk up
+            var searchDir = new DirectoryInfo(AppContext.BaseDirectory);
+
+            while (searchDir != null)
+            {
+                var apiPath = Path.Combine(searchDir.FullName, "API.CliniCore", "API.CliniCore.csproj");
+                if (File.Exists(apiPath))
+                    return apiPath;
+
+                searchDir = searchDir.Parent;
+            }
+
+            // Fallback: try relative to working directory
+            var fallback = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "API.CliniCore", "API.CliniCore.csproj"));
+            return File.Exists(fallback) ? fallback : null;
+        }
+
+        #endregion
     }
 }
