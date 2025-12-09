@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Specialized;
 using System.Windows.Input;
+using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Scheduling;
 using GUI.CliniCore.Helpers;
 using Microsoft.Maui.Controls.Shapes;
@@ -54,6 +55,24 @@ public partial class CalendarView : ContentView
         typeof(CalendarView),
         null);
 
+    public static readonly BindableProperty PhysicianLookupProperty = BindableProperty.Create(
+        nameof(PhysicianLookup),
+        typeof(Func<Guid, (string Name, List<MedicalSpecialization> Specializations)?>),
+        typeof(CalendarView),
+        null);
+
+    public static readonly BindableProperty DayTappedCommandProperty = BindableProperty.Create(
+        nameof(DayTappedCommand),
+        typeof(ICommand),
+        typeof(CalendarView),
+        null);
+
+    public static readonly BindableProperty PatientNameLookupProperty = BindableProperty.Create(
+        nameof(PatientNameLookup),
+        typeof(Func<Guid, string?>),
+        typeof(CalendarView),
+        null);
+
     #endregion
 
     #region Properties
@@ -80,6 +99,24 @@ public partial class CalendarView : ContentView
     {
         get => (ICommand?)GetValue(AppointmentTappedCommandProperty);
         set => SetValue(AppointmentTappedCommandProperty, value);
+    }
+
+    public Func<Guid, (string Name, List<MedicalSpecialization> Specializations)?>? PhysicianLookup
+    {
+        get => (Func<Guid, (string Name, List<MedicalSpecialization> Specializations)?>?)GetValue(PhysicianLookupProperty);
+        set => SetValue(PhysicianLookupProperty, value);
+    }
+
+    public ICommand? DayTappedCommand
+    {
+        get => (ICommand?)GetValue(DayTappedCommandProperty);
+        set => SetValue(DayTappedCommandProperty, value);
+    }
+
+    public Func<Guid, string?>? PatientNameLookup
+    {
+        get => (Func<Guid, string?>?)GetValue(PatientNameLookupProperty);
+        set => SetValue(PatientNameLookupProperty, value);
     }
 
     #endregion
@@ -313,17 +350,37 @@ public partial class CalendarView : ContentView
             stack.Children.Add(aptCard);
         }
 
-        // Show "+N more" if there are more appointments
+        // Show "+N more" if there are more appointments - make it tappable
         if (dayAppointments.Count > 3)
         {
+            var moreBorder = new Border
+            {
+                BackgroundColor = Color.FromArgb("#E0E0E0"),
+                Padding = new Thickness(4, 2),
+                Margin = new Thickness(0, 1)
+            };
+            moreBorder.StrokeShape = new RoundRectangle { CornerRadius = 4 };
+            moreBorder.StrokeThickness = 0;
+
             var moreLabel = new Label
             {
                 Text = $"+{dayAppointments.Count - 3} more",
                 FontSize = 10,
-                TextColor = Colors.Gray,
+                TextColor = Color.FromArgb("#333"),
                 HorizontalOptions = LayoutOptions.Start
             };
-            stack.Children.Add(moreLabel);
+            moreBorder.Content = moreLabel;
+
+            // Tap on "+N more" to open day detail
+            var moreTapGesture = new TapGestureRecognizer();
+            moreTapGesture.Tapped += (s, e) =>
+            {
+                SelectedDate = date;
+                DayTappedCommand?.Execute((date, dayAppointments));
+            };
+            moreBorder.GestureRecognizers.Add(moreTapGesture);
+
+            stack.Children.Add(moreBorder);
         }
 
         border.Content = stack;
@@ -338,12 +395,43 @@ public partial class CalendarView : ContentView
 
     private View CreateAppointmentCard(AppointmentTimeInterval appointment)
     {
-        var statusColor = SpecializationColorHelper.GetStatusColor(appointment.Status);
-        var textColor = SpecializationColorHelper.GetContrastingTextColor(statusColor);
+        Color bgColor;
+        string displayText;
+
+        // Check if we have patient lookup (physician view) - show patient names with status colors
+        var patientName = PatientNameLookup?.Invoke(appointment.PatientId);
+        if (patientName != null)
+        {
+            // Physician view: show patient name with status-based color
+            bgColor = SpecializationColorHelper.GetStatusColor(appointment.Status);
+            displayText = $"{appointment.Start:HH:mm} {patientName}";
+        }
+        // Check if we have physician lookup (admin view) - show physician names with specialization colors
+        else
+        {
+            var physicianInfo = PhysicianLookup?.Invoke(appointment.PhysicianId);
+            if (physicianInfo.HasValue && physicianInfo.Value.Specializations.Count > 0)
+            {
+                // Admin view: use specialization-based color
+                var specs = physicianInfo.Value.Specializations;
+                bgColor = specs.Count == 1
+                    ? SpecializationColorHelper.GetColor(specs[0])
+                    : SpecializationColorHelper.GetAverageColor(specs);
+                displayText = $"{appointment.Start:HH:mm} {physicianInfo.Value.Name}";
+            }
+            else
+            {
+                // Fall back to status color if no lookup available
+                bgColor = SpecializationColorHelper.GetStatusColor(appointment.Status);
+                displayText = $"{appointment.Start:HH:mm}";
+            }
+        }
+
+        var textColor = SpecializationColorHelper.GetContrastingTextColor(bgColor);
 
         var border = new Border
         {
-            BackgroundColor = statusColor,
+            BackgroundColor = bgColor,
             Padding = new Thickness(4, 2),
             Margin = new Thickness(0, 1)
         };
@@ -352,7 +440,7 @@ public partial class CalendarView : ContentView
 
         var label = new Label
         {
-            Text = $"{appointment.Start:HH:mm}",
+            Text = displayText,
             FontSize = 10,
             TextColor = textColor,
             LineBreakMode = LineBreakMode.TailTruncation

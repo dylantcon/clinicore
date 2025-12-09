@@ -125,6 +125,8 @@
                             Appointments="{Binding Appointments}"
                             SelectedDate="{Binding SelectedCalendarDate}"
                             AppointmentTappedCommand="{Binding AppointmentTappedCommand}"
+                            DayTappedCommand="{Binding DayTappedCommand}"
+                            PhysicianLookup="{Binding PhysicianLookup}"
                             ViewMode="Week"/>
 
                         <Button Text="Logout" Command="{Binding LogoutCommand}" BackgroundColor="#F44336" TextColor="White" Margin="0,20,0,0" HeightRequest="50" CornerRadius="8"/>
@@ -204,6 +206,8 @@
                             Appointments="{Binding Appointments}"
                             SelectedDate="{Binding SelectedCalendarDate}"
                             AppointmentTappedCommand="{Binding AppointmentTappedCommand}"
+                            DayTappedCommand="{Binding DayTappedCommand}"
+                            PatientNameLookup="{Binding PatientNameLookup}"
                             ViewMode="Week"/>
 
                         <Button Text="Logout" Command="{Binding LogoutCommand}" BackgroundColor="#F44336" TextColor="White" Margin="0,20,0,0" HeightRequest="50" CornerRadius="8"/>
@@ -272,6 +276,8 @@
                             Appointments="{Binding Appointments}"
                             SelectedDate="{Binding SelectedCalendarDate}"
                             AppointmentTappedCommand="{Binding AppointmentTappedCommand}"
+                            DayTappedCommand="{Binding DayTappedCommand}"
+                            PhysicianLookup="{Binding PhysicianLookup}"
                             ViewMode="Week"/>
 
                         <Button Text="Logout" Command="{Binding LogoutCommand}" BackgroundColor="#F44336" TextColor="White" Margin="0,20,0,0" HeightRequest="50" CornerRadius="8"/>

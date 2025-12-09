@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using Core.CliniCore.Domain.Enumerations;
+using Core.CliniCore.Domain.Users.Concrete;
 using Core.CliniCore.Scheduling;
 using Core.CliniCore.Service;
 using GUI.CliniCore.Commands;
@@ -17,6 +19,8 @@ namespace GUI.CliniCore.ViewModels.Home
         private readonly SessionManager _sessionManager;
         private readonly INavigationService _navigationService;
         private readonly SchedulerService _schedulerService;
+        private readonly ProfileService _profileService;
+        private readonly Dictionary<Guid, (string Name, List<MedicalSpecialization> Specializations)> _physicianCache = new();
 
         private string _welcomeMessage = string.Empty;
         public string WelcomeMessage
@@ -46,16 +50,25 @@ namespace GUI.CliniCore.ViewModels.Home
         public MauiCommand ViewReportsCommand { get; }
         public MauiCommand SystemAdminCommand { get; }
         public MauiCommand AppointmentTappedCommand { get; }
+        public MauiCommand DayTappedCommand { get; }
         public MauiCommand LogoutCommand { get; }
+
+        /// <summary>
+        /// Lookup function for physician info (name and specializations) by ID.
+        /// Used by CalendarView for appointment colors.
+        /// </summary>
+        public Func<Guid, (string Name, List<MedicalSpecialization> Specializations)?> PhysicianLookup => LookupPhysician;
 
         public AdministratorHomeViewModel(
             SessionManager sessionManager,
             INavigationService navigationService,
-            SchedulerService schedulerService)
+            SchedulerService schedulerService,
+            ProfileService profileService)
         {
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _schedulerService = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
+            _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
             Title = "Administrator Dashboard";
             WelcomeMessage = $"Welcome, {_sessionManager.CurrentUsername}!";
@@ -77,6 +90,12 @@ namespace GUI.CliniCore.ViewModels.Home
                 }
             });
 
+            DayTappedCommand = new AsyncRelayCommand<(DateTime, List<AppointmentTimeInterval>)>(async tuple =>
+            {
+                // Navigate to appointment list filtered by date
+                await _navigationService.NavigateToAsync($"AppointmentListPage?date={tuple.Item1:yyyy-MM-dd}");
+            });
+
             LogoutCommand = new AsyncRelayCommand(LogoutAsync);
 
             // Load all facility appointments for calendar
@@ -90,6 +109,26 @@ namespace GUI.CliniCore.ViewModels.Home
             {
                 Appointments.Add(appointment);
             }
+        }
+
+        private (string Name, List<MedicalSpecialization> Specializations)? LookupPhysician(Guid physicianId)
+        {
+            // Check cache first
+            if (_physicianCache.TryGetValue(physicianId, out var cached))
+                return cached;
+
+            // Lookup from profile service
+            var profile = _profileService.GetProfileById(physicianId) as PhysicianProfile;
+            if (profile == null)
+                return null;
+
+            var name = profile.Name ?? "Unknown";
+            var specs = profile.Specializations.ToList();
+
+            // Cache the result
+            var result = (name, specs);
+            _physicianCache[physicianId] = result;
+            return result;
         }
 
         private void ShowPlaceholder(string featureName)

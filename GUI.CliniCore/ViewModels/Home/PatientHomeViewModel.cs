@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Domain.Users.Concrete;
@@ -21,6 +22,7 @@ namespace GUI.CliniCore.ViewModels.Home
         private readonly INavigationService _navigationService;
         private readonly ProfileService _profileRegistry;
         private readonly SchedulerService _schedulerService;
+        private readonly Dictionary<Guid, (string Name, List<MedicalSpecialization> Specializations)> _physicianCache = new();
 
         private string _welcomeMessage = string.Empty;
         public string WelcomeMessage
@@ -46,7 +48,14 @@ namespace GUI.CliniCore.ViewModels.Home
         public MauiCommand ViewMyClinicalDocumentsCommand { get; }
         public MauiCommand ViewMyPhysiciansCommand { get; }
         public MauiCommand AppointmentTappedCommand { get; }
+        public MauiCommand DayTappedCommand { get; }
         public MauiCommand LogoutCommand { get; }
+
+        /// <summary>
+        /// Lookup function for physician info (name and specializations) by ID.
+        /// Used by CalendarView for appointment colors and display.
+        /// </summary>
+        public Func<Guid, (string Name, List<MedicalSpecialization> Specializations)?> PhysicianLookup => LookupPhysician;
 
         public PatientHomeViewModel(
             SessionManager sessionManager,
@@ -105,6 +114,16 @@ namespace GUI.CliniCore.ViewModels.Home
                 }
             });
 
+            DayTappedCommand = new AsyncRelayCommand<(DateTime, List<AppointmentTimeInterval>)>(async tuple =>
+            {
+                // Navigate to appointment list filtered by date for this patient
+                var patientId = _sessionManager.CurrentSession?.UserId;
+                if (patientId.HasValue)
+                {
+                    await _navigationService.NavigateToAsync($"AppointmentListPage?patientId={patientId.Value}&date={tuple.Item1:yyyy-MM-dd}");
+                }
+            });
+
             LogoutCommand = new AsyncRelayCommand(LogoutAsync);
 
             // Load appointments for calendar
@@ -134,6 +153,26 @@ namespace GUI.CliniCore.ViewModels.Home
         {
             _sessionManager.ClearSession();
             await _navigationService.NavigateToLoginAsync();
+        }
+
+        private (string Name, List<MedicalSpecialization> Specializations)? LookupPhysician(Guid physicianId)
+        {
+            // Check cache first
+            if (_physicianCache.TryGetValue(physicianId, out var cached))
+                return cached;
+
+            // Lookup from profile service
+            var profile = _profileRegistry.GetProfileById(physicianId) as PhysicianProfile;
+            if (profile == null)
+                return null;
+
+            var name = profile.Name ?? "Unknown";
+            var specs = profile.Specializations.ToList();
+
+            // Cache the result
+            var result = (name, specs);
+            _physicianCache[physicianId] = result;
+            return result;
         }
     }
 }
