@@ -30,11 +30,14 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Restore and build Core.CliniCore
+        run: dotnet build Core.CliniCore/Core.CliniCore.csproj --configuration Release
 
-      - name: Build projects
-        run: dotnet build --no-restore --configuration Release
+      - name: Restore and build API.CliniCore
+        run: dotnet build API.CliniCore/API.CliniCore.csproj --configuration Release
+
+      - name: Restore and build CLI.CliniCore
+        run: dotnet build CLI.CliniCore/CLI.CliniCore.csproj --configuration Release
 
       - name: Install DocFX
         run: dotnet tool install -g docfx
