@@ -19,19 +19,20 @@ namespace Core.CliniCore.Scheduling.Management
         public ScheduleConflictDetector(IBookingStrategy bookingStrategy)
         {
             _bookingStrategy = bookingStrategy ?? throw new ArgumentNullException(nameof(bookingStrategy));
-            _strategies = new List<IConflictDetectionStrategy>
-            {
+            _strategies =
+            [
                 new DoubleBookingDetector(),
                 new UnavailableTimeDetector(),
-                // Note: OutsideHoursDetector removed - business hours are enforced via
-                // facility unavailable blocks in SchedulerService.InitializeFacilitySchedule()
                 new InvalidDurationDetector()
-            };
+            ];
         }
 
         /// <summary>
         /// Detects all conflicts for a proposed appointment
         /// </summary>
+        /// <param name="proposedAppointment"></param>
+        /// <param name="physicianSchedule"></param>
+        /// <param name="facilityUnavailable"></param>
         /// <param name="excludeAppointmentId">Optional appointment ID to exclude from conflict checking (for updates)</param>
         public ConflictCheckResult CheckForConflicts(
             AppointmentTimeInterval proposedAppointment,
@@ -122,6 +123,9 @@ namespace Core.CliniCore.Scheduling.Management
         /// <summary>
         /// Detects conflicts based on this strategy's rules
         /// </summary>
+        /// <param name="proposedAppointment"></param>
+        /// <param name="physicianSchedule"></param>
+        /// <param name="facilityUnavailable"></param>
         /// <param name="excludeAppointmentId">Optional appointment ID to exclude from conflict checking (for updates)</param>
         List<ScheduleConflict> DetectConflicts(
             AppointmentTimeInterval proposedAppointment,

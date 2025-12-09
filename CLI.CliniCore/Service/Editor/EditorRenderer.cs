@@ -57,6 +57,7 @@ namespace CLI.CliniCore.Service.Editor
                 "",
                 "Commands:",
                 "  A           - Add new SOAP entry",
+                "  C           - Set Chief Complaint",
                 "  E           - Edit selected entry",
                 "  D           - Delete selected entry",
                 "  V           - Toggle view mode",
@@ -334,6 +335,7 @@ namespace CLI.CliniCore.Service.Editor
             // Entry type and basic info
             sb.AppendLine($"Type: {entry.GetType().Name}");
             sb.AppendLine($"Created: {entry.CreatedAt:yyyy-MM-dd HH:mm}");
+            sb.AppendLine($"Severity: {entry.Severity}");
             sb.AppendLine($"ID: {entry.Id:N}");
             sb.AppendLine();
 
@@ -344,6 +346,65 @@ namespace CLI.CliniCore.Service.Editor
             // Additional type-specific info if available
             switch (entry)
             {
+                case ObservationEntry obs:
+                    sb.AppendLine();
+                    sb.AppendLine("OBSERVATION DETAILS:");
+                    sb.AppendLine($"Type: {obs.Type}");
+                    if (obs.BodySystem.HasValue)
+                        sb.AppendLine($"Body System: {obs.BodySystem.Value}");
+                    sb.AppendLine($"Is Abnormal: {(obs.IsAbnormal ? "Yes" : "No")}");
+                    if (obs.NumericValue.HasValue)
+                        sb.AppendLine($"Value: {obs.NumericValue} {obs.Unit}");
+                    if (!string.IsNullOrEmpty(obs.ReferenceRange))
+                        sb.AppendLine($"Reference Range: {obs.ReferenceRange}");
+                    if (obs.VitalSigns.Any())
+                        sb.AppendLine($"Vitals: {obs.GetVitalSignsDisplay()}");
+                    break;
+
+                case DiagnosisEntry dx:
+                    sb.AppendLine();
+                    sb.AppendLine("DIAGNOSIS DETAILS:");
+                    sb.AppendLine($"Type: {dx.Type}");
+                    sb.AppendLine($"Status: {dx.Status}");
+                    if (!string.IsNullOrEmpty(dx.ICD10Code))
+                        sb.AppendLine($"ICD-10: {dx.ICD10Code}");
+                    sb.AppendLine($"Is Primary: {(dx.IsPrimary ? "Yes" : "No")}");
+                    if (dx.OnsetDate.HasValue)
+                        sb.AppendLine($"Onset: {dx.OnsetDate:yyyy-MM-dd}");
+                    if (dx.RelatedPrescriptions.Any())
+                        sb.AppendLine($"Linked Prescriptions: {dx.RelatedPrescriptions.Count}");
+                    break;
+
+                case AssessmentEntry assess:
+                    sb.AppendLine();
+                    sb.AppendLine("ASSESSMENT DETAILS:");
+                    sb.AppendLine($"Condition: {assess.Condition}");
+                    sb.AppendLine($"Prognosis: {assess.Prognosis}");
+                    sb.AppendLine($"Confidence: {assess.Confidence}");
+                    if (assess.RequiresImmediateAction)
+                        sb.AppendLine("** REQUIRES IMMEDIATE ACTION **");
+                    if (assess.DifferentialDiagnoses.Any())
+                        sb.AppendLine($"Differentials: {string.Join(", ", assess.DifferentialDiagnoses)}");
+                    if (assess.RiskFactors.Any())
+                        sb.AppendLine($"Risk Factors: {string.Join(", ", assess.RiskFactors)}");
+                    break;
+
+                case PlanEntry plan:
+                    sb.AppendLine();
+                    sb.AppendLine("PLAN DETAILS:");
+                    sb.AppendLine($"Type: {plan.Type}");
+                    sb.AppendLine($"Priority: {plan.Priority}");
+                    if (plan.TargetDate.HasValue)
+                        sb.AppendLine($"Target Date: {plan.TargetDate:yyyy-MM-dd}");
+                    sb.AppendLine($"Completed: {(plan.IsCompleted ? "Yes" : "No")}");
+                    if (plan.CompletedDate.HasValue)
+                        sb.AppendLine($"Completed On: {plan.CompletedDate:yyyy-MM-dd}");
+                    if (!string.IsNullOrEmpty(plan.FollowUpInstructions))
+                        sb.AppendLine($"Follow-up: {WrapText(plan.FollowUpInstructions, maxWidth - 2)}");
+                    if (plan.RelatedDiagnoses.Any())
+                        sb.AppendLine($"Linked Diagnoses: {plan.RelatedDiagnoses.Count}");
+                    break;
+
                 case PrescriptionEntry rx:
                     sb.AppendLine();
                     sb.AppendLine("PRESCRIPTION DETAILS:");
@@ -550,7 +611,7 @@ namespace CLI.CliniCore.Service.Editor
                 sb.Append(" | [MODIFIED]");
             }
 
-            sb.Append(" | A-Add E-Edit D-Delete V-View S-Save Ctrl+X-Exit");
+            sb.Append(" | A-Add C-Chief E-Edit D-Del S-Save Ctrl+X-Exit");
 
             return sb.ToString();
         }

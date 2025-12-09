@@ -19,20 +19,35 @@ using Core.CliniCore.Domain.Users.Concrete;
 
 namespace CLI.CliniCore.Service
 {
-    public class ConsoleCommandParser(IConsoleEngine console, ProfileService profileService, SchedulerService schedulerService, ClinicalDocumentService clinicalDocService)
+    public class ConsoleCommandParser
     {
-        private readonly IConsoleEngine _console = console ?? throw new ArgumentNullException(nameof(console));
-        private readonly ProfileService _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
-        private readonly SchedulerService _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
-        private readonly ClinicalDocumentService _clinicalDocumentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
+        private readonly IConsoleEngine _console;
+        private readonly ProfileService _profileRegistry;
+        private readonly SchedulerService _scheduleManager;
+        private readonly ClinicalDocumentService _clinicalDocumentService;
+        private readonly ConsoleSessionManager _sessionManager;
+
+        public ConsoleCommandParser(
+            IConsoleEngine console,
+            ProfileService profileService,
+            SchedulerService schedulerService,
+            ClinicalDocumentService clinicalDocService,
+            ConsoleSessionManager sessionManager)
+        {
+            _console = console ?? throw new ArgumentNullException(nameof(console));
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
+            _clinicalDocumentService = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
+            _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
+        }
 
         public CommandParameters ParseInteractive(ICommand command)
         {
-            var parameters = new CommandParameters();
-            
             // Use the command's CommandKey property for consistent identification
             var commandKey = command.CommandKey.ToLowerInvariant();
-            
+
+            var parameters = new CommandParameters();
+
             // Parse parameters based on the command key
             switch (commandKey)
             {
@@ -86,11 +101,36 @@ namespace CLI.CliniCore.Service
                     break;
 
                 case CreateClinicalDocumentCommand.Key:
+                    // Get physician ID - use current user if physician, otherwise prompt
+                    Guid physicianId;
+                    if (_sessionManager.CurrentSession?.UserRole == UserRole.Physician)
+                    {
+                        physicianId = _sessionManager.CurrentUserId!.Value;
+                    }
+                    else
+                    {
+                        physicianId = GetProfileSelection(UserRole.Physician);
+                    }
+                    parameters[CreateClinicalDocumentCommand.Parameters.PhysicianId] = physicianId;
+
                     var selectedPatientId = GetProfileSelection(UserRole.Patient);
                     parameters[CreateClinicalDocumentCommand.Parameters.PatientId] = selectedPatientId;
-                    parameters[CreateClinicalDocumentCommand.Parameters.AppointmentId] = GetAppointmentSelection(selectedPatientId);
+                    parameters[CreateClinicalDocumentCommand.Parameters.AppointmentId] = GetAppointmentSelection(selectedPatientId, physicianId);
                     parameters[CreateClinicalDocumentCommand.Parameters.ChiefComplaint] = GetStringInput("Chief Complaint");
-                    parameters[CreateClinicalDocumentCommand.Parameters.InitialObservation] = GetOptionalStringInput("Initial Observation");
+                    break;
+
+                case DeleteClinicalDocumentCommand.Key:
+                    parameters[DeleteClinicalDocumentCommand.Parameters.DocumentId] = GetClinicalDocumentSelection();
+                    Guid selectedDoc = parameters.GetParameter<Guid>(DeleteClinicalDocumentCommand.Parameters.DocumentId);
+                    if (_clinicalDocumentService.GetDocumentById(selectedDoc)!.IsCompleted)
+                    {
+                        parameters[DeleteClinicalDocumentCommand.Parameters.Force] = GetBoolInput(
+                            "This document is completed. Do you want to force deletion? (Y/N)");
+                    }
+                    else
+                    {
+                        parameters[DeleteClinicalDocumentCommand.Parameters.Force] = false;
+                    }
                     break;
 
                 case AddObservationCommand.Key:
@@ -440,6 +480,7 @@ namespace CLI.CliniCore.Service
             {
                 var input = _console.GetUserInput($"{prompt}: ") ??
                     throw new UserInputCancelledException($"User cancelled input for: {prompt}");
+
                 if (Guid.TryParse(input, out var guid))
                 {
                     return guid;
@@ -474,7 +515,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput("Enter selection (1-" + genders.Length + "): ");
+                var input = _console.GetUserInput("Enter selection (1-" + genders.Length + "): ") ??
+                    throw new UserInputCancelledException("User cancelled input for gender selection");
+
                 if (int.TryParse(input, out var selection) && selection >= 1 && selection <= genders.Length)
                 {
                     return genders[selection - 1];
@@ -529,8 +572,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput($"Enter selection (1-{commonRaces.Length}) or type custom: ");
-                
+                var input = _console.GetUserInput($"Enter selection (1-{commonRaces.Length}) or type custom: ") ??
+                    throw new UserInputCancelledException("User cancelled input for race selection");
+
                 if (int.TryParse(input, out var selection) && selection >= 1 && selection <= commonRaces.Length)
                 {
                     return commonRaces[selection - 1];
@@ -554,7 +598,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput($"Enter selection (1-{specializations.Length}): ");
+                var input = _console.GetUserInput($"Enter selection (1-{specializations.Length}): ") ??
+                    throw new UserInputCancelledException("User cancelled input for specialization selection");
+
                 if (int.TryParse(input, out var selection) && selection >= 1 && selection <= specializations.Length)
                 {
                     return specializations[selection - 1];
@@ -643,7 +689,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput($"Enter selection (1-{days.Length}): ");
+                var input = _console.GetUserInput($"Enter selection (1-{days.Length}): ") ??
+                    throw new UserInputCancelledException("User cancelled input for day of week selection");
+
                 if (int.TryParse(input, out var selection) && selection >= 1 && selection <= days.Length)
                 {
                     return days[selection - 1];
@@ -663,7 +711,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput($"Enter selection (1-{roles.Length}): ");
+                var input = _console.GetUserInput($"Enter selection (1-{roles.Length}): ") ??
+                    throw new UserInputCancelledException("User cancelled input for user role selection");
+
                 if (int.TryParse(input, out var selection) && selection >= 1 && selection <= roles.Length)
                 {
                     return roles[selection - 1];
@@ -684,7 +734,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput($"Enter selection (1-{reportTypes.Length}): ");
+                var input = _console.GetUserInput($"Enter selection (1-{reportTypes.Length}): ") ??
+                    throw new UserInputCancelledException("User cancelled input for report type selection");
+
                 if (int.TryParse(input, out var selection) && selection >= 1 && selection <= reportTypes.Length)
                 {
                     return reportTypes[selection - 1];
@@ -693,15 +745,16 @@ namespace CLI.CliniCore.Service
             }
         }
 
-        private Guid GetAppointmentSelection(Guid patientId)
+        private Guid GetAppointmentSelection(Guid patientId, Guid physicianId)
         {
             var appointments = _scheduleManager.GetPatientAppointments(patientId)
+                .Where(a => a.PhysicianId == physicianId)
                 .OrderBy(a => a.Start)
                 .ToList();
 
             if (appointments.Count == 0)
             {
-                _console.DisplayMessage("No appointments found for this patient.", MessageType.Warning);
+                _console.DisplayMessage("No appointments found for this patient with the selected physician.", MessageType.Warning);
                 return GetGuidInput("Enter Appointment ID manually");
             }
 
@@ -716,7 +769,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput("Enter Appointment ID from list above: ");
+                var input = _console.GetUserInput("Enter Appointment ID from list above: ") 
+                    ?? throw new UserInputCancelledException("User cancelled input for Appointment ID.");
+
                 if (Guid.TryParse(input, out var guid))
                 {
                     if (appointments.Any(a => a.Id == guid))
@@ -734,7 +789,7 @@ namespace CLI.CliniCore.Service
 
         private Guid GetClinicalDocumentSelection()
         {
-            var documents = _clinicalDocumentRegistry.GetAllDocuments()
+            var documents = _clinicalDocumentService.GetAllDocuments()
                 .OrderByDescending(d => d.CreatedAt)
                 .ToList();
 
@@ -767,7 +822,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput("Enter Clinical Document ID from list above: ");
+                var input = _console.GetUserInput("Enter Clinical Document ID from list above: ") ??
+                    throw new UserInputCancelledException("User cancelled input for Clinical Document ID.");
+
                 if (Guid.TryParse(input, out var guid))
                 {
                     if (documents.Any(d => d.Id == guid))
@@ -903,7 +960,9 @@ namespace CLI.CliniCore.Service
 
             while (true)
             {
-                var input = _console.GetUserInput("Enter Profile ID from list above: ");
+                var input = _console.GetUserInput("Enter Profile ID from list above: ") ??
+                    throw new UserInputCancelledException("User cancelled input for Profile ID.");
+
                 if (Guid.TryParse(input, out var guid))
                 {
                     if (profiles.Any(p => p.Id == guid))

@@ -1,8 +1,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CLI.CliniCore.Service.Editor.Input;
 using Core.CliniCore.Commands;
 using Core.CliniCore.Domain.ClinicalDocumentation;
+using Core.CliniCore.Service;
 
 namespace CLI.CliniCore.Service.Editor
 {
@@ -13,9 +15,10 @@ namespace CLI.CliniCore.Service.Editor
     public class ClinicalDocumentEditor : AbstractConsoleEngine
     {
         private readonly EditorRenderer _renderer;
-        private readonly EditorKeyHandler _keyHandler;
+        private readonly EditorInputRouter _inputRouter;
         private readonly new CommandInvoker _commandInvoker;
-        private readonly ConsoleCommandParser _commandParser;
+        private readonly CommandFactory _commandFactory;
+        private readonly ClinicalDocumentService _clinicalDocService;
         
         private EditorState? _editorState;
         private Task? _resizeListenerTask;
@@ -37,14 +40,44 @@ namespace CLI.CliniCore.Service.Editor
         public ClinicalDocumentEditor(
             ConsoleSessionManager sessionManager,
             CommandInvoker commandInvoker,
-            ConsoleCommandParser commandParser)
+            CommandFactory commandFactory,
+            ClinicalDocumentService clinicalDocService)
             : base(sessionManager, null, commandInvoker)
         {
             _commandInvoker = commandInvoker ?? throw new ArgumentNullException(nameof(commandInvoker));
-            _commandParser = commandParser ?? throw new ArgumentNullException(nameof(commandParser));
+            _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
+            _clinicalDocService = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
             _renderer = new EditorRenderer(_console);
-            _keyHandler = new EditorKeyHandler(this, _console, _renderer.InputHandler, _renderer);
+            _inputRouter = new EditorInputRouter(this, _console, _renderer.InputHandler, _renderer);
         }
+
+        /// <summary>
+        /// Gets the current user's ID for use as entry author.
+        /// Falls back to document's physician ID if no session.
+        /// </summary>
+        public Guid GetCurrentAuthorId()
+        {
+            return _sessionManager.CurrentUserId
+                ?? _editorState?.Document.PhysicianId
+                ?? Guid.Empty;
+        }
+
+        /// <summary>
+        /// Executes an add entry command and returns the result.
+        /// Used by EditorKeyHandler to persist entries via the command pattern.
+        /// </summary>
+        public CommandResult? ExecuteCommand(string commandKey, CommandParameters parameters)
+        {
+            var command = _commandFactory.CreateCommand(commandKey);
+            if (command == null) return null;
+
+            return _commandInvoker.Execute(command, parameters, _sessionManager.CurrentSession);
+        }
+
+        /// <summary>
+        /// Gets the current document ID for command parameters
+        /// </summary>
+        public Guid? GetDocumentId() => _editorState?.Document.Id;
 
         /// <summary>
         /// Launches the editor for the specified clinical document
@@ -118,7 +151,7 @@ namespace CLI.CliniCore.Service.Editor
                         // Handle system keys FIRST (exit keys bypass everything)
                         if (IsSystemKey(key))
                         {
-                            var result = _keyHandler.HandleKeyInput(key, _editorState!);
+                            var result = _inputRouter.HandleKeyInput(key, _editorState!);
                             HandleEditorResult(result, ref shouldExit);
                         }
                         // Handle prompts second
@@ -130,7 +163,7 @@ namespace CLI.CliniCore.Service.Editor
                         // Normal key handling
                         else
                         {
-                            var result = _keyHandler.HandleKeyInput(key, _editorState!);
+                            var result = _inputRouter.HandleKeyInput(key, _editorState!);
                             HandleEditorResult(result, ref shouldExit);
                         }
                     }
@@ -225,15 +258,10 @@ namespace CLI.CliniCore.Service.Editor
 
             try
             {
-                // Use existing UpdateClinicalDocumentCommand for persistence
-                var parameters = new CommandParameters();
-                parameters.SetParameter("document_id", _editorState.Document.Id);
-                parameters.SetParameter("status", "completed"); // Simple status for now
-
-                // For now, just mark as clean since we don't have direct command execution here
-                // In a full implementation, this would use the command factory to get the command
+                // Persist the in-memory document to the repository
+                _clinicalDocService.UpdateDocument(_editorState.Document);
                 _editorState.MarkClean();
-                DisplayStatusMessage("Document saved (placeholder)", MessageType.Success);
+                DisplayStatusMessage("Document saved successfully", MessageType.Success);
             }
             catch (Exception ex)
             {

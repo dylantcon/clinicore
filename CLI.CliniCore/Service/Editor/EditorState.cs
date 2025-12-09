@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Core.CliniCore.Domain.ClinicalDocumentation;
 using Core.CliniCore.Domain.ClinicalDocumentation.ClinicalEntries;
+using Core.CliniCore.Domain.Enumerations.Extensions;
 
 namespace CLI.CliniCore.Service.Editor
 {
@@ -106,10 +107,15 @@ namespace CLI.CliniCore.Service.Editor
 
         public GroupedEntries GetGroupedEntries()
         {
-            var subjective = _flattenedEntries.OfType<ObservationEntry>().Cast<AbstractClinicalEntry>().ToList();
-            var objective = _flattenedEntries.Where(e => e is DiagnosisEntry || e is PrescriptionEntry).ToList();
+            var observations = _flattenedEntries.OfType<ObservationEntry>().ToList();
+            var subjective = observations.Where(o => o.Type.IsSubjective()).Cast<AbstractClinicalEntry>().ToList();
+            var objective = observations.Where(o => o.Type.IsObjective()).Cast<AbstractClinicalEntry>().ToList();
             var assessment = _flattenedEntries.OfType<AssessmentEntry>().Cast<AbstractClinicalEntry>().ToList();
             var plan = _flattenedEntries.OfType<PlanEntry>().Cast<AbstractClinicalEntry>().ToList();
+
+            // Diagnoses go under Assessment, Prescriptions go under Plan
+            assessment.AddRange(_flattenedEntries.OfType<DiagnosisEntry>());
+            plan.AddRange(_flattenedEntries.OfType<PrescriptionEntry>());
 
             return new GroupedEntries(subjective, objective, assessment, plan);
         }
@@ -134,12 +140,13 @@ namespace CLI.CliniCore.Service.Editor
             // Order entries by SOAP methodology: S, O, A, P
             return entry switch
             {
-                ObservationEntry => 1,      // Subjective
-                DiagnosisEntry => 2,        // Objective  
-                PrescriptionEntry => 3,     // Objective (linked to diagnosis)
-                AssessmentEntry => 4,       // Assessment
+                ObservationEntry obs when obs.Type.IsSubjective() => 1,  // Subjective
+                ObservationEntry => 2,      // Objective observations
+                AssessmentEntry => 3,       // Assessment
+                DiagnosisEntry => 4,        // Assessment (diagnoses)
                 PlanEntry => 5,             // Plan
-                _ => 6
+                PrescriptionEntry => 6,     // Plan (prescriptions linked to diagnosis)
+                _ => 7
             };
         }
     }

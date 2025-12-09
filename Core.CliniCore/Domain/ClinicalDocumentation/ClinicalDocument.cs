@@ -14,7 +14,14 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
     /// Composite pattern implementation for complete medical encounter documentation
     /// Follows SOAP (Subjective, Objective, Assessment, Plan) format
     /// </summary>
-    public class ClinicalDocument : IIdentifiable
+    /// <remarks>
+    /// Creates a new clinical document with a specified ID (for client-server ID synchronization)
+    /// </remarks>
+    /// <param name="id">The unique identifier for the document.</param>
+    /// <param name="patientId">The unique identifier of the patient.</param>
+    /// <param name="physicianId">The unique identifier of the physician.</param>
+    /// <param name="appointmentId">The unique identifier of the appointment.</param>
+    public class ClinicalDocument(Guid id, Guid patientId, Guid physicianId, Guid appointmentId) : IIdentifiable
     {
         private readonly List<AbstractClinicalEntry> _entries = [];
         private readonly Dictionary<Guid, DiagnosisEntry> _diagnoses = [];
@@ -23,23 +30,23 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         /// <summary>
         /// Gets the unique identifier for the clinical document.
         /// </summary>
-        public Guid Id { get; }
+        public Guid Id { get; } = id;
         /// <summary>
         /// Gets the unique identifier of the patient associated with this document.
         /// </summary>
-        public Guid PatientId { get; }
+        public Guid PatientId { get; } = patientId;
         /// <summary>
         /// Gets the unique identifier of the physician who authored this document.
         /// </summary>
-        public Guid PhysicianId { get; }
+        public Guid PhysicianId { get; } = physicianId;
         /// <summary>
         /// Gets the unique identifier of the appointment related to this document.
         /// </summary>
-        public Guid AppointmentId { get; }
+        public Guid AppointmentId { get; } = appointmentId;
         /// <summary>
         /// Gets the date and time when the document was created.
         /// </summary>
-        public DateTime CreatedAt { get; }
+        public DateTime CreatedAt { get; } = DateTime.Now;
         /// <summary>
         /// Gets the date and time when the document was completed, or null if it is not yet completed.
         /// </summary>
@@ -58,22 +65,6 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
         public ClinicalDocument(Guid patientId, Guid physicianId, Guid appointmentId)
             : this(Guid.NewGuid(), patientId, physicianId, appointmentId)
         {
-        }
-
-        /// <summary>
-        /// Creates a new clinical document with a specified ID (for client-server ID synchronization)
-        /// </summary>
-        /// <param name="id">The unique identifier for the document.</param>
-        /// <param name="patientId">The unique identifier of the patient.</param>
-        /// <param name="physicianId">The unique identifier of the physician.</param>
-        /// <param name="appointmentId">The unique identifier of the appointment.</param>
-        public ClinicalDocument(Guid id, Guid patientId, Guid physicianId, Guid appointmentId)
-        {
-            Id = id;
-            PatientId = patientId;
-            PhysicianId = physicianId;
-            AppointmentId = appointmentId;
-            CreatedAt = DateTime.Now;
         }
 
         /// <summary>
@@ -144,6 +135,53 @@ namespace Core.CliniCore.Domain.ClinicalDocumentation
             }
 
             _entries.Add(entry);
+        }
+
+        /// <summary>
+        /// Removes an entry from the document.
+        /// If removing a diagnosis, all related prescriptions are also removed (cascade delete).
+        /// If removing a prescription, the reference is removed from its parent diagnosis.
+        /// </summary>
+        /// <param name="entry">The clinical entry to remove.</param>
+        /// <returns>True if the entry was removed; false if the entry was not found.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when attempting to modify a completed document.</exception>
+        public bool RemoveEntry(AbstractClinicalEntry entry)
+        {
+            if (IsCompleted)
+                throw new InvalidOperationException("Cannot modify completed document");
+
+            ArgumentNullException.ThrowIfNull(entry);
+
+            if (!_entries.Contains(entry))
+                return false;
+
+            // Handle special cases for diagnoses and prescriptions
+            if (entry is DiagnosisEntry diagnosis)
+            {
+                // Cascade delete: remove all prescriptions linked to this diagnosis
+                var relatedPrescriptionIds = diagnosis.RelatedPrescriptions.ToList();
+                foreach (var prescriptionId in relatedPrescriptionIds)
+                {
+                    if (_prescriptions.TryGetValue(prescriptionId, out var prescription))
+                    {
+                        _entries.Remove(prescription);
+                        _prescriptions.Remove(prescriptionId);
+                    }
+                }
+                _diagnoses.Remove(diagnosis.Id);
+            }
+            else if (entry is PrescriptionEntry prescription)
+            {
+                // Remove reference from parent diagnosis
+                if (_diagnoses.TryGetValue(prescription.DiagnosisId, out var parentDiagnosis))
+                {
+                    parentDiagnosis.RelatedPrescriptions.Remove(prescription.Id);
+                }
+                _prescriptions.Remove(prescription.Id);
+            }
+
+            _entries.Remove(entry);
+            return true;
         }
 
         /// <summary>

@@ -61,5 +61,24 @@ namespace Core.CliniCore.Domain.Enumerations.Extensions
         {
             return All.Select((t, index) => (index + 1, t.GetDisplayName())).ToList();
         }
+
+        /// <summary>
+        /// Returns true if this observation type is subjective (patient-reported).
+        /// Subjective: ChiefComplaint, HPI, SocialHistory, FamilyHistory, Allergy
+        /// </summary>
+        public static bool IsSubjective(this ObservationType type)
+        {
+            return type is ObservationType.ChiefComplaint
+                or ObservationType.HistoryOfPresentIllness
+                or ObservationType.SocialHistory
+                or ObservationType.FamilyHistory
+                or ObservationType.Allergy;
+        }
+
+        /// <summary>
+        /// Returns true if this observation type is objective (clinician-observed/measured).
+        /// Objective: PhysicalExam, VitalSigns, LabResult, ImagingResult, ReviewOfSystems
+        /// </summary>
+        public static bool IsObjective(this ObservationType type) => !type.IsSubjective();
     }
 }

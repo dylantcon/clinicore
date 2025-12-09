@@ -44,7 +44,7 @@ namespace Core.CliniCore.Repositories.Remote
             if (result == null)
             {
                 throw new RepositoryOperationException("Add", "ClinicalDocument", entity.Id,
-                    "Remote server failed to create the clinical document");
+                    LastError ?? "Remote server failed to create the clinical document");
             }
         }
 

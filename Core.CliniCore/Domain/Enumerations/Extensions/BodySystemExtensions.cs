@@ -65,7 +65,7 @@ namespace Core.CliniCore.Domain.Enumerations.Extensions
 
         public static List<(int Index, string Display)> GetNumberedList()
         {
-            return All.Select((s, index) => (index + 1, s.GetDisplayName())).ToList();
+            return [.. All.Select((s, index) => (index + 1, s.GetDisplayName()))];
         }
     }
 }

@@ -119,8 +119,8 @@ namespace CLI.CliniCore.Service
                 null  // Will be resolved below
             );
 
-            // Create command parser with console engine, profile service, scheduler service, and clinical doc service
-            var commandParser = new ConsoleCommandParser(consoleEngine, profileService, scheduleManager, clinicalDocService);
+            // Create command parser with console engine, profile service, scheduler service, clinical doc service, and session manager
+            var commandParser = new ConsoleCommandParser(consoleEngine, profileService, scheduleManager, clinicalDocService, sessionManager);
 
             // Create menu builder with all dependencies
             var menuBuilder = new ConsoleMenuBuilder(
