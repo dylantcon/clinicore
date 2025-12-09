@@ -7,6 +7,8 @@ namespace Core.CliniCore.Requests.ClinicalDocuments
     /// </summary>
     public class CreatePlanRequest
     {
+        public Guid? Id { get; set; }
+        public Guid? AuthorId { get; set; }
         public string Content { get; set; } = string.Empty;  // Plan description
         public PlanType Type { get; set; } = PlanType.Treatment;
         public PlanPriority Priority { get; set; } = PlanPriority.Routine;

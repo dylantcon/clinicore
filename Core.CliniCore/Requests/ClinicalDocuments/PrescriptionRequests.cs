@@ -7,6 +7,8 @@ namespace Core.CliniCore.Requests.ClinicalDocuments
     /// </summary>
     public class CreatePrescriptionRequest
     {
+        public Guid? Id { get; set; }
+        public Guid? AuthorId { get; set; }
         public Guid DiagnosisId { get; set; }  // Required: link to supporting diagnosis
         public string MedicationName { get; set; } = string.Empty;
         public string? Dosage { get; set; }

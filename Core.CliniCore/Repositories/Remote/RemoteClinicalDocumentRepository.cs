@@ -131,7 +131,11 @@ namespace Core.CliniCore.Repositories.Remote
 
         public void AddObservation(Guid documentId, ObservationEntry entry)
         {
-            Post(ApiRoutes.ClinicalDocuments.GetObservations(documentId), entry.ToCreateRequest());
+            if (!Post(ApiRoutes.ClinicalDocuments.GetObservations(documentId), entry.ToCreateRequest()))
+            {
+                throw new RepositoryOperationException("AddObservation", "ClinicalDocument", documentId,
+                    LastError ?? "Remote server failed to add observation");
+            }
         }
 
         public void UpdateObservation(Guid documentId, ObservationEntry entry)
@@ -153,7 +157,11 @@ namespace Core.CliniCore.Repositories.Remote
 
         public void AddAssessment(Guid documentId, AssessmentEntry entry)
         {
-            Post(ApiRoutes.ClinicalDocuments.GetAssessments(documentId), entry.ToCreateRequest());
+            if (!Post(ApiRoutes.ClinicalDocuments.GetAssessments(documentId), entry.ToCreateRequest()))
+            {
+                throw new RepositoryOperationException("AddAssessment", "ClinicalDocument", documentId,
+                    LastError ?? "Remote server failed to add assessment");
+            }
         }
 
         public void UpdateAssessment(Guid documentId, AssessmentEntry entry)
@@ -175,7 +183,11 @@ namespace Core.CliniCore.Repositories.Remote
 
         public void AddDiagnosis(Guid documentId, DiagnosisEntry entry)
         {
-            Post(ApiRoutes.ClinicalDocuments.GetDiagnoses(documentId), entry.ToCreateRequest());
+            if (!Post(ApiRoutes.ClinicalDocuments.GetDiagnoses(documentId), entry.ToCreateRequest()))
+            {
+                throw new RepositoryOperationException("AddDiagnosis", "ClinicalDocument", documentId,
+                    LastError ?? "Remote server failed to add diagnosis");
+            }
         }
 
         public void UpdateDiagnosis(Guid documentId, DiagnosisEntry entry)
@@ -197,7 +209,11 @@ namespace Core.CliniCore.Repositories.Remote
 
         public void AddPlan(Guid documentId, PlanEntry entry)
         {
-            Post(ApiRoutes.ClinicalDocuments.GetPlans(documentId), entry.ToCreateRequest());
+            if (!Post(ApiRoutes.ClinicalDocuments.GetPlans(documentId), entry.ToCreateRequest()))
+            {
+                throw new RepositoryOperationException("AddPlan", "ClinicalDocument", documentId,
+                    LastError ?? "Remote server failed to add plan");
+            }
         }
 
         public void UpdatePlan(Guid documentId, PlanEntry entry)
@@ -219,7 +235,11 @@ namespace Core.CliniCore.Repositories.Remote
 
         public void AddPrescription(Guid documentId, PrescriptionEntry entry)
         {
-            Post(ApiRoutes.ClinicalDocuments.GetPrescriptions(documentId), entry.ToCreateRequest());
+            if (!Post(ApiRoutes.ClinicalDocuments.GetPrescriptions(documentId), entry.ToCreateRequest()))
+            {
+                throw new RepositoryOperationException("AddPrescription", "ClinicalDocument", documentId,
+                    LastError ?? "Remote server failed to add prescription");
+            }
         }
 
         public void UpdatePrescription(Guid documentId, PrescriptionEntry entry)

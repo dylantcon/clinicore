@@ -237,7 +237,7 @@ namespace API.CliniCore.Controllers
             }
 
             var observation = new ObservationEntry(
-                document.PhysicianId,
+                request.AuthorId ?? document.PhysicianId,
                 request.Content)
             {
                 Type = request.Type,
@@ -249,6 +249,10 @@ namespace API.CliniCore.Controllers
                 NumericValue = request.NumericValue,
                 Unit = request.Unit
             };
+
+            // Use client-provided ID if present
+            if (request.Id.HasValue && request.Id.Value != Guid.Empty)
+                MappingExtensions.SetEntryId(observation, request.Id.Value);
 
             document.AddEntry(observation);
             _documentService.UpdateDocument(document);
@@ -277,7 +281,7 @@ namespace API.CliniCore.Controllers
             }
 
             var diagnosis = new DiagnosisEntry(
-                document.PhysicianId,
+                request.AuthorId ?? document.PhysicianId,
                 request.Content)
             {
                 ICD10Code = request.ICD10Code,
@@ -287,6 +291,10 @@ namespace API.CliniCore.Controllers
                 IsPrimary = request.IsPrimary,
                 OnsetDate = request.OnsetDate
             };
+
+            // Use client-provided ID if present
+            if (request.Id.HasValue && request.Id.Value != Guid.Empty)
+                MappingExtensions.SetEntryId(diagnosis, request.Id.Value);
 
             document.AddEntry(diagnosis);
             _documentService.UpdateDocument(document);
@@ -323,7 +331,7 @@ namespace API.CliniCore.Controllers
             }
 
             var prescription = new PrescriptionEntry(
-                document.PhysicianId,
+                request.AuthorId ?? document.PhysicianId,
                 request.DiagnosisId,
                 request.MedicationName)
             {
@@ -338,6 +346,10 @@ namespace API.CliniCore.Controllers
                 Instructions = request.Instructions,
                 Severity = request.Severity
             };
+
+            // Use client-provided ID if present
+            if (request.Id.HasValue && request.Id.Value != Guid.Empty)
+                MappingExtensions.SetEntryId(prescription, request.Id.Value);
 
             document.AddEntry(prescription);
             _documentService.UpdateDocument(document);
@@ -366,7 +378,7 @@ namespace API.CliniCore.Controllers
             }
 
             var assessment = new AssessmentEntry(
-                document.PhysicianId,
+                request.AuthorId ?? document.PhysicianId,
                 request.Content)
             {
                 Condition = request.Condition,
@@ -375,6 +387,10 @@ namespace API.CliniCore.Controllers
                 Severity = request.Severity,
                 RequiresImmediateAction = request.RequiresImmediateAction
             };
+
+            // Use client-provided ID if present
+            if (request.Id.HasValue && request.Id.Value != Guid.Empty)
+                MappingExtensions.SetEntryId(assessment, request.Id.Value);
 
             // Add differential diagnoses if provided
             if (request.DifferentialDiagnoses != null)
@@ -421,7 +437,7 @@ namespace API.CliniCore.Controllers
             }
 
             var plan = new PlanEntry(
-                document.PhysicianId,
+                request.AuthorId ?? document.PhysicianId,
                 request.Content)
             {
                 Type = request.Type,
@@ -430,6 +446,10 @@ namespace API.CliniCore.Controllers
                 TargetDate = request.TargetDate,
                 FollowUpInstructions = request.FollowUpInstructions
             };
+
+            // Use client-provided ID if present
+            if (request.Id.HasValue && request.Id.Value != Guid.Empty)
+                MappingExtensions.SetEntryId(plan, request.Id.Value);
 
             // Link to diagnoses if provided
             if (request.RelatedDiagnosisIds != null)

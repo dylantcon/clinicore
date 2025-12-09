@@ -99,10 +99,18 @@ namespace Core.CliniCore.Repositories.Remote
             try
             {
                 var response = await _httpClient.PostAsJsonAsync(endpoint, data, _jsonOptions).ConfigureAwait(false);
-                return response.IsSuccessStatusCode;
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    LastError = $"HTTP {(int)response.StatusCode}: {errorBody}";
+                    return false;
+                }
+                LastError = null;
+                return true;
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
+                LastError = $"Request failed: {ex.Message}";
                 return false;
             }
         }

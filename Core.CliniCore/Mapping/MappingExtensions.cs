@@ -407,6 +407,8 @@ namespace Core.CliniCore.Mapping
         // Entry->CreateRequest mappings (for repository POST operations)
         public static CreateObservationRequest ToCreateRequest(this ObservationEntry entry) => new()
         {
+            Id = entry.Id,
+            AuthorId = entry.AuthorId,
             Content = entry.Content,
             Type = entry.Type,
             BodySystem = entry.BodySystem,
@@ -421,6 +423,8 @@ namespace Core.CliniCore.Mapping
 
         public static CreateAssessmentRequest ToCreateRequest(this AssessmentEntry entry) => new()
         {
+            Id = entry.Id,
+            AuthorId = entry.AuthorId,
             Content = entry.ClinicalImpression,
             Condition = entry.Condition,
             Prognosis = entry.Prognosis,
@@ -433,6 +437,8 @@ namespace Core.CliniCore.Mapping
 
         public static CreateDiagnosisRequest ToCreateRequest(this DiagnosisEntry entry) => new()
         {
+            Id = entry.Id,
+            AuthorId = entry.AuthorId,
             Content = entry.Content,
             ICD10Code = entry.ICD10Code,
             Type = entry.Type,
@@ -444,6 +450,8 @@ namespace Core.CliniCore.Mapping
 
         public static CreatePlanRequest ToCreateRequest(this PlanEntry entry) => new()
         {
+            Id = entry.Id,
+            AuthorId = entry.AuthorId,
             Content = entry.Content,
             Type = entry.Type,
             Priority = entry.Priority,
@@ -455,6 +463,8 @@ namespace Core.CliniCore.Mapping
 
         public static CreatePrescriptionRequest ToCreateRequest(this PrescriptionEntry entry) => new()
         {
+            Id = entry.Id,
+            AuthorId = entry.AuthorId,
             DiagnosisId = entry.DiagnosisId,
             MedicationName = entry.MedicationName,
             Dosage = entry.Dosage,
@@ -668,7 +678,7 @@ namespace Core.CliniCore.Mapping
             return entry;
         }
 
-        private static void SetEntryId(AbstractClinicalEntry entry, Guid id)
+        public static void SetEntryId(AbstractClinicalEntry entry, Guid id)
         {
             typeof(AbstractClinicalEntry)
                 .GetProperty("Id")!

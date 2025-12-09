@@ -7,6 +7,8 @@ namespace Core.CliniCore.Requests.ClinicalDocuments
     /// </summary>
     public class CreateDiagnosisRequest
     {
+        public Guid? Id { get; set; }  // Client-provided ID (optional, API will generate if null)
+        public Guid? AuthorId { get; set; }  // Author/physician ID
         public string Content { get; set; } = string.Empty;  // Diagnosis description
         public string? ICD10Code { get; set; }
         public DiagnosisType Type { get; set; } = DiagnosisType.Working;

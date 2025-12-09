@@ -42,7 +42,7 @@ public partial class ClinicalDocumentEditViewModel : BaseViewModel
     #region Form Models - Single source of truth for form state
 
     public NewObservationForm SubjectiveObservationForm { get; } = new();
-    public NewObservationForm ObjectiveObservationForm { get; } = new();
+    public NewObservationForm ObjectiveObservationForm { get; } = new() { Type = ObservationType.PhysicalExam };
     public NewAssessmentForm AssessmentForm { get; } = new();
     public NewDiagnosisForm DiagnosisForm { get; } = new();
     public NewPlanForm PlanForm { get; } = new();
