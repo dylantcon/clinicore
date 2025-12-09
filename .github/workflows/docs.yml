@@ -45,6 +45,13 @@ jobs:
       - name: Build Documentation
         run: docfx docs/docfx.json --logLevel verbose
 
+      - name: Debug - List generated files
+        run: |
+          echo "=== docs/_site contents ==="
+          find docs/_site -type f | head -50
+          echo "=== docs/api contents (if any) ==="
+          ls -la docs/api/ || echo "No api folder"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
