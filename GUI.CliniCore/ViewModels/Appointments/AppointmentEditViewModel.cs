@@ -68,6 +68,11 @@ namespace GUI.CliniCore.ViewModels.Appointments
                 parameters.SetParameter(UpdateAppointmentCommand.Parameters.Notes, Notes);
             }
 
+            if (RoomNumber.HasValue)
+            {
+                parameters.SetParameter(UpdateAppointmentCommand.Parameters.RoomNumber, RoomNumber.Value);
+            }
+
             return parameters;
         }
 
@@ -92,6 +97,7 @@ namespace GUI.CliniCore.ViewModels.Appointments
                 DurationMinutes = (int)(_appointment.End - _appointment.Start).TotalMinutes;
                 Reason = _appointment.ReasonForVisit ?? "General Consultation";
                 Notes = _appointment.Notes ?? string.Empty;
+                RoomNumber = _appointment.RoomNumber;
             }
             catch (Exception ex)
             {

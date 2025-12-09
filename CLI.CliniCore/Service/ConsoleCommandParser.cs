@@ -98,6 +98,7 @@ namespace CLI.CliniCore.Service
                     parameters[ScheduleAppointmentCommand.Parameters.StartTime] = GetDateTimeInput("Appointment Date and Time");
                     parameters[ScheduleAppointmentCommand.Parameters.DurationMinutes] = GetIntInput("Duration (minutes)", 30, 15, 240);
                     parameters[ScheduleAppointmentCommand.Parameters.Notes] = GetOptionalStringInput("Notes");
+                    parameters[ScheduleAppointmentCommand.Parameters.RoomNumber] = GetOptionalIntInput("Room Number (1-999, press Enter to skip)", 1, 999);
                     break;
 
                 case CreateClinicalDocumentCommand.Key:
@@ -441,7 +442,7 @@ namespace CLI.CliniCore.Service
                 {
                     return defaultValue;
                 }
-                
+
                 if (int.TryParse(input, out var value))
                 {
                     if (value >= min && value <= max)
@@ -455,6 +456,27 @@ namespace CLI.CliniCore.Service
                     _console.DisplayMessage("Invalid number format.", MessageType.Warning);
                 }
             }
+        }
+
+        private int? GetOptionalIntInput(string prompt, int min = int.MinValue, int max = int.MaxValue)
+        {
+            var input = _console.GetUserInput($"{prompt}: ");
+            if (string.IsNullOrWhiteSpace(input))
+                return null;
+
+            if (int.TryParse(input, out var value))
+            {
+                if (value >= min && value <= max)
+                {
+                    return value;
+                }
+                _console.DisplayMessage($"Value must be between {min} and {max}. Skipping this field.", MessageType.Warning);
+            }
+            else
+            {
+                _console.DisplayMessage("Invalid number format. Skipping this field.", MessageType.Warning);
+            }
+            return null;
         }
 
         private bool GetBoolInput(string prompt)

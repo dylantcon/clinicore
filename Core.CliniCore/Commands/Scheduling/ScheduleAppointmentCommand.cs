@@ -59,6 +59,11 @@ namespace Core.CliniCore.Commands.Scheduling
             /// Parameter key for optional appointment notes.
             /// </summary>
             public const string Notes = "notes";
+
+            /// <summary>
+            /// Parameter key for the optional room number (1-999).
+            /// </summary>
+            public const string RoomNumber = "room_number";
         }
 
         private readonly ProfileService _registry;
@@ -221,7 +226,8 @@ namespace Core.CliniCore.Commands.Scheduling
                     AppointmentStatus.Scheduled)
                 {
                     ReasonForVisit = reason,
-                    Notes = parameters.GetParameter<string>(Parameters.Notes)
+                    Notes = parameters.GetParameter<string>(Parameters.Notes),
+                    RoomNumber = parameters.GetParameter<int?>(Parameters.RoomNumber)
                 };
 
                 // Try to schedule

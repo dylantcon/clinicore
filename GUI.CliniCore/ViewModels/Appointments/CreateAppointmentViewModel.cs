@@ -77,6 +77,11 @@ namespace GUI.CliniCore.ViewModels.Appointments
                 parameters.SetParameter(ScheduleAppointmentCommand.Parameters.Notes, Notes);
             }
 
+            if (RoomNumber.HasValue)
+            {
+                parameters.SetParameter(ScheduleAppointmentCommand.Parameters.RoomNumber, RoomNumber.Value);
+            }
+
             return parameters;
         }
     }

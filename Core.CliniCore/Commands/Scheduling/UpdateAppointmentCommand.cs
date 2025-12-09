@@ -50,6 +50,11 @@ namespace Core.CliniCore.Commands.Scheduling
             /// Parameter key for the new appointment start time.
             /// </summary>
             public const string NewStartTime = "new_start_time";
+
+            /// <summary>
+            /// Parameter key for the optional room number (1-999).
+            /// </summary>
+            public const string RoomNumber = "room_number";
         }
 
         private readonly SchedulerService _scheduleManager;
@@ -190,6 +195,7 @@ namespace Core.CliniCore.Commands.Scheduling
                 var notes = parameters.GetParameter<string?>(Parameters.Notes);
                 var durationMinutes = parameters.GetParameter<int?>(Parameters.DurationMinutes);
                 var newStartTime = parameters.GetParameter<DateTime?>(Parameters.NewStartTime);
+                var roomNumber = parameters.GetParameter<int?>(Parameters.RoomNumber);
 
                 // Delegate to SchedulerService for business logic and conflict validation
                 var result = _scheduleManager.UpdateAppointment(
@@ -197,7 +203,8 @@ namespace Core.CliniCore.Commands.Scheduling
                     reason,
                     notes,
                     durationMinutes,
-                    newStartTime);
+                    newStartTime,
+                    roomNumber);
 
                 if (!result.Success)
                 {

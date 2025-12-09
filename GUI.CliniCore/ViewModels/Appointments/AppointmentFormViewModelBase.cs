@@ -118,6 +118,13 @@ namespace GUI.CliniCore.ViewModels.Appointments
             set => SetProperty(ref _notes, value);
         }
 
+        private int? _roomNumber;
+        public int? RoomNumber
+        {
+            get => _roomNumber;
+            set => SetProperty(ref _roomNumber, value);
+        }
+
         #endregion
 
         #region Commands

@@ -4,9 +4,14 @@
              xmlns:viewModels="clr-namespace:GUI.CliniCore.ViewModels.Appointments"
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
              xmlns:shared="clr-namespace:GUI.CliniCore.Views.Shared"
+             xmlns:converters="clr-namespace:GUI.CliniCore.Converters"
              x:Class="GUI.CliniCore.Views.Appointments.CreateAppointmentPage"
              x:DataType="viewModels:CreateAppointmentViewModel"
              Title="{Binding Title}">
+
+    <ContentPage.Resources>
+        <converters:NullableIntToStringConverter x:Key="NullableIntToStringConverter"/>
+    </ContentPage.Resources>
 
     <Shell.BackButtonBehavior>
         <BackButtonBehavior Command="{Binding BackCommand}"/>
@@ -85,6 +90,19 @@
                            Placeholder="Additional notes about this appointment"
                            HeightRequest="80"
                            FontSize="13"
+                           TextColor="#333"
+                           PlaceholderColor="#999"/>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Room Number (Optional) -->
+            <Border Stroke="LightGray" StrokeThickness="1" Background="White" StrokeShape="RoundRectangle 8" Padding="15">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Room Number (Optional)" FontSize="13" FontAttributes="Bold" TextColor="#666"/>
+                    <Entry Text="{Binding RoomNumber, Converter={StaticResource NullableIntToStringConverter}}"
+                           Placeholder="1-999"
+                           Keyboard="Numeric"
+                           FontSize="14"
                            TextColor="#333"
                            PlaceholderColor="#999"/>
                 </VerticalStackLayout>
