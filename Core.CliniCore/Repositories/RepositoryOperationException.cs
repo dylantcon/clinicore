@@ -1,3 +1,9 @@
+
+using Core.CliniCore.DTOs;
+using Core.CliniCore.DTOs.Administrators;
+using Core.CliniCore.DTOs.Patients;
+using Core.CliniCore.DTOs.Physicians;
+
 namespace Core.CliniCore.Repositories
 {
     /// <summary>
@@ -20,7 +26,7 @@ namespace Core.CliniCore.Repositories
         /// The ID of the entity, if available
         /// </summary>
         public Guid? EntityId { get; }
-
+        
         public RepositoryOperationException(string operation, string entityType, Guid? entityId, string message)
             : base(message)
         {
@@ -41,6 +47,51 @@ namespace Core.CliniCore.Repositories
         {
             var idPart = EntityId.HasValue ? $" (ID: {EntityId.Value})" : "";
             return $"{Operation} operation failed for {EntityType}{idPart}: {Message}";
+        }
+
+        /// <summary>
+        /// Generic helper to throw exception if DTO is null (for single entities)
+        /// </summary>
+        public static TDto ThrowIfNullOperation<TDto>(TDto? dto, Guid? entityId, string op)
+            where TDto : class
+        {
+            if (dto == null)
+            {
+                throw new RepositoryOperationException(
+                    op,
+                    typeof(TDto).Name,
+                    entityId,
+                    $"An operation on {typeof(TDto).Name} {entityId} returned null during {op} operation.");
+            }
+            return dto;
+        }
+
+        /// <summary>
+        /// Generic helper to throw exception if collection is null (for lists)
+        /// </summary>
+        public static IEnumerable<TDto> ThrowIfNullOperation<TDto>(IEnumerable<TDto>? dtos, string entityType, string op)
+            where TDto : class
+        {
+            if (dtos == null)
+            {
+                throw new RepositoryOperationException(
+                    op,
+                    entityType,
+                    null,
+                    $"An operation on {entityType} collection returned null during {op} operation.");
+            }
+
+            // Check for null entries in the collection
+            if (dtos.Any(d => d == null))
+            {
+                throw new RepositoryOperationException(
+                    op,
+                    entityType,
+                    null,
+                    $"An operation on {entityType} returned null entries during {op} operation.");
+            }
+
+            return dtos;
         }
     }
 }

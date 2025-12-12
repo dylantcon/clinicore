@@ -22,14 +22,22 @@ namespace Core.CliniCore.Repositories.Remote
 
         public PhysicianProfile? GetById(Guid id)
         {
-            var dto = Get<PhysicianDto>(ApiRoutes.Physicians.GetById(id));
+            var dto = RepositoryOperationException.ThrowIfNullOperation(
+                Get<PhysicianDto>(ApiRoutes.Physicians.GetById(id)),
+                id,
+                "Get");
+
             return dto?.ToDomain();
         }
 
         public IEnumerable<PhysicianProfile> GetAll()
         {
-            var dtos = GetList<PhysicianDto>(ApiRoutes.Physicians.GetAll());
-            return dtos.Select(d => d.ToDomain());
+            var dtos = RepositoryOperationException.ThrowIfNullOperation(
+                GetList<PhysicianDto>(ApiRoutes.Physicians.GetAll()),
+                nameof(PhysicianDto),
+                "GetAll");
+
+            return dtos.Select(dto => dto.ToDomain());
         }
 
         public void Add(PhysicianProfile entity)
@@ -47,11 +55,10 @@ namespace Core.CliniCore.Repositories.Remote
                     .Select(s => s.ToString()).ToList()
             };
 
-            var result = Post<CreatePhysicianRequest, PhysicianDto>(ApiRoutes.Physicians.GetAll(), request);
-            if (result == null)
-            {
-                throw new RepositoryOperationException("Add", "Physician", entity.Id, "The server did not return the created physician.");
-            }
+            RepositoryOperationException.ThrowIfNullOperation(
+                Post<CreatePhysicianRequest, PhysicianDto>(ApiRoutes.Physicians.GetAll(), request),
+                entity.Id,
+                "Post");
         }
 
         public void Update(PhysicianProfile entity)
@@ -87,8 +94,12 @@ namespace Core.CliniCore.Repositories.Remote
 
         public IEnumerable<PhysicianProfile> Search(string query)
         {
-            var dtos = GetList<PhysicianDto>(ApiRoutes.Physicians.SearchByQuery(query));
-            return dtos.Select(d => d.ToDomain());
+            var dtos = RepositoryOperationException.ThrowIfNullOperation(
+                GetList<PhysicianDto>(ApiRoutes.Physicians.SearchByQuery(query)),
+                nameof(PhysicianDto),
+                "Search");
+
+            return dtos.Select(dto => dto.ToDomain());
         }
 
         public PhysicianProfile? GetByUsername(string username)
@@ -101,14 +112,22 @@ namespace Core.CliniCore.Repositories.Remote
 
         public IEnumerable<PhysicianProfile> FindBySpecialization(MedicalSpecialization spec)
         {
-            var dtos = GetList<PhysicianDto>(ApiRoutes.Physicians.GetBySpecialization(spec.ToString()));
-            return dtos.Select(d => d.ToDomain());
+            var dtos = RepositoryOperationException.ThrowIfNullOperation(
+                GetList<PhysicianDto>(ApiRoutes.Physicians.GetBySpecialization(spec.ToString())),
+                nameof(PhysicianDto),
+                "FindBySpecialization");
+
+            return dtos.Select(dto => dto.ToDomain());
         }
 
         public IEnumerable<PhysicianProfile> GetAvailableOn(DateTime date)
         {
-            var dtos = GetList<PhysicianDto>(ApiRoutes.Physicians.GetAvailableOn(date));
-            return dtos.Select(d => d.ToDomain());
+            var dtos = RepositoryOperationException.ThrowIfNullOperation(
+                GetList<PhysicianDto>(ApiRoutes.Physicians.GetAvailableOn(date)),
+                nameof(PhysicianDto),
+                "GetAvailableOn");
+
+            return dtos.Select(dto => dto.ToDomain());
         }
     }
 }

@@ -1,4 +1,5 @@
 using Core.CliniCore.Domain;
+using Core.CliniCore.Domain.Users;
 
 namespace Core.CliniCore.Repositories.InMemory
 {

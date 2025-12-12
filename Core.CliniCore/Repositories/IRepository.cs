@@ -1,4 +1,5 @@
 ﻿using Core.CliniCore.Domain;
+using Core.CliniCore.Domain.Users;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +8,10 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Repositories
 {
-    public interface IRepository<T> where T : class, IIdentifiable
+    /// <summary>
+    /// Base repository interface for all entity types
+    /// </summary>
+    public interface IRepository<T> where T : IIdentifiable
     {
         T? GetById(Guid id);
         IEnumerable<T> GetAll();

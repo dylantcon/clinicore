@@ -2,12 +2,7 @@
 using Core.CliniCore.Domain.Enumerations.EntryTypes;
 using Core.CliniCore.Domain.Enumerations.Extensions;
 using Core.CliniCore.Domain.ProfileTemplates;
-using Core.CliniCore.Domain.Users;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Core.CliniCore.Domain.Users.Concrete
 {
@@ -23,8 +18,8 @@ namespace Core.CliniCore.Domain.Users.Concrete
         public string Race => GetValue<string>(PatientEntryType.Race.GetKey()) ?? string.Empty;
 
         // Patient relationships
-        public List<Guid> AppointmentIds { get; } = new();
-        public List<Guid> ClinicalDocumentIds { get; } = new();
+        public List<Guid> AppointmentIds { get; } = [];
+        public List<Guid> ClinicalDocumentIds { get; } = [];
         public Guid? PrimaryPhysicianId { get; set; }
 
         protected override IProfileTemplate GetProfileTemplate()
@@ -59,12 +54,12 @@ namespace Core.CliniCore.Domain.Users.Concrete
                 sb.AppendLine("  Primary Physician: None");
             }
 
-            if (AppointmentIds.Any())
+            if (AppointmentIds.Count != 0)
             {
                 sb.AppendLine($"  Appointments: {AppointmentIds.Count}");
             }
 
-            if (ClinicalDocumentIds.Any())
+            if (ClinicalDocumentIds.Count != 0)
             {
                 sb.AppendLine($"  Clinical Documents: {ClinicalDocumentIds.Count}");
             }
