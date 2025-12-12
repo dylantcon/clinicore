@@ -13,26 +13,22 @@ namespace Core.CliniCore.Repositories.Remote
     /// Remote repository implementation that calls the API for patient operations.
     /// Uses ApiRoutes for all endpoint paths (single source of truth).
     /// </summary>
-    public class RemotePatientRepository(HttpClient httpClient) : RemoteRepositoryBase(httpClient), IPatientRepository
+    public class RemotePatientRepository : RemoteRepositoryBase, IPatientRepository
     {
+        public RemotePatientRepository(HttpClient httpClient) : base(httpClient)
+        {
+        }
+
         public PatientProfile? GetById(Guid id)
         {
-            var dto = RepositoryOperationException.ThrowIfNullOperation(
-                Get<PatientDto>(ApiRoutes.Patients.GetById(id)), 
-                id, 
-                "Get");
-            
+            var dto = Get<PatientDto>(ApiRoutes.Patients.GetById(id));
             return dto?.ToDomain();
         }
 
         public IEnumerable<PatientProfile> GetAll()
         {
-            var dtos = RepositoryOperationException.ThrowIfNullOperation(
-                GetList<PatientDto>(ApiRoutes.Patients.GetAll()),
-                nameof(PatientDto),
-                "GetAll");
-
-            return dtos.Select(dto => dto.ToDomain());
+            var dtos = GetList<PatientDto>(ApiRoutes.Patients.GetAll());
+            return dtos.Select(d => d.ToDomain());
         }
 
         public void Add(PatientProfile entity)
@@ -49,10 +45,9 @@ namespace Core.CliniCore.Repositories.Remote
                 PrimaryPhysicianId = entity.PrimaryPhysicianId
             };
 
-            RepositoryOperationException.ThrowIfNullOperation(
-                Post<CreatePatientRequest, PatientDto>(ApiRoutes.Patients.GetAll(), request), 
-                entity.Id, 
-                "Post");
+            var result = Post<CreatePatientRequest, PatientDto>(ApiRoutes.Patients.GetAll(), request);
+            if (result == null)
+                throw new RepositoryOperationException("Add", "Patient", entity.Id, "Remote server failed to create the patient");
         }
 
         public void Update(PatientProfile entity)
@@ -67,62 +62,42 @@ namespace Core.CliniCore.Repositories.Remote
                 PrimaryPhysicianId = entity.PrimaryPhysicianId
             };
 
-            RepositoryOperationException.ThrowIfNullOperation(
-                Put<UpdatePatientRequest, PatientDto>(ApiRoutes.Patients.GetById(entity.Id), request), 
-                entity.Id, 
-                "Put");
+            var result = Put(ApiRoutes.Patients.GetById(entity.Id), request);
+            if (!result)
+                throw new RepositoryOperationException("Update", "Patient", entity.Id, "Remote server failed to update the patient");
         }
 
         public void Delete(Guid id)
         {
-            RepositoryOperationException.ThrowIfNullOperation(
-                Delete<PatientDto>(ApiRoutes.Patients.GetById(id)), 
-                id, 
-                "Delete");
+            var result = Delete(ApiRoutes.Patients.GetById(id));
+            if (!result)
+                throw new RepositoryOperationException("Delete", "Patient", id, "Remote server failed to delete the patient");
         }
 
         public IEnumerable<PatientProfile> Search(string query)
         {
-            var dtos = RepositoryOperationException.ThrowIfNullOperation(
-                GetList<PatientDto>(ApiRoutes.Patients.SearchByQuery(query)),
-                nameof(PatientDto),
-                "Search");
-
-            return dtos.Select(dto => dto.ToDomain());
+            var dtos = GetList<PatientDto>(ApiRoutes.Patients.SearchByQuery(query));
+            return dtos.Select(d => d.ToDomain());
         }
 
-        /// <summary>
-        /// Inefficient search by username (client-side filtering)
-        /// TODO: Add dedicated API endpoint for this
-        /// </summary>
-        /// <param name="username"></param>
-        /// <returns>A nullable patient profile clientside data model.</returns>
         public PatientProfile? GetByUsername(string username)
         {
             // Search and filter client-side (API doesn't have dedicated endpoint)
-            IEnumerable<PatientProfile> all = GetAll();
+            var all = GetAll();
             return all.FirstOrDefault(p =>
                 p.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
         }
 
         public IEnumerable<PatientProfile> GetByPhysician(Guid physicianId)
         {
-            var dtos = RepositoryOperationException.ThrowIfNullOperation(
-                GetList<PatientDto>(ApiRoutes.Patients.GetByPhysician(physicianId)),
-                nameof(PatientDto),
-                "GetByPhysician");
-
-            return dtos.Select(dto => dto.ToDomain());
+            var dtos = GetList<PatientDto>(ApiRoutes.Patients.GetByPhysician(physicianId));
+            return dtos.Select(d => d.ToDomain());
         }
 
         public IEnumerable<PatientProfile> GetUnassigned()
         {
-            var dtos = RepositoryOperationException.ThrowIfNullOperation(
-                GetList<PatientDto>(ApiRoutes.Patients.GetUnassigned()),
-                nameof(PatientDto),
-                "GetUnassigned");
-
-            return dtos.Select(dto => dto.ToDomain());
+            var dtos = GetList<PatientDto>(ApiRoutes.Patients.GetUnassigned());
+            return dtos.Select(d => d.ToDomain());
         }
     }
 }

@@ -50,13 +50,13 @@ namespace Core.CliniCore.Repositories.Remote
             {
                 var response = await _httpClient.GetAsync(endpoint).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
-                    return [];
+                    return new List<T>();
 
-                return await response.Content.ReadFromJsonAsync<List<T>>(_jsonOptions).ConfigureAwait(false) ?? [];
+                return await response.Content.ReadFromJsonAsync<List<T>>(_jsonOptions).ConfigureAwait(false) ?? new List<T>();
             }
             catch (HttpRequestException)
             {
-                return [];
+                return new List<T>();
             }
         }
 
@@ -174,23 +174,11 @@ namespace Core.CliniCore.Repositories.Remote
         /// <summary>
         /// Synchronous wrapper for async PUT operation
         /// </summary>
-        protected TResponse? Put<TRequest, TResponse>(string endpoint, TRequest data) where TResponse : class
-            => PutAsync<TRequest>(endpoint, data).GetAwaiter().GetResult() ? Get<TResponse>(endpoint) : null;
-
-        /// <summary>
-        /// Synchronous wrapper for async PUT operation without response
-        /// </summary>
         protected bool Put<TRequest>(string endpoint, TRequest data)
             => PutAsync(endpoint, data).GetAwaiter().GetResult();
 
         /// <summary>
         /// Synchronous wrapper for async DELETE operation
-        /// </summary>
-        protected TResponse? Delete<TResponse>(string endpoint) where TResponse : class
-            => DeleteAsync(endpoint).GetAwaiter().GetResult() ? Get<TResponse>(endpoint) : null;
-
-        /// <summary>
-        /// Synchronous wrapper for async DELETE operation without response
         /// </summary>
         protected bool Delete(string endpoint)
             => DeleteAsync(endpoint).GetAwaiter().GetResult();

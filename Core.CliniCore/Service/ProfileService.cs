@@ -134,7 +134,7 @@ namespace Core.CliniCore.Service
         /// Checks if a profile can be safely deleted. Returns error message or null if deletable.
         /// Only blocks on scheduled/active appointments (cancelled/completed are historical).
         /// </summary>
-        public string? GetDeletionBlockers(Guid profileId, IUserProfile profile)
+        private string? GetDeletionBlockers(Guid profileId, IUserProfile profile)
         {
             var blockers = new List<string>();
 
@@ -277,22 +277,13 @@ namespace Core.CliniCore.Service
         /// </summary>
         public IEnumerable<IUserProfile> SearchByName(string searchTerm)
         {
-
             if (string.IsNullOrWhiteSpace(searchTerm))
                 return [];
 
             // Use the Search method on each repository
-            try
-            {
-                return _patientRepo.Search(searchTerm).Cast<IUserProfile>()
+            return _patientRepo.Search(searchTerm).Cast<IUserProfile>()
                 .Concat(_physicianRepo.Search(searchTerm).Cast<IUserProfile>())
                 .Concat(_adminRepo.Search(searchTerm).Cast<IUserProfile>());
-            }
-            catch (RepositoryOperationException)
-            {
-                // Log exception as needed
-                return [];
-            }
         }
 
         #endregion
@@ -351,94 +342,26 @@ namespace Core.CliniCore.Service
         /// <summary>
         /// Gets the total count of all profiles
         /// </summary>
-        public int Count
-        {
-            get
-            {
-                try
-                {
-                    return _patientRepo.GetAll().Count() +
-                        _physicianRepo.GetAll().Count() +
-                        _adminRepo.GetAll().Count();
-                }
-                catch (RepositoryOperationException)
-                {
-                    return -1; // Indicate error
-                }
-            }
-
-        }
+        public int Count =>
+            _patientRepo.GetAll().Count() +
+            _physicianRepo.GetAll().Count() +
+            _adminRepo.GetAll().Count();
 
         /// <summary>
         /// Gets statistics about profile counts
         /// </summary>
         public ProfileServiceStatistics GetStatistics()
         {
-            try 
+            return new ProfileServiceStatistics
             {
-                return new ProfileServiceStatistics
-                {
-                    TotalProfiles = Count,
-                    PatientCount = _patientRepo.GetAll().Count(),
-                    PhysicianCount = _physicianRepo.GetAll().Count(),
-                    AdministratorCount = _adminRepo.GetAll().Count()
-                };
-            }
-            catch (RepositoryOperationException)
-            {
-                // TODO: Log the exception
-                return new ProfileServiceStatistics
-                {
-                    TotalProfiles = -1,
-                    PatientCount = -1,
-                    PhysicianCount = -1,
-                    AdministratorCount = -1
-                };
-            }
+                TotalProfiles = Count,
+                PatientCount = _patientRepo.GetAll().Count(),
+                PhysicianCount = _physicianRepo.GetAll().Count(),
+                AdministratorCount = _adminRepo.GetAll().Count()
+            };
         }
 
         #endregion
-
-        /*
-         * Contains helper methods related to fetching profile state information.
-         * These methods do not modify state or fetch entities directly, nor do they
-         * perform any logging or error handling beyond what is necessary for their purpose.
-         */
-        #region Public Helpers 
-
-        /// <summary>
-        /// Determines whether the specified profile can be force deleted.
-        /// </summary>
-        /// <remarks>A profile cannot be force deleted if it is the last remaining administrator. If the
-        /// profile does not exist or a repository operation fails, this method returns <see
-        /// langword="false"/>.</remarks>
-        /// <param name="profile">The unique identifier of the profile to evaluate.</param>
-        /// <returns><see langword="true"/> if the profile exists and can be force deleted; otherwise, <see langword="false"/>.
-        /// Returns <see langword="false"/> if the profile does not exist, is the last administrator, or if a repository
-        /// error occurs.</returns>
-        public bool CanForceDeleteProfile(Guid profile)
-        {
-            try
-            {
-                if (profile == Guid.Empty || GetProfileById(profile) == null)
-                    return false;
-
-                if (GetProfileById(profile)!.Role == UserRole.Administrator)
-                {
-                    var adminCount = _adminRepo.GetAll().Count();
-                    if (adminCount <= 1)
-                        return false; // Cannot delete the last administrator
-                }
-                return true;
-            }
-            catch (RepositoryOperationException)
-            {
-                return false;
-            }
-        }
-
-        #endregion
-
     }
 
     /// <summary>

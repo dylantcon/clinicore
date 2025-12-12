@@ -21,22 +21,14 @@ namespace Core.CliniCore.Repositories.Remote
 
         public AdministratorProfile? GetById(Guid id)
         {
-            var dto = RepositoryOperationException.ThrowIfNullOperation(
-                Get<AdministratorDto>(ApiRoutes.Administrators.GetById(id)),
-                id,
-                "Get");
-
+            var dto = Get<AdministratorDto>(ApiRoutes.Administrators.GetById(id));
             return dto?.ToDomain();
         }
 
         public IEnumerable<AdministratorProfile> GetAll()
         {
-            var dtos = RepositoryOperationException.ThrowIfNullOperation(
-                GetList<AdministratorDto>(ApiRoutes.Administrators.GetAll()),
-                nameof(AdministratorDto),
-                "GetAll");
-
-            return dtos.Select(dto => dto.ToDomain());
+            var dtos = GetList<AdministratorDto>(ApiRoutes.Administrators.GetAll());
+            return dtos.Select(d => d.ToDomain());
         }
 
         public void Add(AdministratorProfile entity)
@@ -53,10 +45,11 @@ namespace Core.CliniCore.Repositories.Remote
                 Permissions = entity.GrantedPermissions.Select(p => p.ToString()).ToList()
             };
 
-            RepositoryOperationException.ThrowIfNullOperation(
-                Post<CreateAdministratorRequest, AdministratorDto>(ApiRoutes.Administrators.GetAll(), request),
-                entity.Id,
-                "Post");
+            var result = Post<CreateAdministratorRequest, AdministratorDto>(ApiRoutes.Administrators.GetAll(), request);
+            if (result == null)
+            {
+                throw new RepositoryOperationException("Add", "Administrator", entity.Id, $"Failed to add administrator with username '{entity.Username}'.");
+            }
         }
 
         public void Update(AdministratorProfile entity)
@@ -108,22 +101,14 @@ namespace Core.CliniCore.Repositories.Remote
 
         public IEnumerable<AdministratorProfile> GetByDepartment(string department)
         {
-            var dtos = RepositoryOperationException.ThrowIfNullOperation(
-                GetList<AdministratorDto>(ApiRoutes.Administrators.GetByDepartment(department)),
-                nameof(AdministratorDto),
-                "GetByDepartment");
-
-            return dtos.Select(dto => dto.ToDomain());
+            var dtos = GetList<AdministratorDto>(ApiRoutes.Administrators.GetByDepartment(department));
+            return dtos.Select(d => d.ToDomain());
         }
 
         public IEnumerable<AdministratorProfile> GetByPermission(Permission permission)
         {
-            var dtos = RepositoryOperationException.ThrowIfNullOperation(
-                GetList<AdministratorDto>(ApiRoutes.Administrators.GetByPermission(permission.ToString())),
-                nameof(AdministratorDto),
-                "GetByPermission");
-
-            return dtos.Select(dto => dto.ToDomain());
+            var dtos = GetList<AdministratorDto>(ApiRoutes.Administrators.GetByPermission(permission.ToString()));
+            return dtos.Select(d => d.ToDomain());
         }
     }
 }

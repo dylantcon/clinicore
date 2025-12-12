@@ -4,9 +4,6 @@ using Core.CliniCore.Domain.Enumerations;
 using Core.CliniCore.Domain.Users;
 using Core.CliniCore.Domain.Authentication.Representation;
 using Core.CliniCore.Domain.Users.Concrete;
-using Core.CliniCore.Domain.Enumerations.EntryTypes;
-using Core.CliniCore.Domain.Enumerations.Extensions;
-using Core.CliniCore.Repositories;
 
 namespace Core.CliniCore.Commands.Profile
 {
@@ -15,14 +12,7 @@ namespace Core.CliniCore.Commands.Profile
     /// Performs dependency checks for clinical documents, appointments, and patient assignments
     /// before deletion. Supports force deletion with automatic cleanup of dependencies.
     /// </summary>
-    /// <remarks>
-    /// Creates a DeleteProfileCommand with the supplied parameters.
-    /// </remarks>
-    /// <param name="profileService"></param>
-    /// <param name="schedulerService"></param>
-    /// <param name="clinicalDocService"></param>
-    /// <exception cref="ArgumentNullException"></exception>
-    public class DeleteProfileCommand(ProfileService profileService, SchedulerService schedulerService, ClinicalDocumentService clinicalDocService) : AbstractCommand
+    public class DeleteProfileCommand : AbstractCommand
     {
         /// <summary>
         /// The unique key used to identify this command.
@@ -49,9 +39,23 @@ namespace Core.CliniCore.Commands.Profile
             public const string Force = "force";
         }
 
-        private readonly ProfileService _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
-        private readonly ClinicalDocumentService _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
-        private readonly SchedulerService _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
+        private readonly ProfileService _profileRegistry;
+        private readonly ClinicalDocumentService _documentRegistry;
+        private readonly SchedulerService _scheduleManager;
+
+        /// <summary>
+        /// Creates a DeleteProfileCommand with the supplied parameters.
+        /// </summary>
+        /// <param name="profileService"></param>
+        /// <param name="schedulerService"></param>
+        /// <param name="clinicalDocService"></param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public DeleteProfileCommand(ProfileService profileService, SchedulerService schedulerService, ClinicalDocumentService clinicalDocService)
+        {
+            _profileRegistry = profileService ?? throw new ArgumentNullException(nameof(profileService));
+            _scheduleManager = schedulerService ?? throw new ArgumentNullException(nameof(schedulerService));
+            _documentRegistry = clinicalDocService ?? throw new ArgumentNullException(nameof(clinicalDocService));
+        }
 
         /// <inheritdoc />
         public override string Description => "Permanently deletes a user profile from the system";
@@ -70,7 +74,7 @@ namespace Core.CliniCore.Commands.Profile
 
             // Check required ProfileId parameter
             var missingParams = parameters.GetMissingRequired(Parameters.ProfileId);
-            if (missingParams.Count != 0)
+            if (missingParams.Any())
             {
                 foreach (var error in missingParams)
                     result.AddError(error);
@@ -85,7 +89,7 @@ namespace Core.CliniCore.Commands.Profile
                 return result;
             }
 
-            var profile = _profileService.GetProfileById(profileId.Value);
+            var profile = _profileRegistry.GetProfileById(profileId.Value);
             if (profile == null)
             {
                 result.AddError($"Profile with ID {profileId.Value} not found");
@@ -97,7 +101,7 @@ namespace Core.CliniCore.Commands.Profile
             if (!force)
             {
                 var dependencies = CheckDependencies(profileId.Value, profile);
-                if (dependencies.Count != 0)
+                if (dependencies.Any())
                 {
                     foreach (var dependency in dependencies)
                     {
@@ -118,32 +122,24 @@ namespace Core.CliniCore.Commands.Profile
                 var profileId = parameters.GetRequiredParameter<Guid>(Parameters.ProfileId);
                 var force = parameters.GetParameter<bool?>(Parameters.Force) ?? false;
 
-                var profile = _profileService.GetProfileById(profileId);
+                var profile = _profileRegistry.GetProfileById(profileId);
                 if (profile == null)
                 {
                     return CommandResult.Fail("Profile not found");
                 }
 
                 // Store profile info for result message
-                var profileName = profile.GetValue<string>(CommonEntryType.Name.GetKey()) ?? "Unknown";
+                var profileName = profile.GetValue<string>("name") ?? "Unknown";
                 var profileRole = profile.Role;
 
-                // if force requested and possible, clean up dependencies
+                // If force delete, clean up dependencies first
                 if (force)
                 {
-                    try
-                    {
-                        if (_profileService.CanForceDeleteProfile(profileId))
-                            CleanupDependencies(profileId, profile);
-                    }
-                    catch (RepositoryOperationException e)
-                    {
-                        return CommandResult.Fail($"Failed to clean dependencies for force delete: {e.Message}", e);
-                    }
+                    CleanupDependencies(profileId, profile);
                 }
 
                 // Remove the profile from registry
-                var error = _profileService.RemoveProfile(profileId);
+                var error = _profileRegistry.RemoveProfile(profileId);
                 if (error != null)
                 {
                     return CommandResult.Fail($"Failed to remove profile: {error}");
@@ -180,7 +176,7 @@ namespace Core.CliniCore.Commands.Profile
                 }
 
                 // Check for assigned patients
-                if (profile is PhysicianProfile physician && physician.PatientIds.Count != 0)
+                if (profile is PhysicianProfile physician && physician.PatientIds.Any())
                 {
                     dependencies.Add($"{physician.PatientIds.Count} assigned patient(s)");
                 }
@@ -188,9 +184,9 @@ namespace Core.CliniCore.Commands.Profile
 
             // Check for active appointments
             var patientAppointments = _scheduleManager.GetPatientAppointments(profileId)?.Where(a => a.Status == AppointmentStatus.Scheduled).ToList();
-            if (patientAppointments?.Count != 0)
+            if (patientAppointments?.Any() == true)
             {
-                dependencies.Add($"{patientAppointments?.Count ?? -1} scheduled appointment(s)");
+                dependencies.Add($"{patientAppointments.Count} scheduled appointment(s)");
             }
 
             // If physician, check for appointments they're scheduled to provide
@@ -198,7 +194,7 @@ namespace Core.CliniCore.Commands.Profile
             {
                 var physicianAppointments = _scheduleManager.GetScheduleInRange(profileId, DateTime.Now, DateTime.Now.AddYears(1))
                     .Where(a => a.Status == AppointmentStatus.Scheduled).ToList();
-                if (physicianAppointments.Count != 0)
+                if (physicianAppointments.Any())
                 {
                     dependencies.Add($"{physicianAppointments.Count} physician appointment(s) to provide");
                 }
@@ -209,13 +205,25 @@ namespace Core.CliniCore.Commands.Profile
 
         private void CleanupDependencies(Guid profileId, IUserProfile profile)
         {
-            try
+            // Clean up clinical documents (unlink from appointments first)
+            var documents = _documentRegistry.GetPatientDocuments(profileId)?.ToList();
+            if (documents != null)
             {
-                // Clean up clinical documents (unlink from appointments first)
-                var documents = _documentRegistry.GetPatientDocuments(profileId)?.ToList();
-                if (documents != null)
+                foreach (var document in documents)
                 {
-                    foreach (var document in documents)
+                    // Unlink from appointment before deleting
+                    _scheduleManager.LinkClinicalDocument(document.AppointmentId, null);
+                    _documentRegistry.RemoveDocument(document.Id);
+                }
+            }
+
+            // If physician, clean up authored documents and patient assignments
+            if (profile.Role == UserRole.Physician)
+            {
+                var authoredDocs = _documentRegistry.GetPhysicianDocuments(profileId)?.ToList();
+                if (authoredDocs != null)
+                {
+                    foreach (var document in authoredDocs)
                     {
                         // Unlink from appointment before deleting
                         _scheduleManager.LinkClinicalDocument(document.AppointmentId, null);
@@ -223,61 +231,42 @@ namespace Core.CliniCore.Commands.Profile
                     }
                 }
 
-                // If physician, clean up authored documents and patient assignments
-                if (profile.Role == UserRole.Physician)
+                // Remove physician from all patients' primary physician assignments
+                if (profile is PhysicianProfile physician)
                 {
-                    var authoredDocs = _documentRegistry.GetPhysicianDocuments(profileId)?.ToList();
-                    if (authoredDocs != null)
+                    foreach (var patientId in physician.PatientIds.ToList())
                     {
-                        foreach (var document in authoredDocs)
+                        var patient = _profileRegistry.GetProfileById(patientId) as PatientProfile;
+                        if (patient?.PrimaryPhysicianId == profileId)
                         {
-                            // Unlink from appointment before deleting
-                            _scheduleManager.LinkClinicalDocument(document.AppointmentId, null);
-                            _documentRegistry.RemoveDocument(document.Id);
+                            patient.PrimaryPhysicianId = null;
+                            _profileRegistry.UpdateProfile(patient);
                         }
                     }
-
-                    // Remove physician from all patients' primary physician assignments
-                    if (profile is PhysicianProfile physician)
-                    {
-                        foreach (var patientId in physician.PatientIds.ToList())
-                        {
-                            var patient = _profileService.GetProfileById(patientId) as PatientProfile;
-                            if (patient?.PrimaryPhysicianId == profileId)
-                            {
-                                patient.PrimaryPhysicianId = null;
-                                _profileService.UpdateProfile(patient);
-                            }
-                        }
-                        physician.PatientIds.Clear();
-                        _profileService.UpdateProfile(physician);
-                    }
-                }
-
-                // Cancel active appointments for patient
-                var patientAppointments = _scheduleManager.GetPatientAppointments(profileId)?.Where(a => a.Status == AppointmentStatus.Scheduled).ToList();
-                if (patientAppointments != null)
-                {
-                    foreach (var appointment in patientAppointments)
-                    {
-                        _scheduleManager.CancelAppointment(appointment.PhysicianId, appointment.Id, $"Patient profile {profileId} deleted");
-                    }
-                }
-
-                // Cancel appointments physician was scheduled to provide
-                if (profile.Role == UserRole.Physician)
-                {
-                    var physicianAppointments = _scheduleManager.GetScheduleInRange(profileId, DateTime.Now, DateTime.Now.AddYears(1))
-                        .Where(a => a.Status == AppointmentStatus.Scheduled).ToList();
-                    foreach (var appointment in physicianAppointments)
-                    {
-                        _scheduleManager.CancelAppointment(profileId, appointment.Id, $"Physician profile {profileId} deleted");
-                    }
+                    physician.PatientIds.Clear();
+                    _profileRegistry.UpdateProfile(physician);
                 }
             }
-            catch (RepositoryOperationException e)
+
+            // Cancel active appointments for patient
+            var patientAppointments = _scheduleManager.GetPatientAppointments(profileId)?.Where(a => a.Status == AppointmentStatus.Scheduled).ToList();
+            if (patientAppointments != null)
             {
-                throw new RepositoryOperationException("DeleteProfileCommand", "CleanupDependencies", profileId, "Failed to clean up dependencies for profile deletion", e);
+                foreach (var appointment in patientAppointments)
+                {
+                    _scheduleManager.CancelAppointment(appointment.PhysicianId, appointment.Id, $"Patient profile {profileId} deleted");
+                }
+            }
+
+            // Cancel appointments physician was scheduled to provide
+            if (profile.Role == UserRole.Physician)
+            {
+                var physicianAppointments = _scheduleManager.GetScheduleInRange(profileId, DateTime.Now, DateTime.Now.AddYears(1))
+                    .Where(a => a.Status == AppointmentStatus.Scheduled).ToList();
+                foreach (var appointment in physicianAppointments)
+                {
+                    _scheduleManager.CancelAppointment(profileId, appointment.Id, $"Physician profile {profileId} deleted");
+                }
             }
         }
     }

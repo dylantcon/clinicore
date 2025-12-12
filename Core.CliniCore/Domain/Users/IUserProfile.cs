@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 
 namespace Core.CliniCore.Domain.Users
 {
-    public interface IUserProfile : IIdentifiable
+    public interface IUserProfile
     {
+        // identity
+        Guid Id { get; }
         string Username { get; set; }
         DateTime CreatedAt { get; }
 
